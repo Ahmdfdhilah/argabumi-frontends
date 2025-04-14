@@ -1,0 +1,31 @@
+{
+  "name": "turbo-repo-argabumi",
+  "version": "1.0.0",
+  "type": "module",
+  "private": true,
+  "scripts": {
+    "build": "turbo build",
+    "clean": "turbo clean && rm -rf .turbo/ node_modules",
+    "check-types": "turbo check-types",
+    "dev": "turbo dev",
+    "format": "turbo format",
+    "lint": "eslint . && turbo lint",
+    "update": "turbo update"
+  },
+  "devDependencies": {
+    "@tailwindcss/postcss": "^4.0.14",
+    "@workspace/eslint": "workspace:*",
+    "@workspace/prettier": "workspace:*",
+    "@workspace/typescript": "workspace:*",
+    "autoprefixer": "^10.4.21",
+    "company-profile": "link:apps\\company-profile",
+    "postcss": "^8.5.3",
+    "tailwindcss": "^4.0.14",
+    "turbo": "^2.4.4",
+    "typescript": "5.8.2"
+  },
+  "packageManager": "pnpm@9.15.4",
+  "engines": {
+    "node": ">=20"
+  }
+}
