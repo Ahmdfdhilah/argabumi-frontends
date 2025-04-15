@@ -5,7 +5,7 @@
     "paths": {
       "@workspace/ui/*": ["./src/*"],
       "@workspace/config/*": ["../../config/*"]
-    }
+    },
   },
   "include": ["."],
   "exclude": ["node_modules", "dist"]

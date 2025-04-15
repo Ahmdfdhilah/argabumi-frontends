@@ -7,7 +7,7 @@ export default defineConfig({
   resolve: {
     alias: {
       '@workspace/ui': path.resolve(__dirname, '../../packages/ui/src') ,
-      '@workspace/tailwind': path.resolve(__dirname, '../../config/tailwind')
+      '@workspace/tailwind': path.resolve(__dirname, '../../packages/tailwind')
     }
   },
   optimizeDeps: {

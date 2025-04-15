@@ -1,1 +1,32 @@
 @import "@workspace/tailwind/globals.css";
+
+.wave-1,
+.wave-2,
+.wave-3 {
+    transform-origin: center bottom;
+}
+
+/* Adding some subtle translucent effects for the waves */
+@keyframes pulse-opacity {
+
+    0%,
+    100% {
+        opacity: 0.2;
+    }
+
+    50% {
+        opacity: 0.3;
+    }
+}
+
+.wave-1 {
+    animation: pulse-opacity 8s infinite;
+}
+
+.wave-2 {
+    animation: pulse-opacity 12s infinite;
+}
+
+.wave-3 {
+    animation: pulse-opacity 10s infinite;
+}

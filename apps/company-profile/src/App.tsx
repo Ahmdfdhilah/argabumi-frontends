@@ -1,12 +1,21 @@
-import './App.css'
-import { Button } from '@workspace/ui/components/button'
+// src/App.jsx
+import { BrowserRouter as Router, Routes, Route } from 'react-router-dom';
+import Header from './components/Header';
+import Footer from './components/Footer';
+import HomePage from './pages/Homepage';
 
 function App() {
-
   return (
-    // <div className="bg-red-500 p-64">test</div>
-    <Button className="bg-blue-500" variant="destructive">Test</Button>
-  )
+    <Router>
+      <Header />
+      <main>
+        <Routes>
+          <Route path="/" element={<HomePage />} />
+        </Routes>
+      </main>
+      <Footer />
+    </Router>
+  );
 }
 
-export default App
+export default App;
