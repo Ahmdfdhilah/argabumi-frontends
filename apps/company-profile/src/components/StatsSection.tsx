@@ -92,7 +92,7 @@ const StatCard: FC<StatCardProps> = ({ label, value, icon: Icon, isVisible, inde
   
   return (
     <div
-      className={`bg-white/10 backdrop-blur-sm border border-white/20 text-white p-6 rounded-2xl shadow-xl hover:scale-105 transition-transform duration-300 ${
+      className={`bg-primary-500 backdrop-blur-sm border border-white/20 text-white p-6 rounded-2xl shadow-xl hover:scale-105 transition-transform duration-300 ${
         isVisible ? `animate-fade-in-${index}` : ''
       }`}
       style={{
@@ -110,7 +110,7 @@ const StatCard: FC<StatCardProps> = ({ label, value, icon: Icon, isVisible, inde
 
 export default function StatsSection(){
   return (
-    <section className="bg-green-700 py-16">
+    <section className="relative z-10 -mt-4 md:-mt-8 lg:-mt-16 bg-transparent">
       <style>
         {`
           @keyframes fadeIn {
@@ -124,9 +124,6 @@ export default function StatsSection(){
         `}
       </style>
       <div className="container mx-auto px-4 text-center">
-        <h2 className="text-3xl font-extrabold mb-12 text-white">
-          Capaian Kami
-        </h2>
         <InView>
           {({ ref, isVisible }) => (
             <div ref={ref} className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6 lg:gap-10 px-4 lg:px-8">

@@ -130,8 +130,10 @@ const AutoSwipeGallery = ({
   return (
     <div className={cn("w-full py-8", className)}>
       {title && (
-        <h2 className="text-3xl font-bold mb-12 text-center">
-          {title}
+
+        <h2 className="text-3xl md:text-4xl font-bold mb-12 text-center">
+          <span className="inline-block mb-2"> {title}</span>
+          <div className="h-1 w-20 bg-primary-500 mx-auto"></div>
         </h2>
       )}
 

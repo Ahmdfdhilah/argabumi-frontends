@@ -3,7 +3,6 @@ import { useState, useEffect, useMemo } from 'react';
 export type VerticalGridStreamProps = {
   images: string[];
   title?: string;
-  description?: string;
   speed?: number;
   columns?: number;
   className?: string;
@@ -15,7 +14,6 @@ export type VerticalGridStreamProps = {
 const VerticalGridStream = ({
   images = [],
   title = '',
-  description = '',
   speed = 20,
   columns = 3,
   className = '',
@@ -119,9 +117,11 @@ const VerticalGridStream = ({
   return (
     <div className={`w-full ${className}`}>
       {title && (
-        <div className="mb-8 text-center">
-          <h2 className="text-3xl font-bold mb-2 text-slate-900">{title}</h2>
-          {description && <p className="text-lg text-slate-600 max-w-2xl mx-auto">{description}</p>}
+        <div className="mb-12 text-center relative">
+          <h2 className="text-3xl md:text-4xl font-bold mb-12 text-center">
+            <span className="inline-block mb-2">{title}</span>
+            <div className="h-1 w-20 bg-primary-500 mx-auto"></div>
+          </h2>
         </div>
       )}
 
