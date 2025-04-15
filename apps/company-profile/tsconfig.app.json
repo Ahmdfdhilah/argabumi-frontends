@@ -22,5 +22,5 @@
     "noFallthroughCasesInSwitch": true,
     "noUncheckedSideEffectImports": true
   },
-  "include": ["src", "../../packages/ui/src/components/ui/auto-swipe-gallery.tsx"]
+  "include": ["src"]
 }

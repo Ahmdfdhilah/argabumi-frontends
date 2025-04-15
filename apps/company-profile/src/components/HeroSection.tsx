@@ -1,5 +1,4 @@
 // src/components/HeroSection.jsx
-
 import { ArrowRight, ChevronRight } from "lucide-react";
 import { Link } from "react-router-dom";
 
@@ -82,7 +81,7 @@ const HeroSection = ({
                     <div className="flex flex-col sm:flex-row justify-center space-y-4 sm:space-y-0 sm:space-x-6">
                         <Link
                             to={primaryBtnLink}
-                            className="bg-primary-500 hover:bg-primary-600 text-white px-6 py-3 rounded-lg font-medium hover:opacity-90 transition-all duration-300 flex items-center group"
+                            className="bg-primary-500 hover:bg-primary-600 text-white px-6 py-3 rounded-lg font-medium hover:opacity-90 transition-all duration-300 flex items-center group justify-center"
                             aria-label={primaryBtnText}
                         >
                             {primaryBtnText}

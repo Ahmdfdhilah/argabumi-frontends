@@ -1,16 +1,29 @@
-// src/components/Header.jsx
-import { useState, useEffect } from 'react';
+import { useState, useEffect, SetStateAction } from 'react';
 import { Link, useLocation } from 'react-router-dom';
-import { Menu, X, ChevronDown } from 'lucide-react';
+import { Menu, ChevronDown, ChevronUp } from 'lucide-react';
+import { Button } from '@workspace/ui/components/button';
+import {
+    Sheet,
+    SheetContent,
+    SheetTrigger,
+} from '@workspace/ui/components/sheet';
+import {
+    NavigationMenu,
+    NavigationMenuContent,
+    NavigationMenuItem,
+    NavigationMenuLink,
+    NavigationMenuList,
+    NavigationMenuTrigger,
+} from '@workspace/ui/components/navigation-menu';
 import logo from '../assets/logo_abi_lightmode.png';
 
-function Header() {
+
+export default function Header() {
     const [isScrolled, setIsScrolled] = useState(false);
-    const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
-    const [dropdown, setDropdown] = useState('');
+    const [activeDropdown, setActiveDropdown] = useState('');
     const location = useLocation();
 
-    // Handle scroll events to create a dynamic header
+    // Handle scroll events for dynamic header
     useEffect(() => {
         const handleScroll = () => {
             setIsScrolled(window.scrollY > 10);
@@ -22,211 +35,197 @@ function Header() {
 
     // Check if link is active
     const isActive = (path: string) => location.pathname === path;
+    const isServiceActive = () => location.pathname.includes('/services');
 
-    // Services dropdown menu content
-    const servicesDropdown = [
-        { name: "Service 1", path: "/services/service-1" },
-        { name: "Service 2", path: "/services/service-2" },
-        { name: "Service 3", path: "/services/service-3" },
+    // Services dropdown content
+    const servicesItems = [
+        { title: "Service 1", href: "/services/service-1", description: "Description for Service 1" },
+        { title: "Service 2", href: "/services/service-2", description: "Description for Service 2" },
+        { title: "Service 3", href: "/services/service-3", description: "Description for Service 3" },
     ];
 
-    // Toggle dropdown menu
-    const toggleDropdown = (name: string) => {
-        setDropdown(dropdown === name ? '' : name);
+    // Toggle mobile dropdown
+    const toggleMobileDropdown = (name: SetStateAction<string>) => {
+        setActiveDropdown(activeDropdown === name ? '' : name);
     };
 
     return (
-        <header className={`md:px-12 xl:px-24 fixed top-0 left-0 right-0 z-50 transition-all duration-300 ${isScrolled ? 'bg-white shadow-lg py-3' : 'bg-transparent py-6'
+        <header className={`fixed top-0 left-0 right-0 w-full z-50 transition-all duration-300 ${isScrolled ? 'bg-white shadow-md py-2' : 'bg-accent backdrop-blur-sm py-4'
             }`}>
-            <div className="container mx-auto px-6 flex justify-between items-center">
+            <div className="container mx-auto px-4 md:px-6 lg:px-12 flex items-center justify-between">
                 {/* Logo */}
-                <Link
-                    to="/"
-                    className="flex items-center space-x-2"
-                >
+                <Link to="/" className="flex items-center">
                     <img src={logo} alt="logo" className="h-10 md:h-12" />
                 </Link>
 
                 {/* Desktop Navigation */}
-                <nav className="hidden lg:block">
-                    <ul className="flex space-x-8">
-                        <li>
-                            <Link
-                                to="/"
-                                className={`font-medium transition-all duration-300 pb-2 border-b-2 ${isActive('/')
-                                    ? 'border-primary-600 text-primary-600'
-                                    : `border-transparent ${isScrolled ? 'text-gray-700 hover:text-primary-600' : 'text-primary-500 hover:text-primary-300'}`
-                                    }`}
-                            >
-                                Home
-                            </Link>
-                        </li>
-                        <li>
-                            <Link
-                                to="/about"
-                                className={`font-medium transition-all duration-300 pb-2 border-b-2 ${isActive('/about')
-                                    ? 'border-primary-600 text-primary-600'
-                                    : `border-transparent ${isScrolled ? 'text-gray-700 hover:text-primary-600' : 'text-primary-500 hover:text-primary-300'}`
-                                    }`}
-                            >
-                                About
-                            </Link>
-                        </li>
-                        <li className="relative">
-                            <button
-                                onClick={() => toggleDropdown('services')}
-                                className={`font-medium transition-all duration-300 pb-2 border-b-2 flex items-center ${location.pathname.includes('/services')
-                                    ? 'border-primary-600 text-primary-600'
-                                    : `border-transparent ${isScrolled ? 'text-gray-700 hover:text-primary-600' : 'text-primary-500 hover:text-primary-300'}`
-                                    }`}
-                            >
-                                Services <ChevronDown className="ml-1 w-4 h-4" />
-                            </button>
-
-                            {dropdown === 'services' && (
-                                <div className="absolute top-full left-0 mt-2 w-48 bg-white shadow-lg rounded-lg py-2 z-20">
-                                    {servicesDropdown.map((item) => (
-                                        <Link
-                                            key={item.path}
-                                            to={item.path}
-                                            className="block px-4 py-2 text-gray-700 hover:bg-primary-50 hover:text-primary-600"
-                                            onClick={() => setDropdown('')}
-                                        >
-                                            {item.name}
-                                        </Link>
-                                    ))}
-                                </div>
-                            )}
-                        </li>
-                        <li>
-                            <Link
-                                to="/portfolio"
-                                className={`font-medium transition-all duration-300 pb-2 border-b-2 ${isActive('/portfolio')
-                                    ? 'border-primary-600 text-primary-600'
-                                    : `border-transparent ${isScrolled ? 'text-gray-700 hover:text-primary-600' : 'text-primary-500 hover:text-primary-300'}`
-                                    }`}
-                            >
-                                Portfolio
-                            </Link>
-                        </li>
-                        <li>
-                            <Link
-                                to="/blog"
-                                className={`font-medium transition-all duration-300 pb-2 border-b-2 ${isActive('/blog')
-                                    ? 'border-primary-600 text-primary-600'
-                                        : `border-transparent ${isScrolled ? 'text-gray-700 hover:text-primary-600' : 'text-primary-500 hover:text-primary-300'}`
-                                    }`}
-                            >
-                                Blog
-                            </Link>
-                        </li>
-                    </ul>
-                </nav>
-
-                {/* Contact Button */}
-                <div className="hidden lg:block">
-                    <Link
-                        to="/contact"
-                        className='px-6 py-2 rounded-full transition-all duration-300 bg-primary-600 text-white hover:bg-primary-700'
-                    >
-                        Contact Us
-                    </Link>
-                </div>
-
-                {/* Mobile Menu Button */}
-                <button
-                    className="lg:hidden"
-                    onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
-                >
-                    {mobileMenuOpen ? (
-                        <X className={`w-6 h-6 ${isScrolled ? 'text-gray-800' : 'text-white'}`} />
-                    ) : (
-                        <Menu className={`w-6 h-6 ${isScrolled ? 'text-gray-800' : 'text-white'}`} />
-                    )}
-                </button>
-            </div>
-
-            {/* Mobile Menu */}
-            {mobileMenuOpen && (
-                <div className="lg:hidden bg-white shadow-lg">
-                    <nav className="container mx-auto px-6 py-4">
-                        <ul className="space-y-4">
-                            <li>
-                                <Link
-                                    to="/"
-                                    className={`block py-2 ${isActive('/') ? 'text-primary-600 font-medium' : 'text-gray-700'}`}
-                                    onClick={() => setMobileMenuOpen(false)}
-                                >
-                                    Home
+                <div className="hidden lg:flex items-center space-x-8">
+                    <NavigationMenu>
+                        <NavigationMenuList>
+                            <NavigationMenuItem>
+                                <Link to="/">
+                                    <NavigationMenuLink
+                                        className={`px-3 py-2 text-sm font-medium transition-colors ${isActive('/')
+                                            ? 'text-primary'
+                                            : 'text-gray-700 hover:text-primary'
+                                            }`}
+                                    >
+                                        Home
+                                    </NavigationMenuLink>
                                 </Link>
-                            </li>
-                            <li>
-                                <Link
-                                    to="/about"
-                                    className={`block py-2 ${isActive('/about') ? 'text-primary-600 font-medium' : 'text-gray-700'}`}
-                                    onClick={() => setMobileMenuOpen(false)}
-                                >
-                                    About
+                            </NavigationMenuItem>
+
+                            <NavigationMenuItem>
+                                <Link to="/about">
+                                    <NavigationMenuLink
+                                        className={`px-3 py-2 text-sm font-medium transition-colors ${isActive('/about')
+                                            ? 'text-primary'
+                                            : 'text-gray-700 hover:text-primary'
+                                            }`}
+                                    >
+                                        About
+                                    </NavigationMenuLink>
                                 </Link>
-                            </li>
-                            <li>
-                                <button
-                                    onClick={() => toggleDropdown('mobileServices')}
-                                    className={`flex items-center justify-between w-full py-2 ${location.pathname.includes('/services') ? 'text-primary-600 font-medium' : 'text-gray-700'
+                            </NavigationMenuItem>
+
+                            <NavigationMenuItem>
+                                <NavigationMenuTrigger
+                                    className={`px-3 py-2 text-sm font-medium transition-colors bg-transparent ${isServiceActive()
+                                        ? 'text-primary'
+                                        : 'text-gray-700 hover:text-primary'
                                         }`}
                                 >
                                     Services
-                                    <ChevronDown className={`w-4 h-4 transition-transform ${dropdown === 'mobileServices' ? 'rotate-180' : ''}`} />
-                                </button>
-
-                                {dropdown === 'mobileServices' && (
-                                    <div className="pl-4 mt-2 border-l border-gray-200 space-y-2">
-                                        {servicesDropdown.map((item) => (
-                                            <Link
-                                                key={item.path}
-                                                to={item.path}
-                                                className="block py-2 text-gray-600 hover:text-primary-600"
-                                                onClick={() => setMobileMenuOpen(false)}
-                                            >
-                                                {item.name}
-                                            </Link>
+                                </NavigationMenuTrigger>
+                                <NavigationMenuContent>
+                                    <ul className="grid w-[400px] gap-3 p-4 md:w-[500px] md:grid-cols-2 lg:w-[600px]">
+                                        {servicesItems.map((service) => (
+                                            <li key={service.href}>
+                                                <Link to={service.href}>
+                                                    <NavigationMenuLink
+                                                        className="block select-none space-y-1 rounded-md p-3 leading-none no-underline outline-none transition-colors hover:bg-accent hover:text-accent-foreground focus:bg-accent focus:text-accent-foreground"
+                                                    >
+                                                        <div className="text-sm font-medium leading-none">{service.title}</div>
+                                                        <p className="line-clamp-2 text-sm leading-snug text-muted-foreground">
+                                                            {service.description}
+                                                        </p>
+                                                    </NavigationMenuLink>
+                                                </Link>
+                                            </li>
                                         ))}
-                                    </div>
-                                )}
-                            </li>
-                            <li>
+                                    </ul>
+                                </NavigationMenuContent>
+                            </NavigationMenuItem>
+
+                            <NavigationMenuItem>
+                                <Link to="/portfolio">
+                                    <NavigationMenuLink
+                                        className={`px-3 py-2 text-sm font-medium transition-colors ${isActive('/portfolio')
+                                            ? 'text-primary'
+                                            : 'text-gray-700 hover:text-primary'
+                                            }`}
+                                    >
+                                        Portfolio
+                                    </NavigationMenuLink>
+                                </Link>
+                            </NavigationMenuItem>
+
+                            <NavigationMenuItem>
+                                <Link to="/blog">
+                                    <NavigationMenuLink
+                                        className={`px-3 py-2 text-sm font-medium transition-colors ${isActive('/blog')
+                                            ? 'text-primary'
+                                            : 'text-gray-700 hover:text-primary'
+                                            }`}
+                                    >
+                                        Blog
+                                    </NavigationMenuLink>
+                                </Link>
+                            </NavigationMenuItem>
+                        </NavigationMenuList>
+                    </NavigationMenu>
+
+                    <Link to="/contact">
+                        <Button size="sm" className="font-medium">
+                            Contact Us
+                        </Button>
+                    </Link>
+                </div>
+
+                {/* Mobile Menu */}
+                <div className="lg:hidden">
+                    <Sheet>
+                        <SheetTrigger asChild>
+                            <Button variant="ghost" size="icon" className="text-gray-700">
+                                <Menu className="h-6 w-6" />
+                                <span className="sr-only">Toggle menu</span>
+                            </Button>
+                        </SheetTrigger>
+                        <SheetContent side="right" className="w-full bg-accent sm:w-80 pt-12 px-4">
+                            <nav className="flex flex-col space-y-6">
+                                <Link
+                                    to="/"
+                                    className={`text-lg font-medium ${isActive('/') ? 'text-primary' : 'text-gray-700'}`}
+                                >
+                                    Home
+                                </Link>
+                                <Link
+                                    to="/about"
+                                    className={`text-lg font-medium ${isActive('/about') ? 'text-primary' : 'text-gray-700'}`}
+                                >
+                                    About
+                                </Link>
+
+                                <div>
+                                    <button
+                                        onClick={() => toggleMobileDropdown('services')}
+                                        className={`flex items-center justify-between w-full text-lg font-medium ${isServiceActive() ? 'text-primary' : 'text-gray-700'
+                                            }`}
+                                    >
+                                        Services
+                                        {activeDropdown === 'services' ? (
+                                            <ChevronUp className="h-5 w-5 ml-1" />
+                                        ) : (
+                                            <ChevronDown className="h-5 w-5 ml-1" />
+                                        )}
+                                    </button>
+
+                                    {activeDropdown === 'services' && (
+                                        <div className="mt-3 pl-4 border-l-2 border-gray-200 space-y-3">
+                                            {servicesItems.map((service) => (
+                                                <Link
+                                                    key={service.href}
+                                                    to={service.href}
+                                                    className="block text-gray-600 hover:text-primary"
+                                                >
+                                                    {service.title}
+                                                </Link>
+                                            ))}
+                                        </div>
+                                    )}
+                                </div>
+
                                 <Link
                                     to="/portfolio"
-                                    className={`block py-2 ${isActive('/portfolio') ? 'text-primary-600 font-medium' : 'text-gray-700'}`}
-                                    onClick={() => setMobileMenuOpen(false)}
+                                    className={`text-lg font-medium ${isActive('/portfolio') ? 'text-primary' : 'text-gray-700'}`}
                                 >
                                     Portfolio
                                 </Link>
-                            </li>
-                            <li>
                                 <Link
                                     to="/blog"
-                                    className={`block py-2 ${isActive('/blog') ? 'text-primary-600 font-medium' : 'text-gray-700'}`}
-                                    onClick={() => setMobileMenuOpen(false)}
+                                    className={`text-lg font-medium ${isActive('/blog') ? 'text-primary' : 'text-gray-700'}`}
                                 >
                                     Blog
                                 </Link>
-                            </li>
-                            <li>
-                                <Link
-                                    to="/contact"
-                                    className="block py-3 mt-4 text-center bg-primary-600 text-white rounded-lg hover:bg-primary-700 transition-colors"
-                                    onClick={() => setMobileMenuOpen(false)}
-                                >
-                                    Contact Us
+
+                                <Link to="/contact" className="mt-4">
+                                    <Button className="w-full">Contact Us</Button>
                                 </Link>
-                            </li>
-                        </ul>
-                    </nav>
+                            </nav>
+                        </SheetContent>
+                    </Sheet>
                 </div>
-            )}
+            </div>
         </header>
     );
 }
-
-export default Header;
