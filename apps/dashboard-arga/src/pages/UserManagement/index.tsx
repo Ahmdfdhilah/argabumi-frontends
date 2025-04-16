@@ -16,7 +16,6 @@ import Footer from '@/components/Footer';
 // Main UserManagement component to wrap all user routes
 const UserManagement = () => {
     // State management for sidebar and dark mode
-    const [currentRole, setCurrentRole] = useState('admin');
     const [isDarkMode, setIsDarkMode] = useState(false);
     const [isSidebarOpen, setIsSidebarOpen] = useState(() => {
         if (typeof window !== 'undefined') {
@@ -26,15 +25,12 @@ const UserManagement = () => {
     });
 
     return (
-        <div className="min-h-screen bg-white dark:bg-gray-900 font-montserrat">
+        <div className="min-h-screen bg-white dark:bg-gray-900 font-montserrat flex flex-col">
             <Header
                 isSidebarOpen={isSidebarOpen}
                 setIsSidebarOpen={setIsSidebarOpen}
                 isDarkMode={isDarkMode}
                 setIsDarkMode={setIsDarkMode}
-                currentRole={currentRole}
-                setCurrentRole={setCurrentRole}
-                currentSystem="User Management"
             />
 
             <div className="flex">
@@ -43,7 +39,7 @@ const UserManagement = () => {
                     setIsSidebarOpen={setIsSidebarOpen}
                 />
 
-                <div className={`flex flex-col mt-4 transition-all duration-300 ease-in-out ${isSidebarOpen ? 'lg:ml-64' : 'lg:ml-0'} w-full`}>
+                <div className={`min-h-screen flex flex-col mt-4 transition-all duration-300 ease-in-out ${isSidebarOpen ? 'lg:ml-64' : 'lg:ml-0'} w-full`}>
                     <main className='flex-1 px-2 md:px-4 pt-16 pb-12 transition-all duration-300 ease-in-out w-full'>
                         <Routes>
                             <Route path="/" element={<UserList />} />

@@ -9,7 +9,6 @@ import { Toaster } from "@workspace/ui/components/sonner";
 import AuthCallback from '@/pages/Auth/AuthCallback';
 import { PersistGate } from 'redux-persist/integration/react';
 import AuthProvider from './components/AuthProvider';
-// import UserDetailPage from './pages/UserDetail';
 import { UserManagementRoutes } from './pages/UserManagement';
 import { ApplicationManagementRoutes } from './pages/ApplicationManagement';
 

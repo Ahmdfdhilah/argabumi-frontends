@@ -17,7 +17,6 @@ interface System {
 }
 
 const Dashboard = () => {
-  const [currentRole, setCurrentRole] = useState('employee');
   const [isDarkMode, setIsDarkMode] = useState(false);
   const [systems, setSystems] = useState<System[]>([]);
   const [loading, setLoading] = useState(true);
@@ -99,15 +98,12 @@ const Dashboard = () => {
   };
 
   return (
-    <div className="min-h-screen bg-white dark:bg-gray-900 font-montserrat">
+    <div className="min-h-screen bg-white dark:bg-gray-900 font-montserrat flex flex-col">
       <Header
         isSidebarOpen={isSidebarOpen}
         setIsSidebarOpen={setIsSidebarOpen}
         isDarkMode={isDarkMode}
         setIsDarkMode={setIsDarkMode}
-        currentRole={currentRole}
-        setCurrentRole={setCurrentRole}
-        currentSystem='Performance Management System'
       />
 
       <div className="flex">
@@ -116,13 +112,13 @@ const Dashboard = () => {
           setIsSidebarOpen={setIsSidebarOpen}
         />
 
-        <div className={`flex flex-col mt-4 transition-all duration-300 ease-in-out ${isSidebarOpen ? 'lg:ml-64' : 'lg:ml-0'} w-full`}>
+        <div className={`min-h-screen flex flex-col mt-4 transition-all duration-300 ease-in-out ${isSidebarOpen ? 'lg:ml-64' : 'lg:ml-0'} w-full`}>
           <main className='flex-1 px-2  md:px-4  pt-16 pb-12 transition-all duration-300 ease-in-out  w-full'>
             <div className="mx-auto">
               <div className="mb-8">
                 <div className="flex items-center justify-between">
-                  <div>
-                    <h1 className="text-3xl font-bold dark:text-white">
+                  <div className='flex flex-col py-4'>
+                    <h1 className="text-3xl font-bold text-primary-500 dark:text-white">
                       Welcome back, {user?.first_name} {user?.last_name}
                     </h1>
                     <p className="text-gray-600 dark:text-gray-400 mt-2">

@@ -29,9 +29,6 @@ interface HeaderProps {
     setIsSidebarOpen: (open: boolean) => void;
     isDarkMode: boolean;
     setIsDarkMode: (mode: boolean) => void;
-    currentRole: string;
-    setCurrentRole: (role: string) => void;
-    currentSystem: string;
 }
 
 const Header: React.FC<HeaderProps> = ({
@@ -39,13 +36,11 @@ const Header: React.FC<HeaderProps> = ({
     setIsSidebarOpen,
     isDarkMode,
     setIsDarkMode,
-    currentRole,
-    setCurrentRole,
 }) => {
     const navigate = useNavigate();
     const dispatch = useAppDispatch();
     const { toast } = useToast();
-    const { loading } = useAppSelector(state => state.auth);
+    const { loading, user } = useAppSelector(state => state.auth);
 
     const [notifications, setNotifications] = useState<{ id: number; title: string; read: boolean }[]>([
         { id: 1, title: "New system update available", read: false },
@@ -53,14 +48,7 @@ const Header: React.FC<HeaderProps> = ({
         { id: 3, title: "Access request approved", read: true }
     ]);
 
-    const roles = [
-        { id: 'admin', label: 'Admin', color: 'bg-red-500' },
-        { id: 'employee', label: 'Employee', color: 'bg-blue-500' },
-        { id: 'manager', label: 'Manager', color: 'bg-green-500' },
-        { id: 'sm_dept', label: 'Senior Manager', color: 'bg-purple-500' }
-    ];
 
-    const currentRoleData = roles.find(role => role.id === currentRole) || roles[0];
     const unreadNotifications = notifications.filter(n => !n.read).length;
 
     useEffect(() => {
@@ -207,40 +195,18 @@ const Header: React.FC<HeaderProps> = ({
                         </DropdownMenuTrigger>
                         <DropdownMenuContent className="w-56" align="end" forceMount>
                             <div className="flex flex-col space-y-1 p-2">
-                                <p className="text-sm font-medium">Daffa Abdurahman Jatmiko</p>
-                                <p className="text-xs text-gray-500 dark:text-gray-400">daffa.abdurahman@company.com</p>
+                                <p className="text-sm font-medium">{user?.first_name} {user?.last_name}</p>
+                                <p className="text-xs text-gray-500 dark:text-gray-400">{user?.email}</p>
                                 <div className="flex items-center gap-2 pt-1">
-                                    <div className={`w-3 h-3 rounded-full ${currentRoleData.color}`} />
-                                    <span className="text-xs font-medium">{currentRoleData.label}</span>
+                                    <div className={`w-3 h-3 rounded-full  ${user?.is_superuser ? 'bg-red-500' : 'bg-blue-500'}`} />
+                                    <span className="text-xs font-medium">{user?.is_superuser ? 'Super Admin' : 'Employee'}</span>
                                 </div>
                             </div>
                             <DropdownMenuSeparator />
 
-                            {/* Role selection section */}
-                            <DropdownMenuLabel>Switch Role</DropdownMenuLabel>
-                            {roles.map((role) => (
-                                <DropdownMenuItem
-                                    key={role.id}
-                                    onClick={() => setCurrentRole(role.id)}
-                                    className="cursor-pointer"
-                                >
-                                    <div className="flex items-center space-x-2 w-full">
-                                        <div className={`w-3 h-3 rounded-full ${role.color}`} />
-                                        <span>{role.label}</span>
-                                        {currentRole === role.id && (
-                                            <div className="ml-auto">
-                                                <svg className="h-4 w-4 text-green-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
-                                                </svg>
-                                            </div>
-                                        )}
-                                    </div>
-                                </DropdownMenuItem>
-                            ))}
-
                             <DropdownMenuSeparator />
-                            <DropdownMenuItem className="cursor-pointer">Profile</DropdownMenuItem>
-                            <DropdownMenuItem className="cursor-pointer">Support</DropdownMenuItem>
+                            <DropdownMenuItem className="cursor-pointer" onClick={() => navigate('#')}>Profile</DropdownMenuItem>
+                            <DropdownMenuItem className="cursor-pointer" onClick={() => navigate('#')}>Settings</DropdownMenuItem>
                             <DropdownMenuSeparator />
                             <DropdownMenuItem className="text-red-600 hover:text-red-700 dark:text-red-400 cursor-pointer" onClick={handleLogout}>
                                 {loading ? 'Logging out...' : 'Logout'}

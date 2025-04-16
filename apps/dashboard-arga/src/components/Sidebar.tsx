@@ -2,7 +2,9 @@ import { useLocation, useNavigate } from 'react-router-dom';
 import { Button } from '@workspace/ui/components/button';
 import { useState, useEffect } from 'react';
 import { ChevronDown, ChevronRight, Home, LogOut, SquareKanban, User } from 'lucide-react';
-import { useAppSelector } from '@/redux/hooks';
+import { useAppDispatch, useAppSelector } from '@/redux/hooks';
+import { useToast } from '@workspace/ui/components/sonner';
+import { logoutUser } from '@/redux/features/authSlice';
 
 interface SidebarProps {
     isSidebarOpen: boolean;
@@ -40,10 +42,12 @@ const menus: MenuItem[] = [
 
 const Sidebar: React.FC<SidebarProps> = ({ isSidebarOpen, setIsSidebarOpen }) => {
     const navigate = useNavigate();
+    const dispatch = useAppDispatch();
+    const { toast } = useToast();
+    const { user } = useAppSelector(state => state.auth);
     const location = useLocation();
     const [expandedMenus, setExpandedMenus] = useState<{ [key: string]: boolean }>({});
     const [viewportWidth, setViewportWidth] = useState(window.innerWidth);
-    const { user } = useAppSelector(state => state.auth);
 
     // Track viewport width for responsive adjustments
     useEffect(() => {
@@ -63,8 +67,23 @@ const Sidebar: React.FC<SidebarProps> = ({ isSidebarOpen, setIsSidebarOpen }) =>
         }
     };
 
-    const handleLogout = () => {
-        navigate('/login');
+    const handleLogout = async () => {
+        try {
+            await dispatch(logoutUser()).unwrap();
+
+            toast({
+                title: "Success",
+                description: "Successfully logged out",
+            });
+
+            navigate('/login');
+        } catch (error) {
+            toast({
+                title: "Error",
+                description: typeof error === 'string' ? `Logout failed: ${error}` : 'Logout failed',
+                variant: "destructive",
+            });
+        }
     };
 
     const filterMenusByRole = (menus: MenuItem[], role: string): MenuItem[] => {
@@ -75,10 +94,10 @@ const Sidebar: React.FC<SidebarProps> = ({ isSidebarOpen, setIsSidebarOpen }) =>
                 subMenus: menu.subMenus ? filterMenusByRole(menu.subMenus, role) : undefined,
             }));
     };
-    
+
     const currentRole = user?.is_superuser ? 'admin' : 'users';
     const accessibleMenus = filterMenusByRole(menus, currentRole);
-    
+
     const toggleSubmenu = (menuPath: string) => {
         setExpandedMenus(prev => ({
             ...prev,

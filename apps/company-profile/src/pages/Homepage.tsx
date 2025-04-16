@@ -174,8 +174,8 @@ function HomePage() {
                             <AutoSwipeGallery
                                 items={newsItems}
                                 title="Berita Terkini"
-                                autoSwipeInterval={6000}
-                                itemsToShow={3}
+                                autoSwipeInterval={3000}
+                                itemsToShow={4}
                                 variant="news"
                             />
                         </Section>
@@ -187,8 +187,8 @@ function HomePage() {
                             <VerticalGridStream
                                 images={partnerLogos}
                                 title="Our Partners"
-                                columns={3}
                                 speed={15}
+                                imageWidth={100}
                             />
                         </Section>
                     </AnimatedSection>
