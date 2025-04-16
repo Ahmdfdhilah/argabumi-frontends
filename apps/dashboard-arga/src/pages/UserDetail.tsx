@@ -11,6 +11,7 @@ import {
 } from "@workspace/ui/components/avatar";
 import { Badge } from "@workspace/ui/components/badge";
 import { Button } from "@workspace/ui/components/button";
+import Sidebar from '@/components/Sidebar';
 import Header from '@/components/Header';
 import {
     User,
@@ -24,6 +25,12 @@ import {
 import Footer from '@/components/Footer';
 
 const UserDetailPage = () => {
+    const [isSidebarOpen, setIsSidebarOpen] = useState(() => {
+        if (typeof window !== 'undefined') {
+            return window.innerWidth >= 768;
+        }
+        return true;
+    });
     const [isDarkMode, setIsDarkMode] = useState(false);
     const [currentRole, setCurrentRole] = useState('admin');
 
@@ -72,6 +79,8 @@ const UserDetailPage = () => {
     return (
         <div className="min-h-screen bg-white dark:bg-gray-900 font-montserrat">
             <Header
+                isSidebarOpen={isSidebarOpen}
+                setIsSidebarOpen={setIsSidebarOpen}
                 isDarkMode={isDarkMode}
                 setIsDarkMode={setIsDarkMode}
                 currentRole={currentRole}
@@ -80,11 +89,16 @@ const UserDetailPage = () => {
             />
 
             <div className="flex">
-                <div className={`flex flex-col mt-4 transition-all duration-300 ease-in-out w-full`}>
-                    <main className='flex-1 pt-12 pb-12 transition-all duration-300 ease-in-out  w-full'>
+                <Sidebar
+                    isSidebarOpen={isSidebarOpen}
+                    setIsSidebarOpen={setIsSidebarOpen}
+                />
+
+                <div className={`flex flex-col mt-4 transition-all duration-300 ease-in-out ${isSidebarOpen ? 'lg:ml-64' : 'lg:ml-0'} w-full`}>
+                    <main className='flex-1 px-2  md:px-4  pt-16 pb-12 transition-all duration-300 ease-in-out  w-full'>
                         {/* User Profile Card */}
-                        <Card className="lg:col-span-1 mb-8">
-                            <CardHeader className="px-12 bg-gradient-to-r from-[#f0f9f0] to-[#e6f3e6] dark:from-[#0a2e14] dark:to-[#0a3419] flex flex-col">
+                        <Card className="border-[#46B749] dark:border-[#1B6131] shadow-md lg:col-span-1 mb-8">
+                            <CardHeader className="bg-gradient-to-r from-[#f0f9f0] to-[#e6f3e6] dark:from-[#0a2e14] dark:to-[#0a3419] flex flex-col">
                                 <Avatar className="h-24 w-24 mb-4 border-4 border-white dark:border-gray-800">
                                     <AvatarFallback className="bg-[#1B6131] text-white dark:bg-[#46B749] text-2xl">
                                         {userData.name.split(' ').map(name => name[0]).join('')}
@@ -115,7 +129,7 @@ const UserDetailPage = () => {
                                     Edit Profile
                                 </Button>
                             </CardHeader>
-                            <CardContent className="pt-6 px-12">
+                            <CardContent className="pt-6">
                                 <div className="space-y-4">
                                     <div className="flex items-center">
                                         <Mail className="h-5 w-5 text-[#1B6131] dark:text-[#46B749] mr-3 flex-shrink-0" />

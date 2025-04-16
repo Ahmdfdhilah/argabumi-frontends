@@ -5,9 +5,9 @@ const Footer = ({ currentSystem = "Arga Bumi Indonesia Dashboard" }) => {
   const currentYear = new Date().getFullYear();
 
   return (
-    <footer className="w-full bg-white dark:bg-gray-800 border-t border-gray-200 dark:border-gray-700 font-montserrat">
+    <footer className="w-full bg-white dark:bg-gray-800 border-t border-gray-200 dark:border-gray-700 font-montserrat lg:px-12">
       <div className="container mx-auto px-0 py-6">
-        <div className="flex flex-col sm:flex-row justify-between items-center px-0">
+        <div className="flex flex-col md:flex-row justify-between items-center px-0">
           {/* Left Section - System Info */}
           <div className="flex items-center mb-4 md:mb-0">
             <div className="mr-4 p-2 bg-[#f0f9f0] dark:bg-[#0a2e14] rounded-full">

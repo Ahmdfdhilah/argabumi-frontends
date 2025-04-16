@@ -2,7 +2,7 @@ import {
     Sun,
     Moon,
     Bell,
-    Home,
+    Menu,
 } from 'lucide-react';
 import LogoLightMode from '../assets/logo_abi_lightmode.png';
 import LogoDarkMode from '../assets/logo_abi_darkmode.png';
@@ -25,6 +25,8 @@ import { logoutUser } from '../redux/features/authSlice';
 import { useToast } from '@workspace/ui/components/sonner';
 
 interface HeaderProps {
+    isSidebarOpen: boolean;
+    setIsSidebarOpen: (open: boolean) => void;
     isDarkMode: boolean;
     setIsDarkMode: (mode: boolean) => void;
     currentRole: string;
@@ -33,6 +35,8 @@ interface HeaderProps {
 }
 
 const Header: React.FC<HeaderProps> = ({
+    isSidebarOpen,
+    setIsSidebarOpen,
     isDarkMode,
     setIsDarkMode,
     currentRole,
@@ -97,9 +101,17 @@ const Header: React.FC<HeaderProps> = ({
 
     return (
         <header className="font-montserrat h-16 bg-white dark:bg-gray-800 shadow-sm fixed top-0 left-0 right-0 z-30 border-b border-gray-200 dark:border-gray-700">
-            <div className="px-4 md:px-8 lg:px-16 h-full flex items-center justify-between">
+            <div className="px-4 h-full flex items-center justify-between">
                 {/* Left section */}
                 <div className="flex items-center space-x-2">
+                    <Button
+                        variant="ghost"
+                        size="icon"
+                        onClick={() => setIsSidebarOpen(!isSidebarOpen)}
+                    >
+                        <Menu className="h-5 w-5" />
+                        <span className="sr-only">Toggle sidebar</span>
+                    </Button>
                     {/* Logo */}
                     <div className="flex items-center ml-1">
                         <img
@@ -113,14 +125,6 @@ const Header: React.FC<HeaderProps> = ({
                 {/* Right section */}
                 <div className="flex items-center space-x-1 md:space-x-4">
                     {/* Theme toggle */}
-                    <Button
-                        variant="ghost"
-                        size="icon"
-                        onClick={() => navigate('/')}
-                    >
-                        <Home className="h-5 w-5" />
-                        <span className="sr-only">Home</span>
-                    </Button>
                     {/* Notifications */}
                     <DropdownMenu>
                         <DropdownMenuTrigger asChild>

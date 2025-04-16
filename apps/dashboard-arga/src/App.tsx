@@ -9,6 +9,9 @@ import { Toaster } from "@workspace/ui/components/sonner";
 import AuthCallback from '@/pages/Auth/AuthCallback';
 import { PersistGate } from 'redux-persist/integration/react';
 import AuthProvider from './components/AuthProvider';
+// import UserDetailPage from './pages/UserDetail';
+import { UserManagementRoutes } from './pages/UserManagement';
+import { ApplicationManagementRoutes } from './pages/ApplicationManagement';
 
 function App() {
   return (
@@ -25,6 +28,18 @@ function App() {
                   <Dashboard />
                 </AuthGuard>
               } />
+              <Route path="/user-management/*" element={
+                <AuthGuard>
+                  <UserManagementRoutes />
+                </AuthGuard>
+              } />
+
+              <Route path="/application-management/*" element={
+                <AuthGuard>
+                  <ApplicationManagementRoutes />
+                </AuthGuard>
+              } />
+
               {/* Add more protected routes as needed */}
               <Route path="/" element={<Navigate to="/dashboard" replace />} />
             </Routes>

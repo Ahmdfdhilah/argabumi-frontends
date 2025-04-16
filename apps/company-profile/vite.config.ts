@@ -5,7 +5,7 @@ import path from 'path'
 export default defineConfig({
   server: {
     host: true,
-    port: 5175,
+    port: 5176,
   },
   plugins: [react()],
   resolve: {
