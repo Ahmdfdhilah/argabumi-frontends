@@ -14,10 +14,10 @@ import { loginWithGoogle } from '@/redux/features/authSlice';
 const Login = () => {
     const navigate = useNavigate();
     const dispatch = useAppDispatch();
-    const { isAuthenticated, loading, error } = useAppSelector(state => state.auth);
+    const { isAuthenticated, loading } = useAppSelector(state => state.auth);
     const [isDarkMode, setIsDarkMode] = useState(false);
 
-    
+
     // Redirect if already authenticated
     useEffect(() => {
         if (isAuthenticated) {
@@ -29,7 +29,7 @@ const Login = () => {
     useEffect(() => {
         const isDark = document.documentElement.classList.contains('dark');
         setIsDarkMode(isDark);
-        
+
         // Create a mutation observer to watch for class changes on html element
         const observer = new MutationObserver((mutations) => {
             mutations.forEach((mutation) => {
@@ -39,9 +39,9 @@ const Login = () => {
                 }
             });
         });
-        
+
         observer.observe(document.documentElement, { attributes: true });
-        
+
         // Cleanup observer on component unmount
         return () => observer.disconnect();
     }, []);
@@ -52,11 +52,11 @@ const Login = () => {
 
     return (
         <>
-            <Navbar/>
-            <div className="font-montserrat min-h-screen bg-white dark:bg-gray-900">
+            <Navbar />
+            <div className="font-montserrat min-h-screen bg-white dark:bg-gray-900 pb-16">
                 <div className="flex flex-wrap items-center min-h-screen">
                     {/* Left Side - Illustration */}
-                    <div className="hidden w-full xl:w-1/2 md:block">
+                    <div className="hidden w-full xl:w-1/2 lg:block">
                         <div className="py-17.5 px-26 text-center flex flex-col justify-center items-center h-full">
                             <img
                                 src={isDarkMode ? LogoDarkMode : LogoLightMode}
@@ -82,11 +82,17 @@ const Login = () => {
                                     </p>
 
                                     {/* Error Message */}
-                                    {error && (
+                                    {/* {error && (
                                         <div className="py-2 px-3 bg-red-50 text-red-600 rounded-md border border-red-200 text-sm">
-                                            {error}
+                                            {typeof error === 'string'
+                                                ? error
+                                                : error.detail
+                                                    ? (Array.isArray(error.detail)
+                                                        ? error.detail.map((err, i) => <div key={i}>{err.msg || JSON.stringify(err)}</div>)
+                                                        : error.detail)
+                                                    : 'Authentication error occurred'}
                                         </div>
-                                    )}
+                                    )} */}
 
                                     {/* Google Login Button */}
                                     <Button

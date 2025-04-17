@@ -1,4 +1,4 @@
-// src/components/AuthGuard.tsx
+// performance-management/src/components/AuthGuard.tsx
 import { ReactNode, useEffect } from 'react';
 import { Navigate, useLocation, useNavigate } from 'react-router-dom';
 import { clearAuth, fetchCurrentUser } from '@/redux/features/authSlice';
@@ -14,8 +14,7 @@ const AuthGuard = ({ children }: AuthGuardProps) => {
   const dispatch = useAppDispatch();
   const location = useLocation();
   const navigate = useNavigate();
-  console.log(isAuthenticated);
-  console.log(user);
+ 
   useEffect(() => {
     const checkAuth = async () => {
       // If we have a token but no user data, try to fetch the user

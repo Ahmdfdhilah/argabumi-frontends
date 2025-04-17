@@ -1,7 +1,4 @@
 import { BrowserRouter, Route, Routes } from "react-router-dom";
-import { AuthProvider } from "./context/AuthContext";
-import Dashboard from "./pages/Dashboard";
-import Login from "./pages/Auth/Login";
 import BSCDashboard from "./pages/BSCDashboard";
 import BSCEntryPage from "./pages/BSCEntry";
 import IPMPage from "./pages/IPM";
@@ -22,71 +19,80 @@ import MPMDashboard from "./pages/MPMDashboard";
 import EmployeeManagementPage from "./pages/EmployeeManagement";
 import TeamManagementPage from "./pages/TeamManagement";
 import DepartmentManagementPage from "./pages/DepartmentManagement";
+import { Toaster } from "@workspace/ui/components/sonner";
+import { PersistGate } from "redux-persist/integration/react";
+import AuthGuard from "./components/AuthGuard";
+import AuthProvider from "./components/AuthProvider";
+import { Provider } from 'react-redux';
+import { persistor, store } from './redux/store';
+import Login from "./pages/Auth/Login";
 
 function App() {
   return (
-    <AuthProvider>
-      <BrowserRouter>
-        <Routes>
-          {/* Auth Routes */}
-          <Route path="/login" element={<Login />} />
+    <Provider store={store}>
+      <PersistGate loading={null} persistor={persistor}>
+        <BrowserRouter>
+          <AuthProvider>
+            <Toaster />
+            <Routes>
+              {/* Dashboard Routes */}
+              <Route path="/" element={<AuthGuard><PerformanceManagementHome /></AuthGuard>} />
+              <Route path="/login" element={<Login />} />
+              <Route path="/user-profile" element={<AuthGuard><UserDetailPage /></AuthGuard>} />
 
-          {/* Dashboard Routes */}
-          <Route path="/" element={<PerformanceManagementHome />} />
-          <Route path="/dashboard" element={<Dashboard />} />
-          <Route path="/user-profile" element={<UserDetailPage />} />
+              {/* Performance Management Routes */}
+              <Route path="/performance-management">
+                <Route path="dashboard" element={<AuthGuard><PerformanceManagementDashboard /></AuthGuard>} />
 
-          {/* Performance Management Routes */}
-          <Route path="/performance-management">
-            <Route path="dashboard" element={<PerformanceManagementDashboard />} />
-
-            {/* Company Management Routes */}
-            <Route path="company-management">
-              <Route path="departments" element={<DepartmentManagementPage />} />
-              <Route path="teams" element={<TeamManagementPage />} />
-              <Route path="employees" element={<EmployeeManagementPage />} />
-            </Route>
-
-            {/* BSC Routes */}
-            <Route path="bsc">
-              <Route path="dashboard" element={<BSCDashboard />} />
-              <Route path="input" element={<BSCEntryPage />} />
-            </Route>
-
-            {/* IPM Routes */}
-            <Route path="ipm">
-              <Route index element={<IPMPage />} />
-              <Route path=":employeeId/details" element={<EmployeeIPMDetailsPage />} />
-            </Route>
-
-            {/* MPM Routes */}
-            <Route path="mpm">
-              <Route path="target">
-                <Route index element={<MPMTargetList />} />
-                <Route path=":targetId" element={<MPMTargets />} />
-                <Route path=":targetId/entri/:mpmId">
-                  <Route path="teams" element={<MPMTargetsTeamKPI />} />
-                  <Route path="teams/:teamId" element={<MPMTargetsActionPlans />} />
+                {/* Company Management Routes */}
+                <Route path="company-management">
+                  <Route path="departments" element={<AuthGuard><DepartmentManagementPage /></AuthGuard>} />
+                  <Route path="teams" element={<AuthGuard><TeamManagementPage /></AuthGuard>} />
+                  <Route path="employees" element={<AuthGuard><EmployeeManagementPage /></AuthGuard>} />
                 </Route>
-              </Route>
 
-              <Route path="actual">
-                <Route index element={<MPMActualList />} />
-                <Route path=":mpmActualId" element={<MPMActuals />} />
-                <Route path=":mpmActualId/entri/:mpmId">
-                  <Route path="teams" element={<MPMActualsTeamKPI />} />
-                  <Route path="teams/:teamId" element={<MPMActualsActionPlans />} />
+                {/* BSC Routes */}
+                <Route path="bsc">
+                  <Route path="dashboard" element={<AuthGuard><BSCDashboard /></AuthGuard>} />
+                  <Route path="input" element={<AuthGuard><BSCEntryPage /></AuthGuard>} />
                 </Route>
+
+                {/* IPM Routes */}
+                <Route path="ipm">
+                  <Route index element={<AuthGuard><IPMPage /></AuthGuard>} />
+                  <Route path=":employeeId/details" element={<AuthGuard><EmployeeIPMDetailsPage /></AuthGuard>} />
+                </Route>
+
+                {/* MPM Routes */}
+                <Route path="mpm">
+                  <Route path="target">
+                    <Route index element={<AuthGuard><MPMTargetList /></AuthGuard>} />
+                    <Route path=":targetId" element={<AuthGuard><MPMTargets /></AuthGuard>} />
+                    <Route path=":targetId/entri/:mpmId">
+                      <Route path="teams" element={<AuthGuard><MPMTargetsTeamKPI /></AuthGuard>} />
+                      <Route path="teams/:teamId" element={<AuthGuard><MPMTargetsActionPlans /></AuthGuard>} />
+                    </Route>
+                  </Route>
+
+                  <Route path="actual">
+                    <Route index element={<AuthGuard><MPMActualList /></AuthGuard>} />
+                    <Route path=":mpmActualId" element={<AuthGuard><MPMActuals /></AuthGuard>} />
+                    <Route path=":mpmActualId/entri/:mpmId">
+                      <Route path="teams" element={<AuthGuard><MPMActualsTeamKPI /></AuthGuard>} />
+                      <Route path="teams/:teamId" element={<AuthGuard><MPMActualsActionPlans /></AuthGuard>} />
+                    </Route>
+                  </Route>
+
+                  <Route path="dashboard" element={<AuthGuard><MPMDashboard /></AuthGuard>} />
+                </Route>
+
+                <Route path="period-master" element={<AuthGuard><PeriodMaster /></AuthGuard>} />
               </Route>
-
-              <Route path="dashboard" element={<MPMDashboard />} />
-            </Route>
-
-            <Route path="period-master" element={<PeriodMaster />} />
-          </Route>
-        </Routes>
-      </BrowserRouter>
-    </AuthProvider>
+            </Routes>
+          </AuthProvider>
+        </BrowserRouter>
+      </PersistGate>
+    </Provider>
   );
 }
 

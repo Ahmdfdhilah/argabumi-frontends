@@ -15,44 +15,50 @@ const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => 
     // Set up automatic token refresh
     useEffect(() => {
         if (!accessToken || !isAuthenticated) return;
-
+      
         try {
-            // Decode token to get expiration
-            const decoded = jwtDecode<TokenData>(accessToken);
-            const expirationTime = decoded.exp * 1000; // Convert to milliseconds
-
-            // Calculate time until token expires
-            const currentTime = Date.now();
-            const timeUntilExpiry = expirationTime - currentTime;
-
-            // If token is already expired, try to refresh immediately
-            if (timeUntilExpiry <= 0) {
-                if (refreshTokenValue) {
-                    dispatch(refreshToken());
-                } else {
-                    dispatch(clearAuth());
-                }
-                return;
+          // Decode token to get expiration
+          const decoded = jwtDecode<TokenData>(accessToken);
+          const expirationTime = decoded.exp * 1000; // Convert to milliseconds
+      
+          // Calculate time until token expires
+          const currentTime = Date.now();
+          const timeUntilExpiry = expirationTime - currentTime;
+      
+          // If token is already expired, try to refresh immediately
+          if (timeUntilExpiry <= 0) {
+            if (refreshTokenValue) {
+              dispatch(refreshToken()).catch(() => {
+                // If refresh fails, clear authentication
+                dispatch(clearAuth());
+              });
+            } else {
+              dispatch(clearAuth());
             }
-
-            // Set timer to refresh 1 minute before expiration
-            const refreshTime = Math.max(timeUntilExpiry - 60000, 0);
-
-            const refreshTimer = setTimeout(() => {
-                if (refreshTokenValue) {
-                    dispatch(refreshToken());
-                }
-            }, refreshTime);
-
-            return () => {
-                clearTimeout(refreshTimer);
-            };
+            return;
+          }
+      
+          // Set timer to refresh 1 minute before expiration
+          const refreshTime = Math.max(timeUntilExpiry - 60000, 0);
+      
+          const refreshTimer = setTimeout(() => {
+            if (refreshTokenValue) {
+              dispatch(refreshToken()).catch(() => {
+                // If refresh fails, clear authentication
+                dispatch(clearAuth());
+              });
+            }
+          }, refreshTime);
+      
+          return () => {
+            clearTimeout(refreshTimer);
+          };
         } catch (error) {
-            console.error("Error setting up token refresh:", error);
-            // If we can't decode the token, consider it invalid
-            dispatch(clearAuth());
+          console.error("Error setting up token refresh:", error);
+          // If we can't decode the token, consider it invalid
+          dispatch(clearAuth());
         }
-    }, [accessToken, isAuthenticated, refreshTokenValue, dispatch]);
+      }, [accessToken, isAuthenticated, refreshTokenValue, dispatch]);
 
     return <>{children}</>;
 };

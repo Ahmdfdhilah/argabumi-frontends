@@ -24,7 +24,7 @@ const Dashboard = () => {
   const navigate = useNavigate();
   
   // Get user data from Redux store
-  const user = useAppSelector((state) => state.auth.user);
+  const { user, accessToken } = useAppSelector((state) => state.auth);
   
   const [isSidebarOpen, setIsSidebarOpen] = useState(() => {
     if (typeof window !== 'undefined') {
@@ -94,7 +94,10 @@ const Dashboard = () => {
   }, [user, navigate]);
 
   const handleClick = (base_url: string) => {
-    window.open(base_url, '_blank');
+    // Add the access token as a query parameter when opening the application
+    const tokenizedUrl = new URL(base_url);
+    tokenizedUrl.searchParams.append('sso_token', accessToken || '');
+    window.open(tokenizedUrl.toString(), '_blank');
   };
 
   return (

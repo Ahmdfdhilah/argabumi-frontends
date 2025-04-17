@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import {
     Card,
     CardContent,
@@ -22,6 +22,7 @@ import Header from '@/components/Header';
 import { Info, AlertTriangle, CheckCircle2, FileText, Users } from 'lucide-react';
 import Breadcrumb from '@/components/Breadcrumb';
 import Footer from '@/components/Footer';
+import { useAppSelector } from '@/redux/hooks';
 
 const PerformanceManagementHome = () => {
     const [isSidebarOpen, setIsSidebarOpen] = useState(() => {
@@ -32,7 +33,14 @@ const PerformanceManagementHome = () => {
     });
     const [isDarkMode, setIsDarkMode] = useState(false);
     const [currentRole, setCurrentRole] = useState('admin');
-
+    const { user} = useAppSelector((state) => state.auth);
+    
+    useEffect(() => {
+        if (user) {
+            console.log(user);
+        }
+    }, [user]);
+    
     return (
         <div className="min-h-screen bg-white dark:bg-gray-900 font-montserrat">
             <Header

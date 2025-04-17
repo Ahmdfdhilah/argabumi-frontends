@@ -1,21 +1,34 @@
 import { Button } from '@workspace/ui/components/button';
 import LogoLightMode from '../../assets/logo_abi_lightmode.png';
 import LogoDarkMode from '../../assets/logo_abi_darkmode.png';
-import { useNavigate } from 'react-router-dom';
+import { useLocation, useNavigate } from 'react-router-dom';
 import LoginSvg from '../../assets/loginSvg.svg';
 import GoogleIcon from '../../assets/googleIcon.svg';
 import Navbar from '@/components/Navbar';
 import { useEffect, useState } from 'react';
+import { useAppSelector } from '@/redux/hooks';
+import {  SSO_DASHBOARD_URL } from '@/config';
+
 
 const Login = () => {
     const navigate = useNavigate();
     const [isDarkMode, setIsDarkMode] = useState(false);
+    const { isAuthenticated } = useAppSelector((state: any) => state.auth);
+    const location = useLocation();
+
+    // If user is already authenticated, redirect to intended destination
+    useEffect(() => {
+        if (isAuthenticated) {
+            const from = location.state?.from?.pathname || '/';
+            navigate(from, { replace: true });
+        }
+    }, [isAuthenticated, navigate, location]);
 
     // Listen for dark mode changes from Navbar
     useEffect(() => {
         const isDark = document.documentElement.classList.contains('dark');
         setIsDarkMode(isDark);
-        
+
         // Create a mutation observer to watch for class changes on html element
         const observer = new MutationObserver((mutations) => {
             mutations.forEach((mutation) => {
@@ -25,21 +38,22 @@ const Login = () => {
                 }
             });
         });
-        
+
         observer.observe(document.documentElement, { attributes: true });
-        
+
         // Cleanup observer on component unmount
         return () => observer.disconnect();
     }, []);
 
-    const handleSubmit = async () => {
-        // For prototype, just redirect
-        navigate('/dashboard');
+    const handleLogin = () => {
+        // Redirect to SSO dashboard with return URL as current location
+        const returnUrl = encodeURIComponent(window.location.origin);
+        window.location.href = `${SSO_DASHBOARD_URL}?returnUrl=${returnUrl}`;
     };
 
     return (
         <>
-            <Navbar/>
+            <Navbar />
             <div className="font-montserrat min-h-screen bg-white dark:bg-gray-900">
                 <div className="flex flex-wrap items-center min-h-screen">
                     {/* Left Side - Illustration */}
@@ -70,7 +84,7 @@ const Login = () => {
 
                                     {/* Google Login Button */}
                                     <Button
-                                        onClick={handleSubmit}
+                                        onClick={handleLogin}
                                         className="w-full h-12 bg-white hover:bg-gray-50 text-gray-900 border border-gray-300
                                         dark:bg-gray-700 dark:hover:bg-gray-600 dark:text-white dark:border-gray-600
                                         transition-colors duration-300"
