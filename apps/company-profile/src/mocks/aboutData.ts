@@ -85,19 +85,26 @@ export const partnerLogos = [
     "https://logo.clearbit.com/garuda-indonesia.com",    // Garuda Indonesia
     "https://logo.clearbit.com/indomie.com",             // Indomie
 ];
-// Define possible media types
-type TestimonialMediaType = 'avatar' | 'image' | 'youtube';
 
-export interface Testimonial {
+// Define possible media types (removed 'avatar' from here)
+type TestimonialMediaType = 'image' | 'youtube' | null;
+
+// Define possible service types for your company
+type ServiceType = 'Coffee Processing' | 'Farmer Support' | 'Export Services' | 'Training' | 'Consultation';
+
+// Enhanced testimonial interface with required avatar and optional media
+interface Testimonial {
     id: number;
     name: string;
     role: string;
     content: string;
-    mediaType: TestimonialMediaType;
-    mediaSrc: string; // Avatar URL, image URL, or YouTube video ID
-    rating?: number; // Optional star rating (1-5)
+    avatarSrc: string; // Avatar is now required for all testimonials
+    serviceType: ServiceType; // Added service type instead of rating
+    mediaType: TestimonialMediaType; // Optional media (image or youtube) or null if none
+    mediaSrc?: string; // Optional: Image URL or YouTube video ID
     company?: string; // Optional company name
-  }
+}
+
 
 export const testimonialsData: Testimonial[] = [
     {
@@ -106,9 +113,21 @@ export const testimonialsData: Testimonial[] = [
         role: "Product Manager",
         company: "Acme Inc",
         content: "This product has completely transformed how we work. The team is incredibly responsive and the quality is outstanding.",
-        mediaType: "avatar",
+        mediaType: "image",
         mediaSrc: "https://picsum.photos/seed/picsum/500/300",
-        rating: 5
+        avatarSrc: "https://picsum.photos/seed/picsum/500/300",
+        serviceType: "Coffee Processing"
+    },
+    {
+        id: 1,
+        name: "Jane Cooper",
+        role: "Product Manager",
+        company: "Acme Inc",
+        content: "This product has completely transformed how we work. The team is incredibly responsive and the quality is outstanding.",
+        mediaType: "image",
+        mediaSrc: "https://picsum.photos/seed/picsum/500/300",
+        avatarSrc: "https://picsum.photos/seed/picsum/500/300",
+        serviceType: "Coffee Processing"
     },
     {
         id: 2,
@@ -117,18 +136,20 @@ export const testimonialsData: Testimonial[] = [
         company: "Tech Solutions",
         content: "I've been using this service for over a year and I'm continually impressed by the innovation and attention to detail.",
         mediaType: "youtube",
-        mediaSrc: "dQw4w9WgXcQ", // YouTube video ID
-        rating: 4
+        mediaSrc: "dQw4w9WgXcQ", 
+        avatarSrc: "https://picsum.photos/seed/picsum/500/300",
+        serviceType: "Coffee Processing"
     },
     {
         id: 3,
         name: "Maria Garcia",
         role: "Marketing Director",
         content: "The results we've seen since implementing this solution have exceeded our expectations. Highly recommended!",
-        mediaType: "avatar",
+        mediaType: "image",
         mediaSrc: "https://picsum.photos/seed/picsum/500/300",
-        rating: 5,
-        company: "Tech Solutions"
+        avatarSrc: "https://picsum.photos/seed/picsum/500/300",
+        serviceType: "Coffee Processing",
+        company: "Tech Solutions",
     }
 ];
 export interface StatItem {

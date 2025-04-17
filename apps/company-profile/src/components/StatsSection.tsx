@@ -19,7 +19,7 @@ const stats: StatItem[] = [
   { label: 'Petani Terbantu', value: 12000, icon: Sprout, valueLabel: 'k' },
   { label: 'Lahan Terintegrasi', value: 4500, icon: MapPinned, valueLabel: ' ha' },
   { label: 'Mitra Korporat', value: 32, icon: Handshake, valueLabel: '' },
-  { label: 'Proyek Sukses', value: 120, icon: CheckCircle, valueLabel: '%' },
+  { label: 'Proyek Sukses', value: 120, icon: CheckCircle },
 ];
 
 // Simple animated counter hook

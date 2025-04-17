@@ -6,10 +6,9 @@ import { AnimatedSection, fadeIn } from '@workspace/ui/components/ui/animated-se
 import { Section } from '@workspace/ui/components/ui/section';
 
 // Mock data
-import { teamMembers, milestones, partnerLogos, testimonialsData } from '../mocks/aboutData';
+import { teamMembers, milestones, partnerLogos } from '../mocks/aboutData';
 import Loader from '@workspace/ui/components/ui/loading';
 import aboutImage from '../assets/about.jpg';
-import StatsSection from '../components/StatsSection';
 import CTOSection from '../components/CTOSection';
 
 // Lazy loading components
@@ -17,7 +16,6 @@ const TeamSection = React.lazy(() => import(/* webpackChunkName: "TeamSection" *
 const MissionVisionSection = React.lazy(() => import(/* webpackChunkName: "MissionVisionSection" */ '../components/MissionVision'));
 const TimelineSection = React.lazy(() => import(/* webpackChunkName: "TimelineSection" */ '../components/TimelineSection'));
 const VerticalGridStream = React.lazy(() => import(/* webpackChunkName: "VerticalGridStream" */ '../components/VerticalGridStream'));
-const TestimonialsSection = React.lazy(() => import(/* webpackChunkName: "TestimonialsSection" */ '../components/TestimonialSection'));
 
 function AboutPage() {
     return (
@@ -89,17 +87,6 @@ function AboutPage() {
                         />
                     </AnimatedSection>
 
-                    {/* Our Impact Metrics */}
-                    <AnimatedSection>
-                        <Section className='px-4 md:px-8 lg:px-16'>
-                            <h2 className="text-3xl font-bold mb-12 text-center">
-                                <span className="inline-block mb-2">Dampak Kami</span>
-                                <div className="h-1 w-20 bg-green-500 mx-auto"></div>
-                            </h2>
-                            <StatsSection />
-                        </Section>
-                    </AnimatedSection>
-
                     {/* Our Approach */}
                     <AnimatedSection variants={fadeIn}>
                         <Section className='px-4 md:px-8 lg:px-16'>
@@ -164,26 +151,15 @@ function AboutPage() {
                         </Section>
                     </AnimatedSection>
 
-                    {/* Testimonials Section */}
-                    <AnimatedSection variants={fadeIn}>
-                        <TestimonialsSection
-                            testimonials={testimonialsData}
-                            title="Kata Mereka"
-                            layout='carousel'
-                        />
-                    </AnimatedSection>
-
                     {/* CTA Section */}
-                    <AnimatedSection>
-                        <CTOSection
-                            title="Mari Bergabung Dalam Perjalanan Kami"
-                            description="Jadilah bagian dari gerakan untuk memajukan pertanian Indonesia dan meningkatkan kesejahteraan petani lokal."
-                            btnText="Hubungi Kami"
-                            btnLink="/contact"
-                            secondaryBtnText="Program Kemitraan"
-                            secondaryBtnLink="/services"
-                        />
-                    </AnimatedSection>
+                    <CTOSection
+                        title="Mari Bergabung Dalam Perjalanan Kami"
+                        description="Jadilah bagian dari gerakan untuk memajukan pertanian Indonesia dan meningkatkan kesejahteraan petani lokal."
+                        btnText="Hubungi Kami"
+                        btnLink="/contact"
+                        secondaryBtnText="Program Kemitraan"
+                        secondaryBtnLink="/services"
+                    />
                 </Suspense>
             </div>
         </>

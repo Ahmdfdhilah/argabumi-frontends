@@ -1,7 +1,6 @@
 export const partnerLogos = [
     "https://logo.clearbit.com/bankmandiri.co.id",       // Bank Mandiri
-    "https://logo.clearbit.com/telkomsel.com",           // Telkomsel
-    "https://logo.clearbit.com/gojek.com",               // Gojek
+    "https://logo.clearbit.com/telkomsel.com",           // Telkomsel              // Gojek
     "https://logo.clearbit.com/tokopedia.com",           // Tokopedia
     "https://logo.clearbit.com/bukalapak.com",           // Bukalapak
     "https://logo.clearbit.com/indosatooredoo.com",      // Indosat Ooredoo
@@ -76,24 +75,28 @@ export const serviceItems = [
         id: 1,
         title: "Konsultasi Agribisnis",
         description: "Layanan konsultasi komprehensif untuk membantu Anda mengembangkan dan mengoptimalkan usaha pertanian.",
-        link: "/services/konsultasi-agribisnis"
+        link: "/services/konsultasi-agribisnis",
+        imageUrl: "https://picsum.photos/id/117/500/300",
     },
     {
         id: 2,
         title: "Teknologi Smart Farming",
         description: "Implementasi teknologi IoT dan AI untuk meningkatkan efisiensi dan produktivitas pertanian Anda.",
-        link: "/services/smart-farming"
+        link: "/services/smart-farming",
+        imageUrl: "https://picsum.photos/id/117/500/300",
     },
     {
         id: 3,
         title: "Manajemen Rantai Pasok",
         description: "Solusi end-to-end untuk mengoptimalkan rantai pasok dari pertanian hingga pasar.",
-        link: "/services/manajemen-rantai-pasok"
+        link: "/services/manajemen-rantai-pasok",
+        imageUrl: "https://picsum.photos/id/117/500/300",
     },
     {
         id: 4,
         title: "Pelatihan SDM Pertanian",
         description: "Program pelatihan untuk meningkatkan kapasitas sumber daya manusia di sektor pertanian.",
-        link: "/services/pelatihan-sdm"
+        link: "/services/pelatihan-sdm",
+        imageUrl: "https://picsum.photos/id/117/500/300",
     }
 ];

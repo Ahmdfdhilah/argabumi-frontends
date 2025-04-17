@@ -1,8 +1,9 @@
-// src/components/CTOSection.jsx
+// src/components/AnimatedCTOSection.jsx
 import { Link } from 'react-router-dom';
 import { ArrowRight, ChevronRight } from 'lucide-react';
 import app from '../assets/app.png';
 import app2 from '../assets/app2.png';
+import { AnimatedSection, fadeInUp, slideInRight, slideInLeft, StaggeredList } from '@workspace/ui/components/ui/animated-section';
 
 export type CTOSectionProps = {
     title: string;
@@ -18,7 +19,7 @@ export type CTOSectionProps = {
     secondaryBtnLink?: string; // Optional secondary button link
 };
 
-function CTOSection({
+function AnimatedCTOSection({
     title,
     description,
     btnText: primaryBtnText,
@@ -35,13 +36,38 @@ function CTOSection({
     return (
         <section className={`${bgColor} ${className}`} data-testid="cto-section">
             <div className="flex flex-col md:flex-row">
-                {/* Content half */}
-                <div className={`${textColor} w-full md:w-1/2 py-16 px-6 md:px-12 flex flex-col justify-center`}>
+                {/* Content half with animations */}
+                <AnimatedSection 
+                    variants={slideInLeft} 
+                    triggerOnce={false}
+                    className={`${textColor} w-full md:w-1/2 py-16 px-6 md:px-12 flex flex-col justify-center`}
+                    threshold={0.2}
+                >
                     <div className="max-w-lg mx-auto md:mx-0">
-                        <h2 className="text-3xl md:text-4xl font-bold mb-6">{title}</h2>
-                        <p className="text-lg mb-8 opacity-90">{description}</p>
+                        <AnimatedSection 
+                            variants={fadeInUp} 
+                            delay={0.2} 
+                            className="mb-6"
+                            triggerOnce={false}
+                        >
+                            <h2 className="text-3xl md:text-4xl font-bold">{title}</h2>
+                        </AnimatedSection>
+                        
+                        <AnimatedSection 
+                            variants={fadeInUp} 
+                            delay={0.4} 
+                            className="mb-8"
+                            triggerOnce={false}
+                        >
+                            <p className="text-lg opacity-90">{description}</p>
+                        </AnimatedSection>
 
-                        <div className="flex flex-wrap gap-4">
+                        <StaggeredList 
+                            staggerDelay={0.15} 
+                            initialDelay={0.6} 
+                            className="flex flex-wrap gap-4"
+                            triggerOnce={false}
+                        >
                             <Link
                                 to={primaryBtnLink}
                                 className={`${btnBgColor} ${btnTextColor} px-6 py-3 rounded-lg font-medium hover:opacity-90 transition-all duration-300 flex items-center group`}
@@ -60,37 +86,51 @@ function CTOSection({
                                     {secondaryBtnText}
                                     <ChevronRight className="ml-1 w-5 h-5" />
                                 </Link>
-
                             )}
-                        </div>
+                        </StaggeredList>
                     </div>
-                </div>
+                </AnimatedSection>
 
-                {/* Image half */}
-                {/* <div className="w-full md:w-1/2 bg-cover bg-center min-h-64 md:min-h-full"
-                    style={imageUrl ? { backgroundImage: `url(${imageUrl})` } : { background: 'linear-gradient(135deg, #4f46e5 0%, #8b5cf6 100%)' }}>
-                </div> */}
-                <div
+                {/* Image half with animations */}
+                <AnimatedSection
+                    variants={slideInRight}
                     className="relative w-full md:w-1/2 min-h-[50vh] md:min-h-[70vh] lg:min-h-[90vh] flex items-center justify-center"
+                    triggerOnce={true}
+                    threshold={0.2}
                 >
                     <div className="flex flex-col md:flex-row items-center justify-center space-y-6 md:space-y-0 md:space-x-6">
-                        {/* First App Image */}
-                        <img
-                            src={app}
-                            className="max-w-[80%] sm:max-w-[60%] md:max-w-xs h-auto object-contain rounded-lg transform transition-transform duration-300 hover:scale-110"
-                            alt="Mobile App Screenshot"
-                        />
-                        {/* Second App Image */}
-                        <img
-                            src={app2}
-                            className="hidden lg:block max-w-[80%] sm:max-w-[60%] md:max-w-xs h-auto object-contain rounded-lg transform transition-transform duration-300 hover:scale-110"
-                            alt="Mobile App Screenshot 2"
-                        />
+                        {/* First App Image with float animation */}
+                        <AnimatedSection
+                            variants={slideInRight}
+                            triggerOnce={false}
+                            delay={0.4}
+                            
+                        >
+                            <img
+                                src={app}
+                                className="max-w-[80%] sm:max-w-[60%] md:max-w-xs h-auto object-contain"
+                                alt="Mobile App Screenshot"
+                            />
+                        </AnimatedSection>
+                        
+                        {/* Second App Image with opposite float animation */}
+                        <AnimatedSection
+                            variants={slideInLeft}
+                            triggerOnce={false}
+                            delay={0.7}
+
+                        >
+                            <img
+                                src={app2}
+                                className="hidden lg:block max-w-[80%] sm:max-w-[60%] md:max-w-xs h-auto object-contain"
+                                alt="Mobile App Screenshot 2"
+                            />
+                        </AnimatedSection>
                     </div>
-                </div>
+                </AnimatedSection>
             </div>
         </section>
     );
 }
 
-export default CTOSection;
+export default AnimatedCTOSection;

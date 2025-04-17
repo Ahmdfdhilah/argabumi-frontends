@@ -22,6 +22,8 @@ export const Waves: React.FC<WavesProps> = ({
 }) => {
   const canvasRef = useRef<HTMLCanvasElement | null>(null);
   const containerRef = useRef<HTMLDivElement | null>(null);
+  const animationRef = useRef<number | null>(null);
+  const startTimeRef = useRef<number | null>(null);
   const [dimensions, setDimensions] = useState({ width: 0, height: 0 });
 
   // Handle resize and set initial dimensions
@@ -56,16 +58,19 @@ export const Waves: React.FC<WavesProps> = ({
     const ctx = canvas.getContext('2d');
     if (!ctx) return;
 
-    let animationFrameId: number;
-    let startTime: number | null = null;
-
-    // Set canvas size to match container
-    canvas.width = dimensions.width;
-    canvas.height = dimensions.height;
+    // Set canvas size to match container with pixel ratio for clearer rendering
+    const pixelRatio = window.devicePixelRatio || 1;
+    canvas.width = dimensions.width * pixelRatio;
+    canvas.height = dimensions.height * pixelRatio;
+    ctx.scale(pixelRatio, pixelRatio);
+    
+    // Set canvas display size
+    canvas.style.width = `${dimensions.width}px`;
+    canvas.style.height = `${dimensions.height}px`;
 
     const drawWaves = (timestamp: number) => {
-      if (!startTime) startTime = timestamp;
-      const elapsed = timestamp - startTime;
+      if (startTimeRef.current === null) startTimeRef.current = timestamp;
+      const elapsed = timestamp - startTimeRef.current;
 
       ctx.clearRect(0, 0, dimensions.width, dimensions.height);
 
@@ -77,8 +82,9 @@ export const Waves: React.FC<WavesProps> = ({
         const waveAmplitude = wave.amplitude || baseAmplitude;
         const waveHeight = wave.height;
         
-        // Calculate wave points based on canvas width
-        for (let x = 0; x <= dimensions.width; x += Math.max(1, Math.floor(dimensions.width / 100))) {
+        // Calculate wave points based on canvas width with consistent resolution
+        const step = Math.max(1, Math.floor(dimensions.width / 200)); // More points for smoother rendering
+        for (let x = 0; x <= dimensions.width; x += step) {
           const frequency = 0.01 + index * 0.005;
           const y = Math.sin(x * frequency + elapsed * waveSpeed * 0.002 + (index * Math.PI * 2) / waves.length) * waveAmplitude;
           ctx.lineTo(x, dimensions.height - waveHeight + y);
@@ -94,24 +100,28 @@ export const Waves: React.FC<WavesProps> = ({
         ctx.globalAlpha = 1; // Reset transparency
       });
 
-      animationFrameId = requestAnimationFrame(drawWaves);
+      animationRef.current = requestAnimationFrame(drawWaves);
     };
 
-    animationFrameId = requestAnimationFrame(drawWaves);
+    // Start the animation
+    animationRef.current = requestAnimationFrame(drawWaves);
 
+    // Cleanup
     return () => {
-      cancelAnimationFrame(animationFrameId);
+      if (animationRef.current) {
+        cancelAnimationFrame(animationRef.current);
+      }
     };
   }, [dimensions, waves, baseSpeed, baseAmplitude]);
 
   return (
     <div 
       ref={containerRef}
-      className={`w-full h-full ${containerClassName}`}
+      className={`w-full h-full overflow-hidden ${containerClassName}`}
     >
       <canvas
         ref={canvasRef}
-        style={{ display: 'block', width: '100%', height: '100%' }}
+        style={{ display: 'block' }}
       />
     </div>
   );

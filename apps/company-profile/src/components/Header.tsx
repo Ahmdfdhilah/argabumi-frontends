@@ -1,5 +1,5 @@
 import { useState, useEffect, SetStateAction } from 'react';
-import { Link, useLocation } from 'react-router-dom';
+import { To, useLocation, useNavigate } from 'react-router-dom';
 import { Menu, ChevronDown, ChevronUp } from 'lucide-react';
 import { Button } from '@workspace/ui/components/button';
 import {
@@ -21,7 +21,9 @@ import logo from '../assets/logo_abi_lightmode.png';
 export default function Header({ isTransparent = false }) {
     const [isScrolled, setIsScrolled] = useState(false);
     const [activeDropdown, setActiveDropdown] = useState('');
+    const [isSheetOpen, setIsSheetOpen] = useState(false);
     const location = useLocation();
+    const navigate = useNavigate();
 
     // Handle scroll events for dynamic header
     useEffect(() => {
@@ -49,51 +51,59 @@ export default function Header({ isTransparent = false }) {
         setActiveDropdown(activeDropdown === name ? '' : name);
     };
 
+    // Custom navigation function to handle navigation and scroll to top
+    const handleNavigation = (path: To) => {
+        navigate(path);
+        window.scrollTo(0, 0);
+        setIsSheetOpen(false); 
+    };
+
     return (
-        <header className={`fixed top-0 left-0 right-0 w-full z-50 transition-all duration-300 ${isScrolled ? 'bg-white shadow-md py-2' : `${isTransparent ? 'bg-transparent' : 'bg-white'} py-4`
-            }`}>
+        <header className={`fixed top-0 left-0 right-0 w-full z-50 transition-all duration-300 ${
+            isScrolled ? 'bg-white shadow-md py-2' : `${isTransparent ? 'bg-transparent' : 'bg-white'} py-4`
+        }`}>
             <div className="container mx-auto px-4 md:px-6 lg:px-12 flex items-center justify-between">
                 {/* Logo */}
-                <Link to="/" className="flex items-center">
+                <div 
+                    onClick={() => handleNavigation('/')}
+                    className="flex items-center cursor-pointer"
+                >
                     <img src={logo} alt="logo" className="h-10 md:h-12" />
-                </Link>
+                </div>
 
                 {/* Desktop Navigation */}
                 <div className="hidden lg:flex items-center space-x-8">
                     <NavigationMenu>
                         <NavigationMenuList>
                             <NavigationMenuItem>
-                                <Link to="/">
+                                <div onClick={() => handleNavigation('/')}>
                                     <NavigationMenuLink
-                                        className={`px-3 py-2 text-sm font-medium transition-colors ${isActive('/')
-                                            ? 'text-primary'
-                                            : 'text-gray-700 hover:text-primary'
-                                            }`}
+                                        className={`px-3 py-2 text-sm font-medium transition-colors cursor-pointer ${
+                                            isActive('/') ? 'text-primary' : 'text-gray-700 hover:text-primary'
+                                        }`}
                                     >
                                         Home
                                     </NavigationMenuLink>
-                                </Link>
+                                </div>
                             </NavigationMenuItem>
 
                             <NavigationMenuItem>
-                                <Link to="/about">
+                                <div onClick={() => handleNavigation('/about')}>
                                     <NavigationMenuLink
-                                        className={`px-3 py-2 text-sm font-medium transition-colors ${isActive('/about')
-                                            ? 'text-primary'
-                                            : 'text-gray-700 hover:text-primary'
-                                            }`}
+                                        className={`px-3 py-2 text-sm font-medium transition-colors cursor-pointer ${
+                                            isActive('/about') ? 'text-primary' : 'text-gray-700 hover:text-primary'
+                                        }`}
                                     >
                                         About
                                     </NavigationMenuLink>
-                                </Link>
+                                </div>
                             </NavigationMenuItem>
 
                             <NavigationMenuItem>
                                 <NavigationMenuTrigger
-                                    className={`px-3 py-2 text-sm font-medium transition-colors bg-transparent ${isServiceActive()
-                                        ? 'text-primary'
-                                        : 'text-gray-700 hover:text-primary'
-                                        }`}
+                                    className={`px-3 py-2 text-sm font-medium transition-colors bg-transparent ${
+                                        isServiceActive() ? 'text-primary' : 'text-gray-700 hover:text-primary'
+                                    }`}
                                 >
                                     Services
                                 </NavigationMenuTrigger>
@@ -101,16 +111,16 @@ export default function Header({ isTransparent = false }) {
                                     <ul className="grid w-[400px] gap-3 p-4 md:w-[500px] md:grid-cols-2 lg:w-[600px]">
                                         {servicesItems.map((service) => (
                                             <li key={service.href}>
-                                                <Link to={service.href}>
+                                                <div onClick={() => handleNavigation(service.href)}>
                                                     <NavigationMenuLink
-                                                        className="block select-none space-y-1 rounded-md p-3 leading-none no-underline outline-none transition-colors hover:bg-accent hover:text-accent-foreground focus:bg-accent focus:text-accent-foreground"
+                                                        className="block select-none space-y-1 rounded-md p-3 leading-none no-underline outline-none transition-colors hover:bg-accent hover:text-accent-foreground focus:bg-accent focus:text-accent-foreground cursor-pointer"
                                                     >
                                                         <div className="text-sm font-medium leading-none">{service.title}</div>
                                                         <p className="line-clamp-2 text-sm leading-snug text-muted-foreground">
                                                             {service.description}
                                                         </p>
                                                     </NavigationMenuLink>
-                                                </Link>
+                                                </div>
                                             </li>
                                         ))}
                                     </ul>
@@ -118,43 +128,41 @@ export default function Header({ isTransparent = false }) {
                             </NavigationMenuItem>
 
                             <NavigationMenuItem>
-                                <Link to="/portfolio">
+                                <div onClick={() => handleNavigation('/portfolio')}>
                                     <NavigationMenuLink
-                                        className={`px-3 py-2 text-sm font-medium transition-colors ${isActive('/portfolio')
-                                            ? 'text-primary'
-                                            : 'text-gray-700 hover:text-primary'
-                                            }`}
+                                        className={`px-3 py-2 text-sm font-medium transition-colors cursor-pointer ${
+                                            isActive('/portfolio') ? 'text-primary' : 'text-gray-700 hover:text-primary'
+                                        }`}
                                     >
                                         Portfolio
                                     </NavigationMenuLink>
-                                </Link>
+                                </div>
                             </NavigationMenuItem>
 
                             <NavigationMenuItem>
-                                <Link to="/news">
+                                <div onClick={() => handleNavigation('/news')}>
                                     <NavigationMenuLink
-                                        className={`px-3 py-2 text-sm font-medium transition-colors ${isActive('/news')
-                                            ? 'text-primary'
-                                            : 'text-gray-700 hover:text-primary'
-                                            }`}
+                                        className={`px-3 py-2 text-sm font-medium transition-colors cursor-pointer ${
+                                            isActive('/news') ? 'text-primary' : 'text-gray-700 hover:text-primary'
+                                        }`}
                                     >
                                         News
                                     </NavigationMenuLink>
-                                </Link>
+                                </div>
                             </NavigationMenuItem>
                         </NavigationMenuList>
                     </NavigationMenu>
 
-                    <Link to="/contact">
-                        <Button size="sm" className="font-medium">
+                    <div onClick={() => handleNavigation('/contact')}>
+                        <Button size="sm" className="font-medium cursor-pointer">
                             Contact Us
                         </Button>
-                    </Link>
+                    </div>
                 </div>
 
                 {/* Mobile Menu */}
                 <div className="lg:hidden">
-                    <Sheet>
+                    <Sheet open={isSheetOpen} onOpenChange={setIsSheetOpen}>
                         <SheetTrigger asChild>
                             <Button variant="ghost" size="icon" className="text-gray-700">
                                 <Menu className="h-6 w-6" />
@@ -163,24 +171,25 @@ export default function Header({ isTransparent = false }) {
                         </SheetTrigger>
                         <SheetContent side="right" className="w-full bg-accent sm:w-80 pt-12 px-4">
                             <nav className="flex flex-col space-y-6">
-                                <Link
-                                    to="/"
-                                    className={`text-lg font-medium ${isActive('/') ? 'text-primary' : 'text-gray-700'}`}
+                                <div
+                                    onClick={() => handleNavigation('/')}
+                                    className={`text-lg font-medium cursor-pointer ${isActive('/') ? 'text-primary' : 'text-gray-700'}`}
                                 >
                                     Home
-                                </Link>
-                                <Link
-                                    to="/about"
-                                    className={`text-lg font-medium ${isActive('/about') ? 'text-primary' : 'text-gray-700'}`}
+                                </div>
+                                <div
+                                    onClick={() => handleNavigation('/about')}
+                                    className={`text-lg font-medium cursor-pointer ${isActive('/about') ? 'text-primary' : 'text-gray-700'}`}
                                 >
                                     About
-                                </Link>
+                                </div>
 
                                 <div>
                                     <button
                                         onClick={() => toggleMobileDropdown('services')}
-                                        className={`flex items-center justify-between w-full text-lg font-medium ${isServiceActive() ? 'text-primary' : 'text-gray-700'
-                                            }`}
+                                        className={`flex items-center justify-between w-full text-lg font-medium ${
+                                            isServiceActive() ? 'text-primary' : 'text-gray-700'
+                                        }`}
                                     >
                                         Services
                                         {activeDropdown === 'services' ? (
@@ -193,34 +202,34 @@ export default function Header({ isTransparent = false }) {
                                     {activeDropdown === 'services' && (
                                         <div className="mt-3 pl-4 border-l-2 border-gray-200 space-y-3">
                                             {servicesItems.map((service) => (
-                                                <Link
+                                                <div
                                                     key={service.href}
-                                                    to={service.href}
-                                                    className="block text-gray-600 hover:text-primary"
+                                                    onClick={() => handleNavigation(service.href)}
+                                                    className="block text-gray-600 hover:text-primary cursor-pointer"
                                                 >
                                                     {service.title}
-                                                </Link>
+                                                </div>
                                             ))}
                                         </div>
                                     )}
                                 </div>
 
-                                <Link
-                                    to="/portfolio"
-                                    className={`text-lg font-medium ${isActive('/portfolio') ? 'text-primary' : 'text-gray-700'}`}
+                                <div
+                                    onClick={() => handleNavigation('/portfolio')}
+                                    className={`text-lg font-medium cursor-pointer ${isActive('/portfolio') ? 'text-primary' : 'text-gray-700'}`}
                                 >
                                     Portfolio
-                                </Link>
-                                <Link
-                                    to="/news"
-                                    className={`text-lg font-medium ${isActive('/news') ? 'text-primary' : 'text-gray-700'}`}
+                                </div>
+                                <div
+                                    onClick={() => handleNavigation('/news')}
+                                    className={`text-lg font-medium cursor-pointer ${isActive('/news') ? 'text-primary' : 'text-gray-700'}`}
                                 >
                                     News
-                                </Link>
+                                </div>
 
-                                <Link to="/contact" className="mt-4">
+                                <div onClick={() => handleNavigation('/contact')} className="mt-4">
                                     <Button className="w-full">Contact Us</Button>
-                                </Link>
+                                </div>
                             </nav>
                         </SheetContent>
                     </Sheet>
