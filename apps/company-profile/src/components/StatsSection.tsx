@@ -11,13 +11,15 @@ interface StatItem {
   label: string;
   value: number;
   icon: LucideIcon;
+  valueLabel?: string; // Tambahkan properti untuk label nilai
+  className?: string; // Tambahkan properti untuk className
 }
 
 const stats: StatItem[] = [
-  { label: 'Petani Terbantu', value: 12000, icon: Sprout },
-  { label: 'Lahan Terintegrasi (ha)', value: 4500, icon: MapPinned },
-  { label: 'Mitra Korporat', value: 32, icon: Handshake },
-  { label: 'Proyek Sukses', value: 120, icon: CheckCircle },
+  { label: 'Petani Terbantu', value: 12000, icon: Sprout, valueLabel: 'k' },
+  { label: 'Lahan Terintegrasi', value: 4500, icon: MapPinned, valueLabel: ' ha' },
+  { label: 'Mitra Korporat', value: 32, icon: Handshake, valueLabel: '' },
+  { label: 'Proyek Sukses', value: 120, icon: CheckCircle, valueLabel: '%' },
 ];
 
 // Simple animated counter hook
@@ -48,10 +50,11 @@ const useCounter = (end: number, duration = 2000): number => {
 
 interface InViewProps {
   children: (props: { ref: (node: HTMLDivElement | null) => void; isVisible: boolean }) => ReactNode;
+  className?: string;
 }
 
 // Simple intersection observer component
-const InView: FC<InViewProps> = ({ children }) => {
+const InView: FC<InViewProps> = ({ children, className }) => {
   const [isVisible, setIsVisible] = useState(false);
   const [ref, setRef] = useState<HTMLDivElement | null>(null);
   
@@ -75,7 +78,7 @@ const InView: FC<InViewProps> = ({ children }) => {
     };
   }, [ref]);
   
-  return <>{children({ ref: setRef, isVisible })}</>;
+  return <div className={className}>{children({ ref: setRef, isVisible })}</div>;
 };
 
 interface StatCardProps {
@@ -84,33 +87,63 @@ interface StatCardProps {
   icon: LucideIcon;
   isVisible: boolean;
   index: number;
+  valueLabel?: string;
+  className?: string;
 }
 
 // Stats card component
-const StatCard: FC<StatCardProps> = ({ label, value, icon: Icon, isVisible, index }) => {
+const StatCard: FC<StatCardProps> = ({ 
+  label, 
+  value, 
+  icon: Icon, 
+  isVisible, 
+  index, 
+  valueLabel = '', 
+  className = 'bg-primary-500' 
+}) => {
   const count = isVisible ? useCounter(value) : 0;
+  
+  // Format nilai dengan label
+  const formatValue = (val: number) => {
+    if (valueLabel === 'k' && val >= 1000) {
+      return `${(val / 1000).toFixed(val % 1000 !== 0 ? 1 : 0)}${valueLabel}`;
+    }
+    return `${val.toLocaleString()}${valueLabel}`;
+  };
   
   return (
     <div
-      className={`bg-primary-500 backdrop-blur-sm border border-white/20 text-white p-6 rounded-2xl shadow-xl hover:scale-105 transition-transform duration-300 ${
+      className={`${className} backdrop-blur-sm border border-white/20 text-white p-6 rounded-2xl shadow-xl hover:scale-105 transition-transform duration-300 ${
         isVisible ? `animate-fade-in-${index}` : ''
       }`}
       style={{
         animation: isVisible ? `fadeIn 0.5s ease-out ${index * 0.2}s forwards` : 'none',
       }}
     >
-      <Icon className="w-10 h-10 mx-auto mb-4 text-green-100" />
+      <Icon className="w-10 h-10 mx-auto mb-4 text-white/80" />
       <h3 className="text-4xl font-bold text-white">
-        {count.toLocaleString()}
+        {formatValue(count)}
       </h3>
-      <p className="mt-2 text-sm font-medium text-green-100">{label}</p>
+      <p className="mt-2 text-sm font-medium text-white/80">{label}</p>
     </div>
   );
 };
 
-export default function StatsSection(){
+interface StatsSectionProps {
+  className?: string;
+  stats?: StatItem[];
+  gridClassName?: string;
+}
+
+export default function StatsSection({
+  className = '',
+  stats: customStats,
+  gridClassName = 'grid-cols-1 sm:grid-cols-2 lg:grid-cols-4'
+}: StatsSectionProps) {
+  const displayStats = customStats || stats;
+  
   return (
-    <section className="relative z-10 -mt-4 md:-mt-8 lg:-mt-16 bg-transparent">
+    <section className={`bg-transparent ${className}`}>
       <style>
         {`
           @keyframes fadeIn {
@@ -124,10 +157,10 @@ export default function StatsSection(){
         `}
       </style>
       <div className="container mx-auto px-4 text-center">
-        <InView>
+        <InView className="px-4 lg:px-8">
           {({ ref, isVisible }) => (
-            <div ref={ref} className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6 lg:gap-10 px-4 lg:px-8">
-              {stats.map((stat, index) => (
+            <div ref={ref} className={`grid ${gridClassName} gap-6 lg:gap-10`}>
+              {displayStats.map((stat, index) => (
                 <StatCard 
                   key={index} 
                   {...stat} 

@@ -1,4 +1,3 @@
-// src/components/AutoSwipeGallery.tsx
 import { useState, useEffect, useRef } from 'react';
 import { Card, CardContent } from "@workspace/ui/components/card";
 import { Button } from "@workspace/ui/components/button";
@@ -35,21 +34,22 @@ const AutoSwipeGallery = ({
 }: AutoSwipeGalleryProps) => {
   const [currentIndex, setCurrentIndex] = useState(0);
   const [isHovering, setIsHovering] = useState(false);
+  const [visibleItems, setVisibleItems] = useState(itemsToShow);
+  const [isMobile, setIsMobile] = useState(false);
   const timerRef = useRef<number | null>(null);
-  const containerRef = useRef<HTMLDivElement>(null);
   const touchStartX = useRef<number | null>(null);
 
   const totalItems = items.length;
-  const maxIndex = Math.max(0, totalItems - itemsToShow);
+  const maxIndex = Math.max(0, totalItems - visibleItems);
 
-  // Adjust items to show based on screen size
-  const [visibleItems, setVisibleItems] = useState(itemsToShow);
-
+  // Responsive logic
   useEffect(() => {
     const handleResize = () => {
-      if (window.innerWidth < 640) {
+      const width = window.innerWidth;
+      setIsMobile(width < 640);
+      if (width < 640) {
         setVisibleItems(1);
-      } else if (window.innerWidth < 1024) {
+      } else if (width < 1024) {
         setVisibleItems(Math.min(2, itemsToShow));
       } else {
         setVisibleItems(itemsToShow);
@@ -61,14 +61,13 @@ const AutoSwipeGallery = ({
     return () => window.removeEventListener('resize', handleResize);
   }, [itemsToShow]);
 
+  // Auto swipe logic (only if not mobile)
   useEffect(() => {
     const startTimer = () => {
-      if (timerRef.current !== null) {
-        clearTimeout(timerRef.current);
-      }
+      if (timerRef.current !== null) clearTimeout(timerRef.current);
 
       timerRef.current = window.setTimeout(() => {
-        if (!isHovering && totalItems > visibleItems) {
+        if (!isHovering && !isMobile && totalItems > visibleItems) {
           setCurrentIndex(prevIndex =>
             prevIndex >= maxIndex ? 0 : prevIndex + 1
           );
@@ -78,105 +77,96 @@ const AutoSwipeGallery = ({
     };
 
     startTimer();
-
     return () => {
-      if (timerRef.current !== null) {
-        clearTimeout(timerRef.current);
-      }
+      if (timerRef.current !== null) clearTimeout(timerRef.current);
     };
-  }, [currentIndex, isHovering, totalItems, visibleItems, autoSwipeInterval, maxIndex]);
+  }, [currentIndex, isHovering, isMobile, totalItems, visibleItems, autoSwipeInterval, maxIndex]);
 
   const goToNext = () => {
-    setCurrentIndex(prevIndex =>
-      prevIndex >= maxIndex ? 0 : prevIndex + 1
-    );
+    setCurrentIndex(prevIndex => (prevIndex >= maxIndex ? 0 : prevIndex + 1));
   };
 
   const goToPrev = () => {
-    setCurrentIndex(prevIndex =>
-      prevIndex <= 0 ? maxIndex : prevIndex - 1
-    );
+    setCurrentIndex(prevIndex => (prevIndex <= 0 ? maxIndex : prevIndex - 1));
   };
 
-  // Touch events for mobile swipe
   const handleTouchStart = (e: React.TouchEvent) => {
     touchStartX.current = e.touches[0]?.clientX || null;
   };
 
   const handleTouchEnd = (e: React.TouchEvent) => {
     if (touchStartX.current === null) return;
-
     const touchEndX = e.changedTouches[0]?.clientX || null;
     const diff = touchStartX.current - (touchEndX || 0);
-
-    // Swipe right to left (next)
-    if (diff > 50) {
-      goToNext();
-    }
-    // Swipe left to right (prev)
-    else if (diff < -50) {
-      goToPrev();
-    }
-
+    if (diff > 50) goToNext();
+    else if (diff < -50) goToPrev();
     touchStartX.current = null;
   };
 
-  // Calculate indicators
   const indicators = [];
-  for (let i = 0; i <= maxIndex; i += 1) {
+  for (let i = 0; i <= maxIndex; i++) {
     indicators.push(i);
   }
 
   return (
     <div className={cn("w-full py-8", className)}>
       {title && (
-
         <h2 className="text-3xl md:text-4xl font-bold mb-12 text-center">
-          <span className="inline-block mb-2"> {title}</span>
+          <span className="inline-block mb-2">{title}</span>
           <div className="h-1 w-20 bg-primary-500 mx-auto"></div>
         </h2>
       )}
 
-      <div className="relative"
+      <div
+        className="relative"
         onMouseEnter={() => setIsHovering(true)}
         onMouseLeave={() => setIsHovering(false)}
-        ref={containerRef}
         onTouchStart={handleTouchStart}
         onTouchEnd={handleTouchEnd}
       >
-        <div className="overflow-hidden">
+        <div className={cn(!isMobile && "overflow-hidden")}>
           <div
-            className="flex transition-transform duration-500 ease-in-out"
-            style={{
-              transform: `translateX(-${(currentIndex * 100) / visibleItems}%)`,
-              width: `${(totalItems / visibleItems) * 100}%`
-            }}
+            className={cn(
+              "flex gap-4",
+              isMobile && "overflow-x-auto scroll-snap-x snap-x scroll-smooth"
+            )}
+            style={
+              !isMobile
+                ? {
+                    transform: `translateX(-${(currentIndex * 100) / visibleItems}%)`,
+                    width: `${(totalItems / visibleItems) * 100}%`,
+                    transition: "transform 0.5s ease-in-out",
+                  }
+                : {}
+            }
           >
             {items.map((item) => (
               <div
                 key={item.id}
-                className="px-2"
-                style={{ width: `${100 / totalItems}%` }}
+                className={cn(
+                  "shrink-0 px-2",
+                  isMobile ? "snap-start w-[calc(100%-1rem)]" : ""
+                )}
+                style={
+                  !isMobile ? { width: `${100 / totalItems}%` } : undefined
+                }
               >
                 <Card className="h-full overflow-hidden transform transition-all duration-300 hover:shadow-lg hover:-translate-y-1">
                   <CardContent className="p-0 h-full flex flex-col">
-                    {
-                      item.imageUrl && (
-                        <div className="relative aspect-video w-full overflow-hidden">
-
-                          <img
-                            src={item.imageUrl}
-                            alt={item.title}
-                            className="w-full h-full object-cover"
-                          />
-
-                          {variant === 'news' && item.category && (
-                            <span className="absolute top-2 left-2 bg-primary text-white text-xs px-2 py-1 rounded">
-                              {item.category}
-                            </span>
-                          )}
-                        </div>
-                      )}
+                    {item.imageUrl && (
+                      <div className="relative aspect-video w-full overflow-hidden">
+                        <img
+                          src={item.imageUrl}
+                          alt={item.title}
+                          className="w-full h-full object-cover"
+                        />
+                        {variant === 'news' && item.category && (
+                          <span className="absolute top-2 left-2 bg-primary text-white text-xs px-2 py-1 rounded">
+                            {item.category}
+                          </span>
+                        )}
+                      </div>
+                    )}
                     <div className="p-4 flex flex-col flex-grow">
                       {variant === 'news' && item.date && (
                         <p className="text-sm text-gray-500 mb-2">{item.date}</p>
@@ -203,7 +193,7 @@ const AutoSwipeGallery = ({
         </div>
 
         {/* Navigation arrows */}
-        {totalItems > visibleItems && (
+        {!isMobile && totalItems > visibleItems && (
           <>
             <Button
               variant="outline"
@@ -225,13 +215,14 @@ const AutoSwipeGallery = ({
         )}
 
         {/* Indicators */}
-        {indicators.length > 1 && (
+        {!isMobile && indicators.length > 1 && (
           <div className="flex justify-center mt-4 gap-1.5">
             {indicators.map((i) => (
               <button
                 key={i}
-                className={`h-2 rounded-full transition-all ${i === currentIndex ? 'w-6 bg-primary' : 'w-2 bg-gray-300 hover:bg-gray-400'
-                  }`}
+                className={`h-2 rounded-full transition-all ${
+                  i === currentIndex ? 'w-6 bg-primary' : 'w-2 bg-gray-300 hover:bg-gray-400'
+                }`}
                 onClick={() => setCurrentIndex(i)}
                 aria-label={`Go to slide ${i + 1}`}
               />

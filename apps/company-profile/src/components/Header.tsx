@@ -18,7 +18,7 @@ import {
 import logo from '../assets/logo_abi_lightmode.png';
 
 
-export default function Header() {
+export default function Header({ isTransparent = false }) {
     const [isScrolled, setIsScrolled] = useState(false);
     const [activeDropdown, setActiveDropdown] = useState('');
     const location = useLocation();
@@ -50,7 +50,7 @@ export default function Header() {
     };
 
     return (
-        <header className={`fixed top-0 left-0 right-0 w-full z-50 transition-all duration-300 ${isScrolled ? 'bg-white shadow-md py-2' : 'bg-accent backdrop-blur-sm py-4'
+        <header className={`fixed top-0 left-0 right-0 w-full z-50 transition-all duration-300 ${isScrolled ? 'bg-white shadow-md py-2' : `${isTransparent ? 'bg-transparent' : 'bg-white'} py-4`
             }`}>
             <div className="container mx-auto px-4 md:px-6 lg:px-12 flex items-center justify-between">
                 {/* Logo */}
@@ -131,14 +131,14 @@ export default function Header() {
                             </NavigationMenuItem>
 
                             <NavigationMenuItem>
-                                <Link to="/blog">
+                                <Link to="/news">
                                     <NavigationMenuLink
-                                        className={`px-3 py-2 text-sm font-medium transition-colors ${isActive('/blog')
+                                        className={`px-3 py-2 text-sm font-medium transition-colors ${isActive('/news')
                                             ? 'text-primary'
                                             : 'text-gray-700 hover:text-primary'
                                             }`}
                                     >
-                                        Blog
+                                        News
                                     </NavigationMenuLink>
                                 </Link>
                             </NavigationMenuItem>
@@ -212,10 +212,10 @@ export default function Header() {
                                     Portfolio
                                 </Link>
                                 <Link
-                                    to="/blog"
-                                    className={`text-lg font-medium ${isActive('/blog') ? 'text-primary' : 'text-gray-700'}`}
+                                    to="/news"
+                                    className={`text-lg font-medium ${isActive('/news') ? 'text-primary' : 'text-gray-700'}`}
                                 >
-                                    Blog
+                                    News
                                 </Link>
 
                                 <Link to="/contact" className="mt-4">

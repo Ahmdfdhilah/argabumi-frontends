@@ -42,28 +42,28 @@ const VerticalGridStream = ({
   // Prepare column data with seamless looping in mind
   const columnContent = useMemo(() => {
     if (images.length === 0) return Array(responsiveColumns).fill([]);
-    
+
     const content: string[][] = Array.from({ length: responsiveColumns }, () => []);
     const viewportHeight = window.innerHeight;
-    
+
     // Calculate items needed to fill screen with buffer
     const itemsPerViewport = Math.ceil(viewportHeight / (imageHeight + gap));
     const minItemsPerColumn = itemsPerViewport * 2 + 4; // Double viewport + buffer
-    
+
     // Duplicate images to ensure we have enough
     const extendedImages = [];
     while (extendedImages.length < minItemsPerColumn * responsiveColumns) {
       extendedImages.push(...images);
     }
-    
+
     // Distribute to columns with some randomness
     const shuffledImages = [...extendedImages].sort(() => Math.random() - 0.5);
-    
+
     for (let i = 0; i < minItemsPerColumn * responsiveColumns; i++) {
       const colIndex = i % responsiveColumns;
       content[colIndex].push(shuffledImages[i % shuffledImages.length]);
     }
-    
+
     return content;
   }, [images, responsiveColumns, imageHeight, gap]);
 
@@ -79,7 +79,7 @@ const VerticalGridStream = ({
     if (previousTimeRef.current === undefined) {
       previousTimeRef.current = time;
     }
-    
+
     const deltaTime = time - previousTimeRef.current;
     previousTimeRef.current = time;
 
@@ -87,24 +87,24 @@ const VerticalGridStream = ({
       return prevPositions.map((pos, colIndex) => {
         const column = columnContent[colIndex];
         if (!column || column.length === 0) return 0;
-        
+
         const direction = colIndex % 2 === 0 ? 1 : -1; // Alternate directions
         const columnHeight = column.length * (imageHeight + gap);
-        
+
         // Frame-rate independent movement (pixels per second)
         const movement = (direction * speed * deltaTime) / 1000;
         let newPos = pos + movement;
-        
+
         // Seamless looping for both directions
         if (direction > 0 && newPos >= columnHeight) {
           newPos -= columnHeight;
         } else if (direction < 0 && newPos <= -columnHeight) {
           newPos += columnHeight;
         }
-        
+
         // Additional safety check
         newPos = newPos % columnHeight;
-        
+
         return newPos;
       });
     });
@@ -172,12 +172,12 @@ const VerticalGridStream = ({
                 </div>
               ))}
             </div>
-            
+
             {/* Clone for seamless looping */}
             <div
               className="flex flex-col items-center will-change-transform"
               style={{
-                transform: `translateY(${(columnPositions[colIndex] || 0) - 
+                transform: `translateY(${(columnPositions[colIndex] || 0) -
                   (colIndex % 2 === 0 ? 1 : -1) * column.length * (imageHeight + gap)}px)`,
                 position: 'absolute',
                 width: '100%',
