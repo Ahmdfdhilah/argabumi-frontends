@@ -72,7 +72,7 @@ export const periodService = {
   ): Promise<Period[]> => {
     try {
       const params = { skip, limit, ...(status && { status }) };
-      const response = await api.get("/api/periods/", { params });
+      const response = await api.get("/periods/", { params });
       return response.data;
     } catch (error: any) {
       toast({
@@ -87,7 +87,7 @@ export const periodService = {
   // Create a new period
   createPeriod: async (periodData: PeriodCreate): Promise<Period> => {
     try {
-      const response = await api.post("/api/periods/", periodData);
+      const response = await api.post("/periods/", periodData);
       toast({
         title: "Success",
         description: "Period created successfully",
@@ -106,7 +106,7 @@ export const periodService = {
   // Get the currently active period
   getActivePeriod: async (): Promise<Period> => {
     try {
-      const response = await api.get("/api/periods/active");
+      const response = await api.get("/periods/active");
       return response.data;
     } catch (error: any) {
       toast({
@@ -121,7 +121,7 @@ export const periodService = {
   // Get periods by year
   getPeriodsByYear: async (year: number): Promise<Period[]> => {
     try {
-      const response = await api.get(`/api/periods/year/${year}`);
+      const response = await api.get(`/periods/year/${year}`);
       return response.data;
     } catch (error: any) {
       toast({
@@ -136,7 +136,7 @@ export const periodService = {
   // Get a period by ID
   getPeriodById: async (periodId: number): Promise<Period> => {
     try {
-      const response = await api.get(`/api/periods/${periodId}`);
+      const response = await api.get(`/periods/${periodId}`);
       return response.data;
     } catch (error: any) {
       toast({
@@ -151,7 +151,7 @@ export const periodService = {
   // Get a period by name
   getPeriodByName: async (name: string): Promise<Period> => {
     try {
-      const response = await api.get(`/api/periods/name/${name}`);
+      const response = await api.get(`/periods/name/${name}`);
       return response.data;
     } catch (error: any) {
       toast({
@@ -169,7 +169,7 @@ export const periodService = {
     periodData: PeriodUpdate
   ): Promise<Period> => {
     try {
-      const response = await api.put(`/api/periods/${periodId}`, periodData);
+      const response = await api.put(`/periods/${periodId}`, periodData);
       toast({
         title: "Success",
         description: "Period updated successfully",
@@ -191,7 +191,7 @@ export const periodService = {
     statusData: PeriodActivateUpdate
   ): Promise<Period> => {
     try {
-      const response = await api.patch(`/api/periods/${periodId}/status`, statusData);
+      const response = await api.patch(`/periods/${periodId}/status`, statusData);
       toast({
         title: "Success",
         description: `Period status updated to ${statusData.period_status}`,
@@ -210,7 +210,7 @@ export const periodService = {
   // Activate a period
   activatePeriod: async (periodId: number): Promise<Period> => {
     try {
-      const response = await api.patch(`/api/periods/${periodId}/activate`);
+      const response = await api.patch(`/periods/${periodId}/activate`);
       toast({
         title: "Success",
         description: "Period activated successfully",
@@ -229,7 +229,7 @@ export const periodService = {
   // Close a period
   closePeriod: async (periodId: number): Promise<Period> => {
     try {
-      const response = await api.patch(`/api/periods/${periodId}/close`);
+      const response = await api.patch(`/periods/${periodId}/close`);
       toast({
         title: "Success",
         description: "Period closed successfully",
@@ -248,7 +248,7 @@ export const periodService = {
   // Soft delete a period
   deletePeriod: async (periodId: number): Promise<StatusMessage> => {
     try {
-      const response = await api.delete(`/api/periods/${periodId}`);
+      const response = await api.delete(`/periods/${periodId}`);
       toast({
         title: "Success",
         description: "Period deleted successfully",
@@ -267,7 +267,7 @@ export const periodService = {
   // Get period with KPI statistics
   getPeriodWithKPIs: async (periodId: number): Promise<PeriodWithKPIs> => {
     try {
-      const response = await api.get(`/api/periods/${periodId}/kpis`);
+      const response = await api.get(`/periods/${periodId}/kpis`);
       return response.data;
     } catch (error: any) {
       toast({
@@ -282,7 +282,7 @@ export const periodService = {
   // Get period performance statistics
   getPeriodStats: async (periodId: number): Promise<PeriodStats> => {
     try {
-      const response = await api.get(`/api/periods/${periodId}/stats`);
+      const response = await api.get(`/periods/${periodId}/stats`);
       return response.data;
     } catch (error: any) {
       toast({

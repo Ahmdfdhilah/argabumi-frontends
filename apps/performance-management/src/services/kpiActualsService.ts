@@ -1,6 +1,6 @@
 // src/services/kpiActualService.ts
 import pmApi from "@/utils/api";
-// import { useToast } from "@workspace/ui/components/sonner";
+import { useToast } from "@workspace/ui/components/sonner";
 import { Decimal } from "decimal.js";
 
 // Common types
@@ -68,14 +68,20 @@ export interface StatusMessage {
   message: string;
 }
 
+const { toast } = useToast();
+
 export const kpiActualService = {
   // Get all actuals for a submission entry
   getActualsByEntry: async (entryId: number): Promise<KPIActualResponse[]> => {
     try {
-      const response = await pmApi.get(`/api/kpi-actuals/entry/${entryId}`);
+      const response = await pmApi.get(`/kpi-actuals/entry/${entryId}`);
       return response.data;
     } catch (error: any) {
-      console.error("Failed to fetch actuals by entry:", error);
+      toast({
+        title: "Error",
+        description: error.response?.data?.detail || "Failed to fetch actuals by entry",
+        variant: "destructive",
+      });
       throw error;
     }
   },
@@ -86,10 +92,14 @@ export const kpiActualService = {
     month: number
   ): Promise<KPIActualResponse[]> => {
     try {
-      const response = await pmApi.get(`/api/kpi-actuals/kpi/${kpiId}/month/${month}`);
+      const response = await pmApi.get(`/kpi-actuals/kpi/${kpiId}/month/${month}`);
       return response.data;
     } catch (error: any) {
-      console.error("Failed to fetch actuals by KPI and month:", error);
+      toast({
+        title: "Error",
+        description: error.response?.data?.detail || "Failed to fetch actuals by KPI and month",
+        variant: "destructive",
+      });
       throw error;
     }
   },
@@ -97,10 +107,14 @@ export const kpiActualService = {
   // Get a KPI actual by ID
   getActual: async (actualId: number): Promise<KPIActualResponse> => {
     try {
-      const response = await pmApi.get(`/api/kpi-actuals/${actualId}`);
+      const response = await pmApi.get(`/kpi-actuals/${actualId}`);
       return response.data;
     } catch (error: any) {
-      console.error("Failed to fetch actual:", error);
+      toast({
+        title: "Error",
+        description: error.response?.data?.detail || "Failed to fetch actual",
+        variant: "destructive",
+      });
       throw error;
     }
   },
@@ -108,10 +122,14 @@ export const kpiActualService = {
   // Get a KPI actual with evidence count
   getActualWithEvidence: async (actualId: number): Promise<KPIActualWithEvidenceResponse> => {
     try {
-      const response = await pmApi.get(`/api/kpi-actuals/${actualId}/evidence`);
+      const response = await pmApi.get(`/kpi-actuals/${actualId}/evidence`);
       return response.data;
     } catch (error: any) {
-      console.error("Failed to fetch actual with evidence:", error);
+      toast({
+        title: "Error",
+        description: error.response?.data?.detail || "Failed to fetch actual with evidence",
+        variant: "destructive",
+      });
       throw error;
     }
   },
@@ -119,10 +137,14 @@ export const kpiActualService = {
   // Get all monthly actuals for a KPI
   getMonthlyActuals: async (kpiId: number): Promise<KPIMonthlyActualsResponse> => {
     try {
-      const response = await pmApi.get(`/api/kpi-actuals/kpi/${kpiId}/monthly`);
+      const response = await pmApi.get(`/kpi-actuals/kpi/${kpiId}/monthly`);
       return response.data;
     } catch (error: any) {
-      console.error("Failed to fetch monthly actuals:", error);
+      toast({
+        title: "Error",
+        description: error.response?.data?.detail || "Failed to fetch monthly actuals",
+        variant: "destructive",
+      });
       throw error;
     }
   },
@@ -130,10 +152,18 @@ export const kpiActualService = {
   // Create a new KPI actual
   createActual: async (actualData: KPIActualCreate): Promise<KPIActualResponse> => {
     try {
-      const response = await pmApi.post("/api/kpi-actuals/", actualData);
+      const response = await pmApi.post("/kpi-actuals/", actualData);
+      toast({
+        title: "Success",
+        description: "KPI actual created successfully",
+      });
       return response.data;
     } catch (error: any) {
-      console.error("Failed to create actual:", error);
+      toast({
+        title: "Error",
+        description: error.response?.data?.detail || "Failed to create actual",
+        variant: "destructive",
+      });
       throw error;
     }
   },
@@ -144,10 +174,18 @@ export const kpiActualService = {
     actualData: KPIActualUpdate
   ): Promise<KPIActualResponse> => {
     try {
-      const response = await pmApi.put(`/api/kpi-actuals/${actualId}`, actualData);
+      const response = await pmApi.put(`/kpi-actuals/${actualId}`, actualData);
+      toast({
+        title: "Success",
+        description: "KPI actual updated successfully",
+      });
       return response.data;
     } catch (error: any) {
-      console.error("Failed to update actual:", error);
+      toast({
+        title: "Error",
+        description: error.response?.data?.detail || "Failed to update actual",
+        variant: "destructive",
+      });
       throw error;
     }
   },
@@ -158,10 +196,18 @@ export const kpiActualService = {
     statusData: KPIActualStatusUpdate
   ): Promise<KPIActualResponse> => {
     try {
-      const response = await pmApi.patch(`/api/kpi-actuals/${actualId}/status`, statusData);
+      const response = await pmApi.patch(`/kpi-actuals/${actualId}/status`, statusData);
+      toast({
+        title: "Success",
+        description: "KPI actual status updated successfully",
+      });
       return response.data;
     } catch (error: any) {
-      console.error("Failed to update actual status:", error);
+      toast({
+        title: "Error",
+        description: error.response?.data?.detail || "Failed to update actual status",
+        variant: "destructive",
+      });
       throw error;
     }
   },
@@ -171,10 +217,18 @@ export const kpiActualService = {
     problemData: KPIProblemUpdateRequest
   ): Promise<KPIActualResponse> => {
     try {
-      const response = await pmApi.patch("/api/kpi-actuals/problem", problemData);
+      const response = await pmApi.patch("/kpi-actuals/problem", problemData);
+      toast({
+        title: "Success",
+        description: "Problem information updated successfully",
+      });
       return response.data;
     } catch (error: any) {
-      console.error("Failed to update problem info:", error);
+      toast({
+        title: "Error",
+        description: error.response?.data?.detail || "Failed to update problem info",
+        variant: "destructive",
+      });
       throw error;
     }
   },
@@ -182,10 +236,18 @@ export const kpiActualService = {
   // Delete a KPI actual
   deleteActual: async (actualId: number): Promise<StatusMessage> => {
     try {
-      const response = await pmApi.delete(`/api/kpi-actuals/${actualId}`);
+      const response = await pmApi.delete(`/kpi-actuals/${actualId}`);
+      toast({
+        title: "Success",
+        description: "KPI actual deleted successfully",
+      });
       return response.data;
     } catch (error: any) {
-      console.error("Failed to delete actual:", error);
+      toast({
+        title: "Error",
+        description: error.response?.data?.detail || "Failed to delete actual",
+        variant: "destructive",
+      });
       throw error;
     }
   },

@@ -120,7 +120,7 @@ export const kpiDefinitionService = {
   ): Promise<KPIDefinitionResponse[]> => {
     try {
       const params = { skip, limit, ...(period_id ? { period_id } : {}) };
-      const response = await pmApi.get("/api/kpi-definitions/", { params });
+      const response = await pmApi.get("/kpi-definitions/", { params });
       return response.data;
     } catch (error: any) {
       toast({
@@ -135,7 +135,7 @@ export const kpiDefinitionService = {
   // Create a new KPI definition
   createKPIDefinition: async (kpiData: KPIDefinitionCreate): Promise<KPIDefinitionResponse> => {
     try {
-      const response = await pmApi.post("/api/kpi-definitions/", kpiData);
+      const response = await pmApi.post("/kpi-definitions/", kpiData);
       toast({
         title: "Success",
         description: "KPI definition created successfully",
@@ -154,7 +154,7 @@ export const kpiDefinitionService = {
   // Create a new KPI action plan
   createActionPlan: async (actionPlanData: KPIActionPlanCreate): Promise<KPIDefinitionResponse> => {
     try {
-      const response = await pmApi.post("/api/kpi-definitions/action-plan", actionPlanData);
+      const response = await pmApi.post("/kpi-definitions/action-plan", actionPlanData);
       toast({
         title: "Success",
         description: "Action plan created successfully",
@@ -178,7 +178,7 @@ export const kpiDefinitionService = {
   ): Promise<KPIDefinitionResponse[]> => {
     try {
       const params = { ...(period_id ? { period_id } : {}), limit };
-      const response = await pmApi.get(`/api/kpi-definitions/search/${term}`, { params });
+      const response = await pmApi.get(`/kpi-definitions/search/${term}`, { params });
       return response.data;
     } catch (error: any) {
       toast({
@@ -193,7 +193,7 @@ export const kpiDefinitionService = {
   // Get KPI tree for a period
   getKPITreeByPeriod: async (period_id: number): Promise<KPICascadeResponse> => {
     try {
-      const response = await pmApi.get(`/api/kpi-definitions/period/${period_id}/tree`);
+      const response = await pmApi.get(`/kpi-definitions/period/${period_id}/tree`);
       return response.data;
     } catch (error: any) {
       toast({
@@ -212,7 +212,7 @@ export const kpiDefinitionService = {
   ): Promise<KPIDefinitionResponse[]> => {
     try {
       const params = { ...(period_id ? { period_id } : {}) };
-      const response = await pmApi.get(`/api/kpi-definitions/organization-unit/${org_unit_id}`, {
+      const response = await pmApi.get(`/kpi-definitions/organization-unit/${org_unit_id}`, {
         params,
       });
       return response.data;
@@ -233,7 +233,7 @@ export const kpiDefinitionService = {
   ): Promise<KPIDefinitionResponse[]> => {
     try {
       const params = { ...(period_id ? { period_id } : {}) };
-      const response = await pmApi.get(`/api/kpi-definitions/employee/${employee_id}`, { params });
+      const response = await pmApi.get(`/kpi-definitions/employee/${employee_id}`, { params });
       return response.data;
     } catch (error: any) {
       toast({
@@ -248,7 +248,7 @@ export const kpiDefinitionService = {
   // Get a KPI definition by ID
   getKPIDefinition: async (kpi_id: number): Promise<KPIDefinitionResponse> => {
     try {
-      const response = await pmApi.get(`/api/kpi-definitions/${kpi_id}`);
+      const response = await pmApi.get(`/kpi-definitions/${kpi_id}`);
       return response.data;
     } catch (error: any) {
       toast({
@@ -263,7 +263,7 @@ export const kpiDefinitionService = {
   // Get a KPI definition by code
   getKPIDefinitionByCode: async (code: string): Promise<KPIDefinitionResponse> => {
     try {
-      const response = await pmApi.get(`/api/kpi-definitions/code/${code}`);
+      const response = await pmApi.get(`/kpi-definitions/code/${code}`);
       return response.data;
     } catch (error: any) {
       toast({
@@ -278,7 +278,7 @@ export const kpiDefinitionService = {
   // Get a KPI definition with its immediate children
   getKPIDefinitionWithChildren: async (kpi_id: number): Promise<KPIDefinitionWithChildrenResponse> => {
     try {
-      const response = await pmApi.get(`/api/kpi-definitions/${kpi_id}/children`);
+      const response = await pmApi.get(`/kpi-definitions/${kpi_id}/children`);
       return response.data;
     } catch (error: any) {
       toast({
@@ -293,7 +293,7 @@ export const kpiDefinitionService = {
   // Get a KPI definition with full context information
   getKPIDefinitionFull: async (kpi_id: number): Promise<KPIDefinitionFullResponse> => {
     try {
-      const response = await pmApi.get(`/api/kpi-definitions/${kpi_id}/full`);
+      const response = await pmApi.get(`/kpi-definitions/${kpi_id}/full`);
       return response.data;
     } catch (error: any) {
       toast({
@@ -308,7 +308,7 @@ export const kpiDefinitionService = {
   // Get KPI cascade as a tree structure
   getKPICascade: async (kpi_id: number): Promise<KPICascadeResponse> => {
     try {
-      const response = await pmApi.get(`/api/kpi-definitions/${kpi_id}/cascade`);
+      const response = await pmApi.get(`/kpi-definitions/${kpi_id}/cascade`);
       return response.data;
     } catch (error: any) {
       toast({
@@ -326,7 +326,7 @@ export const kpiDefinitionService = {
     kpiData: KPIDefinitionUpdate
   ): Promise<KPIDefinitionResponse> => {
     try {
-      const response = await pmApi.put(`/api/kpi-definitions/${kpi_id}`, kpiData);
+      const response = await pmApi.put(`/kpi-definitions/${kpi_id}`, kpiData);
       toast({
         title: "Success",
         description: "KPI definition updated successfully",
@@ -345,7 +345,7 @@ export const kpiDefinitionService = {
   // Soft delete a KPI definition
   deleteKPIDefinition: async (kpi_id: number): Promise<StatusMessage> => {
     try {
-      const response = await pmApi.delete(`/api/kpi-definitions/${kpi_id}`);
+      const response = await pmApi.delete(`/kpi-definitions/${kpi_id}`);
       toast({
         title: "Success",
         description: "KPI definition deleted successfully",
@@ -364,7 +364,7 @@ export const kpiDefinitionService = {
   // Get all action plans for a KPI
   getKPIActionPlans: async (kpi_id: number): Promise<KPIDefinitionResponse[]> => {
     try {
-      const response = await pmApi.get(`/api/kpi-definitions/${kpi_id}/action-plans`);
+      const response = await pmApi.get(`/kpi-definitions/${kpi_id}/action-plans`);
       return response.data;
     } catch (error: any) {
       toast({
@@ -383,7 +383,7 @@ export const kpiDefinitionService = {
   ): Promise<KPIDefinitionResponse[]> => {
     try {
       const params = { ...(period_id ? { period_id } : {}) };
-      const response = await pmApi.get(`/api/kpi-definitions/type/${kpi_type}`, { params });
+      const response = await pmApi.get(`/kpi-definitions/type/${kpi_type}`, { params });
       return response.data;
     } catch (error: any) {
       toast({

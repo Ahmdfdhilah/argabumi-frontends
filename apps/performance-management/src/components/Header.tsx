@@ -21,6 +21,10 @@ import {
 import { useEffect, useState } from 'react';
 import avatar from '@/assets/avatar.png';
 import SearchBar from './Search';
+import { logoutUser } from '@/redux/features/authSlice';
+import { useNavigate } from 'react-router-dom';
+import { useToast } from '@workspace/ui/components/sonner';
+import { useAppDispatch } from '@/redux/hooks';
 
 interface HeaderProps {
     isSidebarOpen: boolean;
@@ -56,6 +60,9 @@ const Header: React.FC<HeaderProps> = ({
 
     const currentRoleData = roles.find(role => role.id === currentRole) || roles[0];
     const unreadNotifications = notifications.filter(n => !n.read).length;
+    const { toast } = useToast();
+    const dispatch = useAppDispatch();
+    const navigate = useNavigate();
 
     useEffect(() => {
         if (isDarkMode) {
@@ -72,6 +79,25 @@ const Header: React.FC<HeaderProps> = ({
     const markAsRead = (id: number) => {
         setNotifications(notifications.map(n =>
             n.id === id ? { ...n, read: true } : n));
+    };
+
+    const handleLogout = async () => {
+        try {
+            await dispatch(logoutUser()).unwrap();
+
+            toast({
+                title: "Success",
+                description: "Successfully logged out",
+            });
+
+            navigate('/login');
+        } catch (error) {
+            toast({
+                title: "Error",
+                description: typeof error === 'string' ? `Logout failed: ${error}` : 'Logout failed',
+                variant: "destructive",
+            });
+        }
     };
 
     return (
@@ -239,7 +265,7 @@ const Header: React.FC<HeaderProps> = ({
                             <DropdownMenuItem className="cursor-pointer">Profile</DropdownMenuItem>
                             <DropdownMenuItem className="cursor-pointer">Support</DropdownMenuItem>
                             <DropdownMenuSeparator />
-                            <DropdownMenuItem className="text-red-600 hover:text-red-700 dark:text-red-400 cursor-pointer">
+                            <DropdownMenuItem className="text-red-600 hover:text-red-700 dark:text-red-400 cursor-pointer" onClick={handleLogout}>
                                 Log out
                             </DropdownMenuItem>
                         </DropdownMenuContent>

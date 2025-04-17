@@ -39,7 +39,7 @@ export const kpiPerspectiveService = {
   ): Promise<KPIPerspective[]> => {
     try {
       const params = { skip, limit };
-      const response = await api.get("/api/kpi-perspectives/", { params });
+      const response = await api.get("/kpi-perspectives/", { params });
       return response.data;
     } catch (error: any) {
       toast({
@@ -57,7 +57,7 @@ export const kpiPerspectiveService = {
     perspectiveData: KPIPerspectiveCreate
   ): Promise<KPIPerspective> => {
     try {
-      const response = await api.post("/api/kpi-perspectives/", perspectiveData);
+      const response = await api.post("/kpi-perspectives/", perspectiveData);
       toast({
         title: "Success",
         description: "KPI perspective created successfully",
@@ -77,7 +77,7 @@ export const kpiPerspectiveService = {
   // Get a KPI perspective by ID
   getPerspectiveById: async (perspectiveId: number): Promise<KPIPerspective> => {
     try {
-      const response = await api.get(`/api/kpi-perspectives/${perspectiveId}`);
+      const response = await api.get(`/kpi-perspectives/${perspectiveId}`);
       return response.data;
     } catch (error: any) {
       toast({
@@ -93,7 +93,7 @@ export const kpiPerspectiveService = {
   // Get a KPI perspective by code
   getPerspectiveByCode: async (code: string): Promise<KPIPerspective> => {
     try {
-      const response = await api.get(`/api/kpi-perspectives/code/${code}`);
+      const response = await api.get(`/kpi-perspectives/code/${code}`);
       return response.data;
     } catch (error: any) {
       toast({
@@ -113,7 +113,7 @@ export const kpiPerspectiveService = {
   ): Promise<KPIPerspective> => {
     try {
       const response = await api.put(
-        `/api/kpi-perspectives/${perspectiveId}`,
+        `/kpi-perspectives/${perspectiveId}`,
         perspectiveData
       );
       toast({
@@ -137,7 +137,7 @@ export const kpiPerspectiveService = {
     perspectiveId: number
   ): Promise<StatusMessage> => {
     try {
-      const response = await api.delete(`/api/kpi-perspectives/${perspectiveId}`);
+      const response = await api.delete(`/kpi-perspectives/${perspectiveId}`);
       toast({
         title: "Success",
         description: "KPI perspective deleted successfully",

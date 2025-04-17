@@ -1,6 +1,6 @@
 // src/services/kpiTargetService.ts
 import pmApi from "@/utils/api";
-// import { useToast } from "@workspace/ui/components/sonner";
+import { useToast } from "@workspace/ui/components/sonner";
 import { Decimal } from "decimal.js";
 
 // Common types
@@ -62,14 +62,20 @@ export interface StatusMessage {
   message: string;
 }
 
+const { toast } = useToast();
+
 export const kpiTargetService = {
   // Get all targets for a submission entry
   getTargetsByEntry: async (entryId: number): Promise<KPITargetResponse[]> => {
     try {
-      const response = await pmApi.get(`/api/kpi-targets/entry/${entryId}`);
+      const response = await pmApi.get(`/kpi-targets/entry/${entryId}`);
       return response.data;
     } catch (error: any) {
-      console.error("Failed to fetch targets by entry:", error);
+      toast({
+        title: "Error",
+        description: error.response?.data?.detail || "Failed to fetch targets by entry",
+        variant: "destructive",
+      });
       throw error;
     }
   },
@@ -80,10 +86,14 @@ export const kpiTargetService = {
     month: number
   ): Promise<KPITargetResponse[]> => {
     try {
-      const response = await pmApi.get(`/api/kpi-targets/kpi/${kpiId}/month/${month}`);
+      const response = await pmApi.get(`/kpi-targets/kpi/${kpiId}/month/${month}`);
       return response.data;
     } catch (error: any) {
-      console.error("Failed to fetch targets by KPI and month:", error);
+      toast({
+        title: "Error",
+        description: error.response?.data?.detail || "Failed to fetch targets by KPI and month",
+        variant: "destructive",
+      });
       throw error;
     }
   },
@@ -91,10 +101,14 @@ export const kpiTargetService = {
   // Get a KPI target by ID
   getTarget: async (targetId: number): Promise<KPITargetResponse> => {
     try {
-      const response = await pmApi.get(`/api/kpi-targets/${targetId}`);
+      const response = await pmApi.get(`/kpi-targets/${targetId}`);
       return response.data;
     } catch (error: any) {
-      console.error("Failed to fetch target:", error);
+      toast({
+        title: "Error",
+        description: error.response?.data?.detail || "Failed to fetch target",
+        variant: "destructive",
+      });
       throw error;
     }
   },
@@ -102,10 +116,14 @@ export const kpiTargetService = {
   // Get all monthly targets for a KPI
   getMonthlyTargets: async (kpiId: number): Promise<KPIMonthlyTargetsResponse> => {
     try {
-      const response = await pmApi.get(`/api/kpi-targets/kpi/${kpiId}/monthly`);
+      const response = await pmApi.get(`/kpi-targets/kpi/${kpiId}/monthly`);
       return response.data;
     } catch (error: any) {
-      console.error("Failed to fetch monthly targets:", error);
+      toast({
+        title: "Error",
+        description: error.response?.data?.detail || "Failed to fetch monthly targets",
+        variant: "destructive",
+      });
       throw error;
     }
   },
@@ -113,10 +131,18 @@ export const kpiTargetService = {
   // Create a new KPI target
   createTarget: async (targetData: KPITargetCreate): Promise<KPITargetResponse> => {
     try {
-      const response = await pmApi.post("/api/kpi-targets/", targetData);
+      const response = await pmApi.post("/kpi-targets/", targetData);
+      toast({
+        title: "Success",
+        description: "KPI target created successfully",
+      });
       return response.data;
     } catch (error: any) {
-      console.error("Failed to create target:", error);
+      toast({
+        title: "Error",
+        description: error.response?.data?.detail || "Failed to create target",
+        variant: "destructive",
+      });
       throw error;
     }
   },
@@ -127,12 +153,20 @@ export const kpiTargetService = {
     kpiId: number
   ): Promise<KPITargetResponse[]> => {
     try {
-      const response = await pmApi.post("/api/kpi-targets/auto-create", null, {
+      const response = await pmApi.post("/kpi-targets/auto-create", null, {
         params: { entry_id: entryId, kpi_id: kpiId },
+      });
+      toast({
+        title: "Success",
+        description: "Monthly targets created automatically",
       });
       return response.data;
     } catch (error: any) {
-      console.error("Failed to auto-create targets:", error);
+      toast({
+        title: "Error",
+        description: error.response?.data?.detail || "Failed to auto-create targets",
+        variant: "destructive",
+      });
       throw error;
     }
   },
@@ -143,10 +177,18 @@ export const kpiTargetService = {
     targetData: KPITargetUpdate
   ): Promise<KPITargetResponse> => {
     try {
-      const response = await pmApi.put(`/api/kpi-targets/${targetId}`, targetData);
+      const response = await pmApi.put(`/kpi-targets/${targetId}`, targetData);
+      toast({
+        title: "Success",
+        description: "KPI target updated successfully",
+      });
       return response.data;
     } catch (error: any) {
-      console.error("Failed to update target:", error);
+      toast({
+        title: "Error",
+        description: error.response?.data?.detail || "Failed to update target",
+        variant: "destructive",
+      });
       throw error;
     }
   },
@@ -157,10 +199,18 @@ export const kpiTargetService = {
     statusData: KPITargetStatusUpdate
   ): Promise<KPITargetResponse> => {
     try {
-      const response = await pmApi.patch(`/api/kpi-targets/${targetId}/status`, statusData);
+      const response = await pmApi.patch(`/kpi-targets/${targetId}/status`, statusData);
+      toast({
+        title: "Success",
+        description: "KPI target status updated successfully",
+      });
       return response.data;
     } catch (error: any) {
-      console.error("Failed to update target status:", error);
+      toast({
+        title: "Error",
+        description: error.response?.data?.detail || "Failed to update target status",
+        variant: "destructive",
+      });
       throw error;
     }
   },
@@ -170,10 +220,18 @@ export const kpiTargetService = {
     bulkData: KPITargetBulkUpdate
   ): Promise<KPITargetResponse[]> => {
     try {
-      const response = await pmApi.post("/api/kpi-targets/bulk-update", bulkData);
+      const response = await pmApi.post("/kpi-targets/bulk-update", bulkData);
+      toast({
+        title: "Success",
+        description: "KPI targets updated in bulk successfully",
+      });
       return response.data;
     } catch (error: any) {
-      console.error("Failed to bulk update targets:", error);
+      toast({
+        title: "Error",
+        description: error.response?.data?.detail || "Failed to bulk update targets",
+        variant: "destructive",
+      });
       throw error;
     }
   },
@@ -181,10 +239,18 @@ export const kpiTargetService = {
   // Delete a KPI target
   deleteTarget: async (targetId: number): Promise<StatusMessage> => {
     try {
-      const response = await pmApi.delete(`/api/kpi-targets/${targetId}`);
+      const response = await pmApi.delete(`/kpi-targets/${targetId}`);
+      toast({
+        title: "Success",
+        description: "KPI target deleted successfully",
+      });
       return response.data;
     } catch (error: any) {
-      console.error("Failed to delete target:", error);
+      toast({
+        title: "Error",
+        description: error.response?.data?.detail || "Failed to delete target",
+        variant: "destructive",
+      });
       throw error;
     }
   },

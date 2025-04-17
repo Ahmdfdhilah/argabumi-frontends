@@ -100,7 +100,7 @@ export const fetchCurrentUser = createAsyncThunk(
       }
 
       // Fetch user data from Performance Management service instead of SSO
-      const response = await axios.get(`${API_BASE_URL_PERFORMANCE_MANAGEMENT}/api/users/me`, {
+      const response = await axios.get(`${API_BASE_URL_PERFORMANCE_MANAGEMENT}/users/me`, {
         headers: {
           Authorization: `Bearer ${auth.accessToken}`
         }
@@ -125,7 +125,7 @@ export const verifyToken = createAsyncThunk(
       }
 
       // Verify token with SSO service
-      const response = await axios.post(`${API_BASE_URL_SSO}/api/auth/verify`, {}, {
+      const response = await axios.post(`${API_BASE_URL_SSO}/auth/verify`, {}, {
         headers: {
           Authorization: `Bearer ${auth.accessToken}`
         }
@@ -150,7 +150,7 @@ export const refreshToken = createAsyncThunk(
       }
 
       // Use SSO service for token refresh
-      const response = await axios.post(`${API_BASE_URL_SSO}/api/auth/refresh`, {}, {
+      const response = await axios.post(`${API_BASE_URL_SSO}/auth/refresh`, {}, {
         headers: {
           Authorization: `Bearer ${auth.refreshToken}`
         }
@@ -174,7 +174,7 @@ export const logoutUser = createAsyncThunk(
       if (auth.accessToken) {
         // Notify SSO service about logout
         try {
-          await axios.post(`${API_BASE_URL_SSO}/api/auth/logout`, {}, {
+          await axios.post(`${API_BASE_URL_SSO}/auth/logout`, {}, {
             headers: {
               Authorization: `Bearer ${auth.accessToken}`
             }
@@ -244,13 +244,6 @@ const authSlice = createSlice({
     builder.addCase(fetchCurrentUser.rejected, (state, action) => {
       state.loading = false;
       state.error = action.payload as string;
-
-      // If unauthorized (401), clear the token
-      if (action.meta.rejectedWithValue) {
-        state.accessToken = null;
-        state.isAuthenticated = false;
-        localStorage.removeItem('accessToken');
-      }
     });
 
     // verifyToken

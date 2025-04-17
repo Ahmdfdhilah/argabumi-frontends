@@ -72,7 +72,7 @@ const organizationUnitService = {
   ): Promise<OrganizationUnitResponse[]> => {
     try {
       const params = { skip, limit, search };
-      const response = await pmApi.get("/api/organization-units/", { params });
+      const response = await pmApi.get("/organization-units/", { params });
       return response.data;
     } catch (error: any) {
       toast({
@@ -89,7 +89,7 @@ const organizationUnitService = {
     orgUnitData: OrganizationUnitCreate
   ): Promise<OrganizationUnitResponse> => {
     try {
-      const response = await pmApi.post("/api/organization-units/", orgUnitData);
+      const response = await pmApi.post("/organization-units/", orgUnitData);
       toast({
         title: "Success",
         description: "Organization unit created successfully",
@@ -108,7 +108,7 @@ const organizationUnitService = {
   // Get the complete organization hierarchy as a tree
   getOrganizationHierarchy: async (): Promise<OrganizationUnitHierarchyResponse> => {
     try {
-      const response = await pmApi.get("/api/organization-units/hierarchy");
+      const response = await pmApi.get("/organization-units/hierarchy");
       return response.data;
     } catch (error: any) {
       toast({
@@ -123,7 +123,7 @@ const organizationUnitService = {
   // Get an organization unit by ID
   getOrganizationUnitById: async (orgUnitId: number): Promise<OrganizationUnitResponse> => {
     try {
-      const response = await pmApi.get(`/api/organization-units/${orgUnitId}`);
+      const response = await pmApi.get(`/organization-units/${orgUnitId}`);
       return response.data;
     } catch (error: any) {
       toast({
@@ -138,7 +138,7 @@ const organizationUnitService = {
   // Get an organization unit by code
   getOrganizationUnitByCode: async (code: string): Promise<OrganizationUnitResponse> => {
     try {
-      const response = await pmApi.get(`/api/organization-units/code/${code}`);
+      const response = await pmApi.get(`/organization-units/code/${code}`);
       return response.data;
     } catch (error: any) {
       toast({
@@ -155,7 +155,7 @@ const organizationUnitService = {
     orgUnitId: number
   ): Promise<OrganizationUnitWithChildrenResponse> => {
     try {
-      const response = await pmApi.get(`/api/organization-units/${orgUnitId}/children`);
+      const response = await pmApi.get(`/organization-units/${orgUnitId}/children`);
       return response.data;
     } catch (error: any) {
       toast({
@@ -173,7 +173,7 @@ const organizationUnitService = {
     orgUnitData: OrganizationUnitUpdate
   ): Promise<OrganizationUnitResponse> => {
     try {
-      const response = await pmApi.put(`/api/organization-units/${orgUnitId}`, orgUnitData);
+      const response = await pmApi.put(`/organization-units/${orgUnitId}`, orgUnitData);
       toast({
         title: "Success",
         description: "Organization unit updated successfully",
@@ -192,7 +192,7 @@ const organizationUnitService = {
   // Soft delete an organization unit
   deleteOrganizationUnit: async (orgUnitId: number): Promise<StatusMessage> => {
     try {
-      const response = await pmApi.delete(`/api/organization-units/${orgUnitId}`);
+      const response = await pmApi.delete(`/organization-units/${orgUnitId}`);
       toast({
         title: "Success",
         description: "Organization unit deleted successfully",
@@ -215,7 +215,7 @@ const organizationUnitService = {
   ): Promise<OrganizationUnitResponse[]> => {
     try {
       const params = { limit };
-      const response = await pmApi.get(`/api/organization-units/search/${term}`, { params });
+      const response = await pmApi.get(`/organization-units/search/${term}`, { params });
       return response.data;
     } catch (error: any) {
       toast({

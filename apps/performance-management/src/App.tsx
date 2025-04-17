@@ -36,7 +36,7 @@ function App() {
             <Toaster />
             <Routes>
               {/* Dashboard Routes */}
-              <Route path="/" element={<AuthGuard><PerformanceManagementHome /></AuthGuard>} />
+              <Route path="/" element={<PerformanceManagementHome />} />
               <Route path="/login" element={<Login />} />
               <Route path="/user-profile" element={<AuthGuard><UserDetailPage /></AuthGuard>} />
 

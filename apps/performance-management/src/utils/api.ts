@@ -53,7 +53,7 @@ const configureInterceptors = (api: AxiosInstance) => {
   api.interceptors.request.use(
     async (config) => {
       const state = store.getState();
-      const token = state.auth.accessToken;
+      const token = state.auth?.accessToken;
 
       if (!token) {
         return config;
