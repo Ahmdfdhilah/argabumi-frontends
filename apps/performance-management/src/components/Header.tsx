@@ -22,9 +22,9 @@ import { useEffect, useState } from 'react';
 import avatar from '@/assets/avatar.png';
 import SearchBar from './Search';
 import { logoutUser } from '@/redux/features/authSlice';
-import { useNavigate } from 'react-router-dom';
 import { useToast } from '@workspace/ui/components/sonner';
 import { useAppDispatch } from '@/redux/hooks';
+import { SSO_DASHBOARD_URL } from '@/config';
 
 interface HeaderProps {
     isSidebarOpen: boolean;
@@ -52,7 +52,6 @@ const Header: React.FC<HeaderProps> = ({
     // const unreadNotifications = notifications.filter(n => !n.read).length;
     const { toast } = useToast();
     const dispatch = useAppDispatch();
-    const navigate = useNavigate();
 
     useEffect(() => {
         if (isDarkMode) {
@@ -80,7 +79,8 @@ const Header: React.FC<HeaderProps> = ({
                 description: "Successfully logged out",
             });
 
-            navigate('/login');
+            window.location.href = `${SSO_DASHBOARD_URL}/login`;
+            return null;
         } catch (error) {
             toast({
                 title: "Error",

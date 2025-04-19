@@ -7,8 +7,7 @@ import PerformanceManagementDashboard from "./pages/PerformanceManagementDashboa
 import PerformanceManagementHome from "./pages/PerformanceManagementHome";
 import UserDetailPage from "./pages/UserDetail";
 import EmployeeIPMDetailsPage from "./pages/IPM/EmployeeIPMDetails";
-import MPMTargetsTeamKPI from "./pages/MPM/MPMTargetsTeamKPI";
-import MPMTargetsActionPlans from "./pages/MPM/MPMTargetsActionPlans";
+
 import MPMActuals from "./pages/MPM/MPMActuals";
 import MPMActualList from "./pages/MPM/MPMActualList";
 import MPMTargetList from "./pages/MPM/MPMTargetsList";
@@ -32,6 +31,7 @@ import EmployeeDetailsPage from "./pages/Employee/EmployeeDetailsPage";
 import EmployeeHierarchyPage from "./pages/Employee/EmployeeHierarchyPage";
 import PeriodMasterPage from "./pages/Periods/PeriodMasterPage";
 import PeriodFormPage from "./pages/Periods/PeriodFormPage";
+import MPMActionPlan from "./pages/MPM/MPMActionPlan";
 
 function App() {
   return (
@@ -84,10 +84,10 @@ function App() {
                 <Route path="mpm">
                   <Route path="target">
                     <Route index element={<AuthGuard><MPMTargetList /></AuthGuard>} />
-                    <Route path=":targetId" element={<AuthGuard><MPMTargets /></AuthGuard>} />
-                    <Route path=":targetId/entri/:mpmId">
-                      <Route path="teams" element={<AuthGuard><MPMTargetsTeamKPI /></AuthGuard>} />
-                      <Route path="teams/:teamId" element={<AuthGuard><MPMTargetsActionPlans /></AuthGuard>} />
+                    <Route path=":submissionId" element={<AuthGuard><MPMTargets /></AuthGuard>} />
+                    <Route path=":submissionId/kpi/:kpiId">
+                      <Route path="action-plans" element={<AuthGuard><MPMActionPlan /></AuthGuard>} />
+                      {/* <Route path="teams/:teamId" element={<AuthGuard><MPMTargetsActionPlans /></AuthGuard>} /> */}
                     </Route>
                   </Route>
 

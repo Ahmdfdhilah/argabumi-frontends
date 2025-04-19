@@ -39,7 +39,7 @@ const UserManagement = () => {
                     setIsSidebarOpen={setIsSidebarOpen}
                 />
 
-                <div className={`min-h-screen flex flex-col mt-4 transition-all duration-300 ease-in-out ${isSidebarOpen ? 'lg:ml-64' : 'lg:ml-0'} w-full`}>
+                <div className={`min-h-screen flex flex-col mt-4 transition-all duration-300 ease-in-out ${isSidebarOpen ? 'md:ml-64' : 'lg:ml-0'} w-full`}>
                     <main className='flex-1 px-2 md:px-4 pt-16 pb-12 transition-all duration-300 ease-in-out w-full'>
                         <Routes>
                             <Route path="/" element={<UserList />} />

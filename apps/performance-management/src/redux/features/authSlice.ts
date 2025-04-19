@@ -4,48 +4,8 @@ import type { PayloadAction } from '@reduxjs/toolkit';
 import axios from 'axios';
 import { API_BASE_URL_SSO, API_BASE_URL_PERFORMANCE_MANAGEMENT } from '@/config';
 import { jwtDecode } from 'jwt-decode';
-
-export interface EmployeeBase {
-  employee_number: string;
-  employee_name: string;
-  employee_org_unit_id?: number | null;
-  employee_email?: string | null;
-  employee_phone?: string | null;
-  employee_position?: string | null;
-  employee_supervisor_id?: number | null;
-  employee_metadata?: Record<string, any> | null;
-  is_active: boolean;
-}
-
-export interface Employee extends EmployeeBase {
-  employee_id: number;
-  org_unit_name?: string | null;
-  supervisor_name?: string | null;
-  created_at?: string;
-  updated_at?: string;
-}
-
-export interface OrganizationUnitBase {
-  org_unit_code: string;
-  org_unit_name: string;
-  org_unit_type: string;
-  org_unit_parent_id?: number | null;
-  org_unit_level: number;
-  org_unit_description?: string | null;
-  org_unit_metadata?: Record<string, any> | null;
-  is_active: boolean;
-}
-
-export interface OrganizationUnitResponse extends OrganizationUnitBase {
-  org_unit_id: number;
-  org_unit_path: string;
-  created_at: string;
-  created_by?: number | null;
-  updated_at?: string | null;
-  updated_by?: number | null;
-  deleted_at?: string | null;
-  deleted_by?: number | null;
-}
+import { OrganizationUnitResponse } from '@/services/organizationUnitService';
+import { Employee } from '@/services/employeeService';
 
 // Types for the target application user structure
 export interface Role {

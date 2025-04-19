@@ -125,7 +125,7 @@ const Sidebar: React.FC<SidebarProps> = ({ isSidebarOpen, setIsSidebarOpen }) =>
             {/* Overlay for mobile when sidebar is open */}
             {isSidebarOpen && (
                 <div
-                    className="fixed inset-0 bg-black/50 lg:hidden z-30"
+                    className="fixed inset-0 bg-black/50 md:hidden z-30"
                     onClick={() => setIsSidebarOpen(false)}
                 />
             )}

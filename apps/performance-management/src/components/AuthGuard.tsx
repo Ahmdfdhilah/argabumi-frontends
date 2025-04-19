@@ -1,9 +1,9 @@
 // performance-management/src/components/AuthGuard.tsx
 import { ReactNode, useEffect } from 'react';
-import { Navigate, useLocation, useNavigate } from 'react-router-dom';
 import { clearAuth, fetchCurrentUser } from '@/redux/features/authSlice';
 import { useAppDispatch, useAppSelector } from '@/redux/hooks';
 import Loader from '@workspace/ui/components/ui/loading';
+import {  SSO_DASHBOARD_URL } from '@/config';
 
 interface AuthGuardProps {
   children: ReactNode;
@@ -12,9 +12,7 @@ interface AuthGuardProps {
 const AuthGuard = ({ children }: AuthGuardProps) => {
   const { isAuthenticated, accessToken, loading, user } = useAppSelector((state: { auth: any; }) => state.auth);
   const dispatch = useAppDispatch();
-  const location = useLocation();
-  const navigate = useNavigate();
- 
+
   useEffect(() => {
     const checkAuth = async () => {
       // If we have a token but no user data, try to fetch the user
@@ -24,7 +22,7 @@ const AuthGuard = ({ children }: AuthGuardProps) => {
         } catch (error) {
           // Clear auth state and redirect to login
           dispatch(clearAuth());
-          navigate('/login');
+          window.location.href = `${SSO_DASHBOARD_URL}/login`; //harusnya di login curr domain tp nanti saja arahkan ke domain login sso
         }
       } 
       // If there's no token but isAuthenticated is true, there's an inconsistency
@@ -34,7 +32,7 @@ const AuthGuard = ({ children }: AuthGuardProps) => {
     };
     
     checkAuth();
-  }, [accessToken, user, loading, isAuthenticated, dispatch, navigate]);
+  }, [accessToken, user, loading, isAuthenticated, dispatch]);
   
   if (loading && accessToken) {
     return (
@@ -43,7 +41,9 @@ const AuthGuard = ({ children }: AuthGuardProps) => {
   }
   
   if (!isAuthenticated) {
-    return <Navigate to="/login" state={{ from: location }} replace />;
+    dispatch(clearAuth());
+    window.location.href = `${SSO_DASHBOARD_URL}/login`;
+    return null;
   }
 
   return <>{children}</>;

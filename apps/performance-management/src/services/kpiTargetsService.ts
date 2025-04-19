@@ -66,9 +66,9 @@ const { toast } = useToast();
 
 export const kpiTargetService = {
   // Get all targets for a submission entry
-  getTargetsByEntry: async (entryId: number): Promise<KPITargetResponse[]> => {
+  getTargetsByEntry: async (entryId: number, submissionId: number): Promise<KPITargetResponse[]> => {
     try {
-      const response = await pmApi.get(`/kpi-targets/entry/${entryId}`);
+      const response = await pmApi.get(`/kpi-targets/entry/${entryId}?submission_id=${submissionId}`);
       return response.data;
     } catch (error: any) {
       toast({
