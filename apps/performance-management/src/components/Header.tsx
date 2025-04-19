@@ -2,7 +2,7 @@ import {
     Menu,
     Sun,
     Moon,
-    Bell,
+    // Bell,
     Search
 } from 'lucide-react';
 import LogoLightMode from '../assets/logo_abi_lightmode.png';
@@ -14,7 +14,7 @@ import {
     DropdownMenu,
     DropdownMenuContent,
     DropdownMenuItem,
-    DropdownMenuLabel,
+    // DropdownMenuLabel,
     DropdownMenuSeparator,
     DropdownMenuTrigger
 } from '@workspace/ui/components/dropdown-menu';
@@ -31,9 +31,6 @@ interface HeaderProps {
     setIsSidebarOpen: (open: boolean) => void;
     isDarkMode: boolean;
     setIsDarkMode: (mode: boolean) => void;
-    currentRole: string;
-    setCurrentRole: (role: string) => void;
-    currentSystem: string;
 }
 
 const Header: React.FC<HeaderProps> = ({
@@ -41,25 +38,18 @@ const Header: React.FC<HeaderProps> = ({
     setIsSidebarOpen,
     isDarkMode,
     setIsDarkMode,
-    currentRole,
-    setCurrentRole,
 }) => {
     const [isSearchOpen, setIsSearchOpen] = useState(false);
-    const [notifications, setNotifications] = useState<{ id: number; title: string; read: boolean }[]>([
-        { id: 1, title: "New system update available", read: false },
-        { id: 2, title: "Meeting reminder: Strategy session", read: false },
-        { id: 3, title: "Access request approved", read: true }
-    ]);
+    // const [notifications, setNotifications] = useState<{ id: number; title: string; read: boolean }[]>([
+    //     { id: 1, title: "New system update available", read: false },
+    //     { id: 2, title: "Meeting reminder: Strategy session", read: false },
+    //     { id: 3, title: "Access request approved", read: true }
+    // ]);
 
-    const roles = [
-        { id: 'admin', label: 'Admin', color: 'bg-red-500' },
-        { id: 'employee', label: 'Employee', color: 'bg-blue-500' },
-        { id: 'manager', label: 'Manager', color: 'bg-green-500' },
-        { id: 'sm_dept', label: 'Senior Manager', color: 'bg-purple-500' }
-    ];
 
-    const currentRoleData = roles.find(role => role.id === currentRole) || roles[0];
-    const unreadNotifications = notifications.filter(n => !n.read).length;
+
+    // const currentRoleData = roles.find(role => role.id === currentRole) || roles[0];
+    // const unreadNotifications = notifications.filter(n => !n.read).length;
     const { toast } = useToast();
     const dispatch = useAppDispatch();
     const navigate = useNavigate();
@@ -72,14 +62,14 @@ const Header: React.FC<HeaderProps> = ({
         }
     }, [isDarkMode]);
 
-    const markAllAsRead = () => {
-        setNotifications(notifications.map(n => ({ ...n, read: true })));
-    };
+    // const markAllAsRead = () => {
+    //     setNotifications(notifications.map(n => ({ ...n, read: true })));
+    // };
 
-    const markAsRead = (id: number) => {
-        setNotifications(notifications.map(n =>
-            n.id === id ? { ...n, read: true } : n));
-    };
+    // const markAsRead = (id: number) => {
+    //     setNotifications(notifications.map(n =>
+    //         n.id === id ? { ...n, read: true } : n));
+    // };
 
     const handleLogout = async () => {
         try {
@@ -126,7 +116,7 @@ const Header: React.FC<HeaderProps> = ({
 
                 {/* Center section - Search */}
                 <SearchBar
-                    currentRole={currentRole}
+                    // 
                     isSearchOpen={isSearchOpen}
                     setIsSearchOpen={setIsSearchOpen}
                     onSearch={(query) => {
@@ -149,7 +139,7 @@ const Header: React.FC<HeaderProps> = ({
                     </Button>
 
                     {/* Notifications */}
-                    <DropdownMenu>
+                    {/* <DropdownMenu>
                         <DropdownMenuTrigger asChild>
                             <Button variant="ghost" size="icon" className="relative">
                                 <Bell className="h-5 w-5" />
@@ -160,8 +150,8 @@ const Header: React.FC<HeaderProps> = ({
                                 )}
                                 <span className="sr-only">Notifications</span>
                             </Button>
-                        </DropdownMenuTrigger>
-                        <DropdownMenuContent align="end" className="w-72">
+                        </DropdownMenuTrigger> */}
+                        {/* <DropdownMenuContent align="end" className="w-72">
                             <DropdownMenuLabel className="flex items-center justify-between">
                                 <span>Notifications</span>
                                 <Button
@@ -200,7 +190,7 @@ const Header: React.FC<HeaderProps> = ({
                                 View all notifications
                             </DropdownMenuItem>
                         </DropdownMenuContent>
-                    </DropdownMenu>
+                    </DropdownMenu> */}
 
                     {/* Theme toggle */}
                     <Button
@@ -232,15 +222,15 @@ const Header: React.FC<HeaderProps> = ({
                             <div className="flex flex-col space-y-1 p-2">
                                 <p className="text-sm font-medium">Daffa Abdurahman Jatmiko</p>
                                 <p className="text-xs text-gray-500 dark:text-gray-400">daffa.abdurahman@company.com</p>
-                                <div className="flex items-center gap-2 pt-1">
+                                {/* <div className="flex items-center gap-2 pt-1">
                                     <div className={`w-3 h-3 rounded-full ${currentRoleData.color}`} />
                                     <span className="text-xs font-medium">{currentRoleData.label}</span>
-                                </div>
+                                </div> */}
                             </div>
                             <DropdownMenuSeparator />
 
                             {/* Role selection section */}
-                            <DropdownMenuLabel>Switch Role</DropdownMenuLabel>
+                            {/* <DropdownMenuLabel>Switch Role</DropdownMenuLabel>
                             {roles.map((role) => (
                                 <DropdownMenuItem
                                     key={role.id}
@@ -259,7 +249,7 @@ const Header: React.FC<HeaderProps> = ({
                                         )}
                                     </div>
                                 </DropdownMenuItem>
-                            ))}
+                            ))} */}
 
                             <DropdownMenuSeparator />
                             <DropdownMenuItem className="cursor-pointer">Profile</DropdownMenuItem>

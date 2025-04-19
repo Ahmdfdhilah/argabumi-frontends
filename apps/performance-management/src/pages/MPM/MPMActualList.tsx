@@ -2,6 +2,7 @@ import React, { useState, useMemo, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import Pagination from '@/components/Pagination';
 import Header from '@/components/Header';
+import Footer from '@/components/Footer';
 import Sidebar from '@/components/Sidebar';
 import Filtering from '@/components/Filtering';
 import { Card, CardContent, CardHeader, CardTitle } from '@workspace/ui/components/card';
@@ -12,10 +13,8 @@ import { Input } from '@workspace/ui/components/input';
 import { Label } from '@workspace/ui/components/label';
 import Breadcrumb from '@/components/Breadcrumb';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@workspace/ui/components/select';
-import { BarChart2Icon } from 'lucide-react';
-import Footer from '@/components/Footer';
 
-type MPMTargetStatus = 'Pending' | 'Draft' | 'Submitted' | 'Approved by Senior Manager' | 'Rejected by Senior Manager';
+type MPMActualStatus = 'Pending' | 'Draft' | 'Submitted' | 'Approved by Senior Manager' | 'Rejected by Senior Manager';
 
 type ApproverComment = {
   reviewer: string;
@@ -30,19 +29,20 @@ type Department = {
   code: string;
 };
 
-type MpmTarget = {
+type MpmActual = {
   id: string;
-  year: string;
+  month: string;
   period: string;
+  year: string;
   submittedBy: string;
   departmentId: number;
   departmentName: string;
   submittedAt: Date;
-  status: MPMTargetStatus;
+  status: MPMActualStatus;
   approverComments?: ApproverComment[];
 };
 
-const MPMTargetList: React.FC = () => {
+const MPMActualList: React.FC = () => {
   const navigate = useNavigate();
 
   // State Management
@@ -53,7 +53,7 @@ const MPMTargetList: React.FC = () => {
     return true;
   });
   const [isDarkMode, setIsDarkMode] = useState(false);
-  const [currentRole, setCurrentRole] = useState('admin');
+  const [currentRole] = useState('admin');
 
   // Filtering States
   const [selectedPeriod, setSelectedPeriod] = useState('');
@@ -72,20 +72,21 @@ const MPMTargetList: React.FC = () => {
   const [currentUserDepartment,] = useState<number | null>(1);
 
   // Pagination
-  const [currentPage, setCurrentPage] = useState(1); 0;
+  const [currentPage, setCurrentPage] = useState(1);
   const [itemsPerPage, setItemsPerPage] = useState(10);
 
   // Modal States
-  const [selectedMpmTarget, setSelectedMpmTarget] = useState<MpmTarget | null>(null);
+  const [selectedMpmActual, setSelectedMpmActual] = useState<MpmActual | null>(null);
   const [isSubmitModalOpen, setIsSubmitModalOpen] = useState(false);
   const [isReviewModalOpen, setIsReviewModalOpen] = useState(false);
   const [reviewComment, setReviewComment] = useState('');
 
-  const [mpmTargets, setMpmTargets] = useState<MpmTarget[]>([
+  const [mpmActuals, setMpmActuals] = useState<MpmActual[]>([
     {
       id: '1',
+      month: 'January',
+      period: 'Jan-25',
       year: '2025',
-      period: '2025',
       submittedBy: 'John Doe',
       departmentId: 1,
       departmentName: 'IT Department',
@@ -93,90 +94,193 @@ const MPMTargetList: React.FC = () => {
       status: 'Approved by Senior Manager',
       approverComments: [{
         reviewer: 'Jane Smith',
-        comment: 'Targets look good, approved',
+        comment: 'All KPIs look good, approved',
         action: 'Approved',
         reviewedAt: new Date(2025, 0, 18)
       }]
     },
     {
       id: '2',
-      year: '2026',
-      period: '2026',
+      month: 'February',
+      period: 'Feb-25',
+      year: '2025',
       submittedBy: 'John Doe',
       departmentId: 1,
       departmentName: 'IT Department',
       submittedAt: new Date(2025, 1, 16),
-      status: 'Draft',
-      approverComments: []
+      status: 'Approved by Senior Manager',
+      approverComments: [{
+        reviewer: 'Jane Smith',
+        comment: 'Minor discrepancies noted but within acceptable range',
+        action: 'Approved',
+        reviewedAt: new Date(2025, 1, 19)
+      }]
     },
     {
       id: '3',
-      year: '2024',
-      period: '2024',
-      submittedBy: 'Sarah Johnson',
-      departmentId: 2,
-      departmentName: 'Marketing',
-      submittedAt: new Date(2024, 2, 17),
+      month: 'March',
+      period: 'Mar-25',
+      year: '2025',
+      submittedBy: 'John Doe',
+      departmentId: 1,
+      departmentName: 'IT Department',
+      submittedAt: new Date(2025, 2, 17),
+      status: 'Rejected by Senior Manager',
+      approverComments: [{
+        reviewer: 'Jane Smith',
+        comment: 'Incomplete documentation',
+        action: 'Rejected',
+        reviewedAt: new Date(2025, 2, 20)
+      }]
+    },
+    {
+      id: '4',
+      month: 'April',
+      period: 'Apr-25',
+      year: '2025',
+      submittedBy: 'John Doe',
+      departmentId: 1,
+      departmentName: 'IT Department',
+      submittedAt: new Date(2025, 3, 15),
       status: 'Submitted',
       approverComments: []
     },
     {
-      id: '4',
-      year: '2027',
-      period: '2027',
-      submittedBy: 'Robert Brown',
-      departmentId: 3,
-      departmentName: 'Human Resources',
-      submittedAt: new Date(2025, 3, 15),
-      status: 'Rejected by Senior Manager',
+      id: '5',
+      month: 'May',
+      period: 'May-25',
+      year: '2025',
+      submittedBy: 'John Doe',
+      departmentId: 1,
+      departmentName: 'IT Department',
+      submittedAt: new Date(2025, 4, 16),
+      status: 'Draft',
+      approverComments: []
+    },
+    {
+      id: '6',
+      month: 'June',
+      period: 'Jun-25',
+      year: '2025',
+      submittedBy: 'Sarah Johnson',
+      departmentId: 2,
+      departmentName: 'Marketing',
+      submittedAt: new Date(2025, 5, 17),
+      status: 'Approved by Senior Manager',
       approverComments: [{
-        reviewer: 'Emily Wilson',
-        comment: 'Need more detailed justification for targets',
-        action: 'Rejected',
-        reviewedAt: new Date(2025, 3, 18)
+        reviewer: 'Michael Chen',
+        comment: 'Excellent performance this month',
+        action: 'Approved',
+        reviewedAt: new Date(2025, 5, 20)
       }]
     },
     {
-      id: '5',
+      id: '7',
+      month: 'July',
+      period: 'Jul-25',
       year: '2025',
-      period: '2025',
-      submittedBy: 'Michael Lee',
-      departmentId: 4,
-      departmentName: 'Finance',
-      submittedAt: new Date(2025, 0, 10),
+      submittedBy: 'Sarah Johnson',
+      departmentId: 2,
+      departmentName: 'Marketing',
+      submittedAt: new Date(2025, 6, 15),
+      status: 'Submitted',
+      approverComments: []
+    },
+    {
+      id: '8',
+      month: 'August',
+      period: 'Aug-25',
+      year: '2025',
+      submittedBy: 'Sarah Johnson',
+      departmentId: 2,
+      departmentName: 'Marketing',
+      submittedAt: new Date(2025, 7, 16),
+      status: 'Draft',
+      approverComments: []
+    },
+    {
+      id: '9',
+      month: 'September',
+      period: 'Sep-25',
+      year: '2025',
+      submittedBy: 'Robert Brown',
+      departmentId: 3,
+      departmentName: 'Human Resources',
+      submittedAt: new Date(2025, 8, 17),
       status: 'Approved by Senior Manager',
       approverComments: [{
-        reviewer: 'Jane Smith',
-        comment: 'Well prepared targets',
+        reviewer: 'Emily Wilson',
+        comment: 'Q3 results are satisfactory',
         action: 'Approved',
-        reviewedAt: new Date(2025, 0, 12)
+        reviewedAt: new Date(2025, 8, 21)
       }]
+    },
+    {
+      id: '10',
+      month: 'October',
+      period: 'Oct-25',
+      year: '2025',
+      submittedBy: 'Robert Brown',
+      departmentId: 3,
+      departmentName: 'Human Resources',
+      submittedAt: new Date(2025, 9, 15),
+      status: 'Rejected by Senior Manager',
+      approverComments: [{
+        reviewer: 'Emily Wilson',
+        comment: 'Missing documentation for several KPIs',
+        action: 'Rejected',
+        reviewedAt: new Date(2025, 9, 18)
+      }]
+    },
+    {
+      id: '11',
+      month: 'November',
+      period: 'Nov-25',
+      year: '2025',
+      submittedBy: 'Robert Brown',
+      departmentId: 3,
+      departmentName: 'Human Resources',
+      submittedAt: new Date(2025, 10, 16),
+      status: 'Submitted',
+      approverComments: []
+    },
+    {
+      id: '12',
+      month: 'December',
+      period: 'Dec-25',
+      year: '2025',
+      submittedBy: 'Robert Brown',
+      departmentId: 3,
+      departmentName: 'Human Resources',
+      submittedAt: new Date(2025, 11, 15),
+      status: 'Draft',
+      approverComments: []
     }
   ]);
 
   // Filtering and Pagination Logic
-  const filteredMpmTargets = useMemo(() => {
-    let result = mpmTargets;
+  const filteredMpmActuals = useMemo(() => {
+    let result = mpmActuals;
 
     // Filter by role
     if (currentRole === 'manager' || currentRole === 'sm_dept') {
-      result = result.filter(target => target.departmentId === currentUserDepartment);
+      result = result.filter(actual => actual.departmentId === currentUserDepartment);
     }
 
     // Apply other filters
-    result = result.filter(target =>
-      (!selectedPeriod || target.period === selectedPeriod) &&
-      (!selectedStatus || target.status === selectedStatus) &&
-      (!selectedDepartment || target.departmentId.toString() === selectedDepartment)
+    result = result.filter(actual =>
+      (!selectedPeriod || actual.period === selectedPeriod) &&
+      (!selectedStatus || actual.status === selectedStatus) &&
+      (!selectedDepartment || actual.departmentId.toString() === selectedDepartment)
     );
 
     return result;
-  }, [mpmTargets, selectedPeriod, selectedStatus, selectedDepartment, currentRole, currentUserDepartment]);
+  }, [mpmActuals, selectedPeriod, selectedStatus, selectedDepartment, currentRole, currentUserDepartment]);
 
-  const paginatedMpmTargets = useMemo(() => {
+  const paginatedMpmActuals = useMemo(() => {
     const startIndex = (currentPage - 1) * itemsPerPage;
-    return filteredMpmTargets.slice(startIndex, startIndex + itemsPerPage);
-  }, [filteredMpmTargets, currentPage]);
+    return filteredMpmActuals.slice(startIndex, startIndex + itemsPerPage);
+  }, [filteredMpmActuals, currentPage]);
 
   // Reset to first page when filters change
   useEffect(() => {
@@ -184,20 +288,20 @@ const MPMTargetList: React.FC = () => {
   }, [selectedPeriod, selectedStatus, selectedDepartment]);
 
   // Handlers
-  const handleSubmitMpmTarget = () => {
-    if (selectedMpmTarget) {
-      const updatedTargets = mpmTargets.map(target =>
-        target.id === selectedMpmTarget.id
-          ? { ...target, status: 'Submitted' as MPMTargetStatus }
-          : target
+  const handleSubmitMpmActual = () => {
+    if (selectedMpmActual) {
+      const updatedActuals = mpmActuals.map(actual =>
+        actual.id === selectedMpmActual.id
+          ? { ...actual, status: 'Submitted' as MPMActualStatus }
+          : actual
       );
-      setMpmTargets(updatedTargets);
+      setMpmActuals(updatedActuals);
       setIsSubmitModalOpen(false);
     }
   };
 
-  const handleReviewMpmTarget = (action: 'Approved by Senior Manager' | 'Rejected by Senior Manager') => {
-    if (selectedMpmTarget) {
+  const handleReviewMpmActual = (action: 'Approved by Senior Manager' | 'Rejected by Senior Manager') => {
+    if (selectedMpmActual) {
       const newComment: ApproverComment = {
         reviewer: 'Senior Manager',
         comment: reviewComment,
@@ -205,25 +309,25 @@ const MPMTargetList: React.FC = () => {
         reviewedAt: new Date()
       };
 
-      const updatedTargets = mpmTargets.map(target =>
-        target.id === selectedMpmTarget.id
+      const updatedActuals = mpmActuals.map(actual =>
+        actual.id === selectedMpmActual.id
           ? {
-            ...target,
+            ...actual,
             status: action,
             approverComments: [
-              ...(target.approverComments || []),
+              ...(actual.approverComments || []),
               newComment
             ]
           }
-          : target
+          : actual
       );
-      setMpmTargets(updatedTargets);
+      setMpmActuals(updatedActuals);
       setIsReviewModalOpen(false);
       setReviewComment('');
     }
   };
 
-  const getStatusColor = (status: MPMTargetStatus) => {
+  const getStatusColor = (status: MPMActualStatus) => {
     switch (status) {
       case 'Pending':
         return 'bg-gray-200 text-gray-700 dark:bg-gray-700 dark:text-gray-200';
@@ -240,9 +344,9 @@ const MPMTargetList: React.FC = () => {
     }
   };
 
-  // Navigate to individual MPM Target details
-  const handleRowClick = (target: MpmTarget) => {
-    navigate(`/performance-management/mpm/target/${target.id}`);
+  // Navigate to individual MPM Actual details
+  const handleRowClick = (actual: MpmActual) => {
+    navigate(`/performance-management/mpm/actual/${actual.id}?month=${actual.month}`);
   };
 
   return (
@@ -252,17 +356,17 @@ const MPMTargetList: React.FC = () => {
         setIsSidebarOpen={setIsSidebarOpen}
         isDarkMode={isDarkMode}
         setIsDarkMode={setIsDarkMode}
-        currentRole={currentRole}
-        setCurrentRole={setCurrentRole}
-        currentSystem='Performance Management System'
+        
+        
+        
       />
 
       <div className="flex flex-col md:flex-row">
         <Sidebar
           isSidebarOpen={isSidebarOpen}
           setIsSidebarOpen={setIsSidebarOpen}
-          role={currentRole}
-          system="performance-management"
+          
+          
         />
 
         <div className={`flex flex-col mt-4 transition-all duration-300 ease-in-out ${isSidebarOpen ? 'lg:ml-64' : 'lg:ml-0'} w-full`}>
@@ -270,19 +374,19 @@ const MPMTargetList: React.FC = () => {
             <div className="space-y-6 w-full">
               <Breadcrumb
                 items={[]}
-                currentPage="MPM Targets List"
+                currentPage="MPM Actuals List"
                 showHomeIcon={true}
-                subtitle={`Target MPM Value ${currentRole == 'admin' ? 'Company' : 'IT Department'}`}
+                subtitle={`Actual MPM Value ${currentRole == 'admin' ? 'Company' : 'IT Department'}`}
               />
 
+              {/* Enhanced Filter Section */}
               <Filtering
                 handlePeriodChange={setSelectedPeriod}
                 selectedPeriod={selectedPeriod}
               >
-                {/* Additional filters as children */}
+
                 <div className="space-y-3">
                   <label className="flex items-center space-x-2 text-sm font-medium text-gray-700 dark:text-gray-200">
-                    <BarChart2Icon className="h-4 w-4 text-[#46B749] dark:text-[#1B6131]" />
                     <span>Status</span>
                   </label>
                   <Select onValueChange={setSelectedStatus} value={selectedStatus}>
@@ -302,7 +406,6 @@ const MPMTargetList: React.FC = () => {
                 {currentRole === 'admin' && (
                   <div className="space-y-3">
                     <label className="flex items-center space-x-2 text-sm font-medium text-gray-700 dark:text-gray-200">
-                      <BarChart2Icon className="h-4 w-4 text-[#46B749] dark:text-[#1B6131]" />
                       <span>Department</span>
                     </label>
                     <Select onValueChange={setSelectedDepartment} value={selectedDepartment}>
@@ -326,62 +429,63 @@ const MPMTargetList: React.FC = () => {
                 <CardHeader className="bg-gradient-to-r from-[#f0f9f0] to-[#e6f3e6] dark:from-[#0a2e14] dark:to-[#0a3419] pb-4">
                   <div className="flex justify-between items-center">
                     <CardTitle className="font-semibold text-gray-700 dark:text-gray-200 flex items-center">
-                      MPM Targets Table
+                      MPM Actuals Table
                     </CardTitle>
                   </div>
                 </CardHeader>
-                <CardContent className='m-0 p-0 overflow-x-auto'>
+                <CardContent className='m-0 p-0 overflow-x-auto pb-4'>
                   <table className="w-full border-collapse min-w-[800px]">
                     <thead className="bg-[#1B6131] text-white">
                       <tr>
-                        {['Year', 'Department', 'Submitted By', 'Submitted At', 'Status', 'Actions'].map(header => (
+                        {['Month', 'Year', 'Department', 'Submitted By', 'Submitted At', 'Status', 'Actions'].map(header => (
                           <th key={header} className="p-4 text-left">{header}</th>
                         ))}
                       </tr>
                     </thead>
                     <tbody>
-                      {paginatedMpmTargets.length > 0 ? (
-                        paginatedMpmTargets.map(target => (
+                      {paginatedMpmActuals.length > 0 ? (
+                        paginatedMpmActuals.map(actual => (
                           <tr
-                            key={target.id}
+                            key={actual.id}
                             className="hover:bg-[#E4EFCF]/50 dark:hover:bg-[#1B6131]/20 cursor-pointer border-b border-gray-200 dark:border-gray-700"
-                            onClick={() => handleRowClick(target)}
+                            onClick={() => handleRowClick(actual)}
                           >
-                            <td className="p-4">{target.year}</td>
-                            <td className="p-4">{target.departmentName}</td>
-                            <td className="p-4">{target.submittedBy}</td>
+                            <td className="p-4">{actual.month}</td>
+                            <td className="p-4">{actual.year}</td>
+                            <td className="p-4">{actual.departmentName}</td>
+                            <td className="p-4">{actual.submittedBy}</td>
                             <td className="p-4">
-                              {target.submittedAt.toLocaleDateString('en-US', {
+                              {actual.submittedAt.toLocaleDateString('en-US', {
                                 year: 'numeric',
                                 month: 'short',
                                 day: 'numeric'
                               })}
                             </td>
                             <td className="p-4">
-                              <span className={`px-3 py-1 rounded-full text-xs ${getStatusColor(target.status)}`}>
-                                {target.status}
+                              <span className={`px-3 py-1 rounded-full text-xs ${getStatusColor(actual.status)}`}>
+                                {actual.status}
                               </span>
                             </td>
                             <td
                               className="p-4 space-x-2 whitespace-nowrap"
                               onClick={(e) => e.stopPropagation()} // Prevent row click when clicking action buttons
                             >
-                              {currentRole === 'manager' && target.status === 'Draft' && (
+                              {currentRole === 'manager' && actual.status === 'Draft' && (
                                 <Button
                                   size="sm"
                                   onClick={() => {
-                                    setSelectedMpmTarget(target);
+                                    setSelectedMpmActual(actual);
                                     setIsSubmitModalOpen(true);
                                   }}
                                 >
                                   Submit
                                 </Button>
                               )}
-                              {currentRole === 'sm_dept' && target.status === 'Submitted' && (
+                              {currentRole === 'sm_dept' && actual.status === 'Submitted' && (
                                 <Button
                                   size="sm"
                                   onClick={() => {
-                                    setSelectedMpmTarget(target);
+                                    setSelectedMpmActual(actual);
                                     setIsReviewModalOpen(true);
                                   }}
                                 >
@@ -392,7 +496,7 @@ const MPMTargetList: React.FC = () => {
                                 <Button
                                   variant="outline"
                                   size="sm"
-                                  onClick={() => handleRowClick(target)}
+                                  onClick={() => handleRowClick(actual)}
                                 >
                                   View Details
                                 </Button>
@@ -402,8 +506,8 @@ const MPMTargetList: React.FC = () => {
                         ))
                       ) : (
                         <tr>
-                          <td colSpan={6} className="p-4 text-center text-gray-500">
-                            No targets found matching your criteria
+                          <td colSpan={7} className="p-4 text-center text-gray-500">
+                            No actuals found matching your criteria
                           </td>
                         </tr>
                       )}
@@ -412,9 +516,9 @@ const MPMTargetList: React.FC = () => {
 
                   <Pagination
                     currentPage={currentPage}
-                    totalPages={Math.ceil(filteredMpmTargets.length / itemsPerPage)}
+                    totalPages={Math.ceil(filteredMpmActuals.length / itemsPerPage)}
                     itemsPerPage={itemsPerPage}
-                    totalItems={filteredMpmTargets.length}
+                    totalItems={filteredMpmActuals.length}
                     onPageChange={setCurrentPage}
                     onItemsPerPageChange={(value) => {
                       setItemsPerPage(Number(value));
@@ -434,9 +538,9 @@ const MPMTargetList: React.FC = () => {
       <Dialog open={isSubmitModalOpen} onOpenChange={setIsSubmitModalOpen}>
         <DialogContent className="max-w-md w-[95%] lg:max-w-lg rounded-lg overflow-y-scroll max-h-[85vh]">
           <DialogHeader>
-            <DialogTitle>Submit MPM Target</DialogTitle>
+            <DialogTitle>Submit MPM Actual</DialogTitle>
             <DialogDescription>
-              Submit your yearly performance management targets for review
+              Submit your monthly performance management actuals for review
             </DialogDescription>
           </DialogHeader>
 
@@ -445,7 +549,7 @@ const MPMTargetList: React.FC = () => {
               <Button variant="outline" onClick={() => setIsSubmitModalOpen(false)}>
                 Cancel
               </Button>
-              <Button onClick={handleSubmitMpmTarget}>
+              <Button onClick={handleSubmitMpmActual}>
                 Confirm Submission
               </Button>
             </div>
@@ -457,9 +561,9 @@ const MPMTargetList: React.FC = () => {
       <Dialog open={isReviewModalOpen} onOpenChange={setIsReviewModalOpen}>
         <DialogContent className="max-w-md w-[95%] lg:max-w-lg rounded-lg overflow-y-scroll max-h-[85vh]">
           <DialogHeader>
-            <DialogTitle>Review MPM Target</DialogTitle>
+            <DialogTitle>Review MPM Actual</DialogTitle>
             <DialogDescription>
-              Review and take action on the submitted performance management targets
+              Review and take action on the submitted performance management actuals
             </DialogDescription>
           </DialogHeader>
           <div className="space-y-4">
@@ -478,11 +582,11 @@ const MPMTargetList: React.FC = () => {
             <div className="flex flex-col lg:flex-row gap-4">
               <Button
                 variant="destructive"
-                onClick={() => handleReviewMpmTarget('Rejected by Senior Manager')}
+                onClick={() => handleReviewMpmActual('Rejected by Senior Manager')}
               >
                 Reject
               </Button>
-              <Button onClick={() => handleReviewMpmTarget('Approved by Senior Manager')}>
+              <Button onClick={() => handleReviewMpmActual('Approved by Senior Manager')}>
                 Approve
               </Button>
             </div>
@@ -493,4 +597,4 @@ const MPMTargetList: React.FC = () => {
   );
 };
 
-export default MPMTargetList;
+export default MPMActualList;

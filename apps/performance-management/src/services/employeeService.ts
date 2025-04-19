@@ -155,7 +155,7 @@ export const employeeService = {
   // Get employee with details (organization unit and supervisor)
   getEmployeeWithDetails: async (employeeId: number): Promise<Employee> => {
     try {
-      const response = await pmApi.get(`/employees/${employeeId}/details`);
+      const response = await pmApi.get(`/employees/${employeeId}`); //BUTUH DI EDIT HARUS PUNYA ENDPOINT /details
       return response.data;
     } catch (error: any) {
       toast({

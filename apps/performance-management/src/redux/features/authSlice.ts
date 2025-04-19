@@ -5,7 +5,62 @@ import axios from 'axios';
 import { API_BASE_URL_SSO, API_BASE_URL_PERFORMANCE_MANAGEMENT } from '@/config';
 import { jwtDecode } from 'jwt-decode';
 
+export interface EmployeeBase {
+  employee_number: string;
+  employee_name: string;
+  employee_org_unit_id?: number | null;
+  employee_email?: string | null;
+  employee_phone?: string | null;
+  employee_position?: string | null;
+  employee_supervisor_id?: number | null;
+  employee_metadata?: Record<string, any> | null;
+  is_active: boolean;
+}
+
+export interface Employee extends EmployeeBase {
+  employee_id: number;
+  org_unit_name?: string | null;
+  supervisor_name?: string | null;
+  created_at?: string;
+  updated_at?: string;
+}
+
+export interface OrganizationUnitBase {
+  org_unit_code: string;
+  org_unit_name: string;
+  org_unit_type: string;
+  org_unit_parent_id?: number | null;
+  org_unit_level: number;
+  org_unit_description?: string | null;
+  org_unit_metadata?: Record<string, any> | null;
+  is_active: boolean;
+}
+
+export interface OrganizationUnitResponse extends OrganizationUnitBase {
+  org_unit_id: number;
+  org_unit_path: string;
+  created_at: string;
+  created_by?: number | null;
+  updated_at?: string | null;
+  updated_by?: number | null;
+  deleted_at?: string | null;
+  deleted_by?: number | null;
+}
+
 // Types for the target application user structure
+export interface Role {
+  created_at: string;
+  updated_at: string;
+  created_by: string | null;
+  updated_by: string | null;
+  role_code: string;
+  role_name: string;
+  role_type: string;
+  role_description: string;
+  is_active: boolean;
+  role_id: number;
+}
+
 export interface UserData {
   user_id: number;
   user_email: string;
@@ -13,13 +68,17 @@ export interface UserData {
   user_last_name: string;
   user_is_active: boolean;
   user_sso_id: string;
-  user_employee_id: string | null;
+  user_employee_id: number | null;
   employee_name: string | null;
   org_unit_name: string | null;
   created_at: string;
   updated_at: string;
   created_by: string | null;
   updated_by: string | null;
+  roles: Role[];
+
+  employee_data?: Employee | null;
+  org_unit_data?: OrganizationUnitResponse | null;
 }
 
 interface TokenData {
@@ -99,13 +158,51 @@ export const fetchCurrentUser = createAsyncThunk(
         return rejectWithValue('No access token found');
       }
 
-      // Fetch user data from Performance Management service instead of SSO
-      const response = await axios.get(`${API_BASE_URL_PERFORMANCE_MANAGEMENT}/users/me`, {
+      // 1. Fetch basic user data
+      const userResponse = await axios.get<UserData>(`${API_BASE_URL_PERFORMANCE_MANAGEMENT}/users/me/roles`, {
         headers: {
           Authorization: `Bearer ${auth.accessToken}`
         }
       });
-      return response.data;
+
+      const userData: UserData = {
+        ...userResponse.data,
+        employee_data: null,
+        org_unit_data: null
+      };
+
+      // 2. If user has employee_id, fetch employee data
+      if (userData.user_employee_id) {
+        try {
+          const employeeResponse = await axios.get<Employee>(`${API_BASE_URL_PERFORMANCE_MANAGEMENT}/employees/${userData.user_employee_id}`, {
+            headers: {
+              Authorization: `Bearer ${auth.accessToken}`
+            }
+          });
+          userData.employee_data = employeeResponse.data;
+
+          // 3. If employee has org_unit_id, fetch org unit data
+          if (userData.employee_data.employee_org_unit_id) {
+            try {
+              const orgUnitResponse = await axios.get<OrganizationUnitResponse>(
+                `${API_BASE_URL_PERFORMANCE_MANAGEMENT}/organization-units/${userData.employee_data.employee_org_unit_id}`,
+                {
+                  headers: {
+                    Authorization: `Bearer ${auth.accessToken}`
+                  }
+                }
+              );
+              userData.org_unit_data = orgUnitResponse.data;
+            } catch (orgUnitError) {
+              console.warn("Failed to fetch org unit data:", orgUnitError);
+            }
+          }
+        } catch (employeeError) {
+          console.warn("Failed to fetch employee data:", employeeError);
+        }
+      }
+
+      return userData;
     } catch (error) {
       if (axios.isAxiosError(error) && error.response) {
         return rejectWithValue(error.response.data);
@@ -267,8 +364,8 @@ const authSlice = createSlice({
       state.tokenExpiration = null;
 
       // Clear from localStorage
-      localStorage.removeItem('accessToken');
-      localStorage.removeItem('refreshToken');
+      // localStorage.removeItem('accessToken');
+      // localStorage.removeItem('refreshToken');
     });
 
     // refreshToken
@@ -296,8 +393,8 @@ const authSlice = createSlice({
       state.tokenExpiration = null;
 
       // Clear from localStorage
-      localStorage.removeItem('accessToken');
-      localStorage.removeItem('refreshToken');
+      // localStorage.removeItem('accessToken');
+      // localStorage.removeItem('refreshToken');
     });
 
     // logoutUser

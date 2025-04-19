@@ -23,7 +23,6 @@ import { Info, AlertTriangle, CheckCircle2, FileText, Users } from 'lucide-react
 import Breadcrumb from '@/components/Breadcrumb';
 import Footer from '@/components/Footer';
 import { useAppSelector } from '@/redux/hooks';
-import employeeService from '@/services/employeeService';
 
 const PerformanceManagementHome = () => {
     const [isSidebarOpen, setIsSidebarOpen] = useState(() => {
@@ -33,14 +32,12 @@ const PerformanceManagementHome = () => {
         return true;
     });
     const [isDarkMode, setIsDarkMode] = useState(false);
-    const [currentRole, setCurrentRole] = useState('admin');
+   
     const { user } = useAppSelector((state) => state.auth);
 
     useEffect(() => {
         if (user) {
-            employeeService.getEmployeeById(4).then((res) => {
-                console.log(res);
-            });
+            console.log(user);
         }
     }, [user]);
 
@@ -51,17 +48,15 @@ const PerformanceManagementHome = () => {
                 setIsSidebarOpen={setIsSidebarOpen}
                 isDarkMode={isDarkMode}
                 setIsDarkMode={setIsDarkMode}
-                currentRole={currentRole}
-                setCurrentRole={setCurrentRole}
-                currentSystem='Performance Management System'
+                
+                
+                
             />
 
             <div className="flex">
                 <Sidebar
                     isSidebarOpen={isSidebarOpen}
                     setIsSidebarOpen={setIsSidebarOpen}
-                    role={currentRole}
-                    system="performance-management"
                 />
                 <div className={`flex flex-col mt-4 transition-all duration-300 ease-in-out ${isSidebarOpen ? 'lg:ml-64' : 'lg:ml-0'} w-full`}>
                     <main className='flex-1 px-2  md:px-4  pt-16 pb-12 transition-all duration-300 ease-in-out  w-full'>
@@ -499,7 +494,7 @@ const PerformanceManagementHome = () => {
 
                     </main>
                     <Footer
-                        currentSystem='Performance Management System'
+                        
                     />
                 </div>
             </div>

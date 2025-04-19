@@ -1,13 +1,12 @@
 import { useLocation, useNavigate } from 'react-router-dom';
-import { LogOut, User, BarChart3, Building2, LineChart, Target, Trophy, ChevronDown, ChevronRight, Home, Calendar, SquareKanban, Building } from 'lucide-react';
+import { LogOut, User, BarChart3, LineChart, Target, ChevronDown, ChevronRight, Home, Calendar, SquareKanban, Building } from 'lucide-react';
 import { Button } from '@workspace/ui/components/button';
 import { useState, useEffect } from 'react';
+import { useAppSelector } from '@/redux/hooks';
 
 interface SidebarProps {
     isSidebarOpen: boolean;
     setIsSidebarOpen: (isOpen: boolean) => void;
-    system?: string;
-    role?: string;
 }
 
 interface MenuItem {
@@ -17,127 +16,129 @@ interface MenuItem {
     roles: string[];
     subMenus?: MenuItem[];
 }
-
-// Define performance management menus
 const performanceMenus: MenuItem[] = [
     {
         title: 'Home',
         path: '/',
         icon: Home,
-        roles: ['admin', 'manager', 'sm_dept', 'employee'],
+        roles: ['admin', 'director', 'division_head', 'department_head', 'employee'],
     },
     {
         title: 'Dashboard',
         path: '/performance-management/dashboard',
         icon: SquareKanban,
-        roles: ['admin', 'manager', 'sm_dept'],
+        roles: ['admin', 'director', 'division_head', 'department_head', 'employee'],
     },
     {
         title: 'Period Master',
-        path: '/performance-management/period-master',
+        path: '/performance-management/periods',
         icon: Calendar,
-        roles: ['admin', 'manager', 'sm_dept'],
+        roles: ['admin'],
     },
     {
-        title: 'Company Management',
-        path: '/performance-management/company-management',
+        title: 'Organization Management',
+        path: '/performance-management/organization-units',
         icon: Building,
         roles: ['admin'],
         subMenus: [
             {
-                title: 'Department Management',
-                path: '/performance-management/company-management/departments',
-                roles: ['admin']
+                title: 'Organization Units Management',
+                path: '/performance-management/organization-units',
+                roles: ['admin'],
             },
             {
-                title: 'Teams Management',
-                path: '/performance-management/company-management/teams',
-                roles: ['admin']
+                title: 'Employees Management',
+                path: '/performance-management/employees',
+                roles: ['admin'],
             },
-            {
-                title: 'Employee Management',
-                path: '/performance-management/company-management/employees',
-                roles: ['admin']
-            },
-        ]
+            // {
+            //     title: 'Organization Hierarchy',
+            //     path: '/performance-management/organization-units/hierarchy',
+            //     roles: ['admin'],
+            // },
+        ],
     },
+    // {
+    //     title: 'Employee',
+    //     path: '/performance-management/employees',
+    //     icon: Users2,
+    //     roles: ['admin'],
+    //     subMenus: [
+    //         {
+    //             title: 'Employee',
+    //             path: '/performance-management/employees',
+    //             roles: ['admin'],
+    //         },
+    //         // {
+    //         //     title: 'Employee Hierarchy',
+    //         //     path: '/performance-management/employees/hierarchy',
+    //         //     roles: ['admin'],
+    //         // },
+    //     ],
+    // },
     {
         title: 'BSC',
         path: '/performance-management/bsc',
         icon: BarChart3,
-        roles: ['admin', 'manager', 'sm_dept'],
+        roles: ['admin', 'director'],
         subMenus: [
             {
                 title: 'BSC Dashboard',
                 path: '/performance-management/bsc/dashboard',
-                roles: ['admin', 'manager', 'sm_dept']
+                roles: ['admin', 'director'],
             },
             {
                 title: 'BSC KPI Input',
                 path: '/performance-management/bsc/input',
-                roles: ['admin', 'manager']
-            }
-        ]
+                roles: ['admin', 'director'],
+            },
+        ],
     },
     {
         title: 'Individual Performance',
         path: '/performance-management/ipm',
         icon: LineChart,
-        roles: ['admin', 'employee', 'manager', 'sm_dept'],
+        roles: ['admin', 'director', 'division_head', 'department_head', 'employee'],
     },
     {
         title: 'Monthly Management Performance',
         path: '/monthly-performance-management/mpm/dashboard',
         icon: Target,
-        roles: ['admin', 'manager', 'sm_dept'],
+        roles: ['admin', 'director', 'division_head', 'department_head'],
         subMenus: [
             {
                 title: 'MPM Dashboard',
                 path: '/performance-management/mpm/dashboard',
-                roles: ['admin', 'manager', 'sm_dept']
+                roles: ['admin', 'director', 'division_head', 'department_head'],
             },
             {
                 title: 'MPM Actual',
                 path: '/performance-management/mpm/actual',
-                roles: ['admin', 'manager', 'sm_dept']
+                roles: ['admin', 'director', 'division_head', 'department_head'],
             },
             {
                 title: 'MPM Target',
                 path: '/performance-management/mpm/target',
-                roles: ['admin', 'manager', 'sm_dept']
-            }
-        ]
+                roles: ['admin', 'director', 'division_head', 'department_head'],
+            },
+        ],
     },
 ];
 
-const systems = [
-    {
-        title: 'Performance Management System',
-        description: 'Monitor and manage employee performance metrics',
-        icon: Trophy,
-        roles: ['admin', 'employee', 'manager', 'sm_dept'],
-        iconColor: '#4CAF50',
-        titleColor: '#2E7D32',
-        url: '/performance-management/bsc/dashboard',
-        menus: performanceMenus
-    },
-    {
-        title: 'Company Profile CMS',
-        description: 'Manage company website content and information',
-        icon: Building2,
-        roles: ['admin'],
-        iconColor: '#FFA000',
-        titleColor: '#E65100',
-        url: '#',
-        menus: []
-    }
-];
 
-const Sidebar: React.FC<SidebarProps> = ({ isSidebarOpen, setIsSidebarOpen, system, role }) => {
+
+const Sidebar: React.FC<SidebarProps> = ({ isSidebarOpen, setIsSidebarOpen }) => {
     const navigate = useNavigate();
     const location = useLocation();
     const [expandedMenus, setExpandedMenus] = useState<{ [key: string]: boolean }>({});
     const [viewportWidth, setViewportWidth] = useState(window.innerWidth);
+
+    // Get user data from Redux store
+    const { user } = useAppSelector((state) => state.auth);
+
+    // Extract user roles
+    const userRoles = user?.roles?.map((role: { role_code: any; }) => role.role_code) || [];
+
 
     // Track viewport width for responsive adjustments
     useEffect(() => {
@@ -161,9 +162,10 @@ const Sidebar: React.FC<SidebarProps> = ({ isSidebarOpen, setIsSidebarOpen, syst
         navigate('/login');
     };
 
-    const currentSystem = systems.find(sys => sys.url.includes(system || ''));
-    const accessibleMenus = currentSystem?.menus?.filter(menu =>
-        menu.roles.includes(role || '')
+
+    // Filter menus by user roles
+    const accessibleMenus = performanceMenus?.filter(menu =>
+        menu.roles.some(role => userRoles.includes(role))
     ) || [];
 
     const toggleSubmenu = (menuPath: string) => {
@@ -198,7 +200,7 @@ const Sidebar: React.FC<SidebarProps> = ({ isSidebarOpen, setIsSidebarOpen, syst
                 />
             )}
 
-         
+
             {/* Sidebar */}
             <aside className={`
                 font-montserrat 
@@ -227,7 +229,8 @@ const Sidebar: React.FC<SidebarProps> = ({ isSidebarOpen, setIsSidebarOpen, syst
                     </div>
                 )}
 
-                <div className="relative h-full p-2 sm:p-4 flex flex-col">
+                <div className="relative h-full p-2 sm:p-4 flex flex-col">                   
+
                     {/* Navigation Menu */}
                     <nav className="space-y-1 flex-grow overflow-y-auto">
                         {accessibleMenus.map((menu, menuIndex) => (
@@ -269,25 +272,27 @@ const Sidebar: React.FC<SidebarProps> = ({ isSidebarOpen, setIsSidebarOpen, syst
                                 {/* Submenu */}
                                 {menu.subMenus && expandedMenus[menu.path] && (
                                     <div className="ml-2 mt-1 space-y-1">
-                                        {menu.subMenus.map((submenu, subIndex) => (
-                                            <Button
-                                                key={subIndex}
-                                                variant="ghost"
-                                                onClick={() => handleNavigate(submenu.path)}
-                                                className={`
-                                                    w-full justify-start 
-                                                    pl-6 
-                                                    h-auto min-h-9 
-                                                    py-1.5 
-                                                    ${isSubmenuActive(submenu.path)
-                                                        ? 'bg-gray-100 dark:bg-gray-700 text-gray-900 dark:text-gray-100'
-                                                        : 'text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-gray-100 hover:bg-gray-50 dark:hover:bg-gray-700/50'
-                                                    }
-                                                `}
-                                            >
-                                                <span className="truncate text-xs sm:text-sm">{submenu.title}</span>
-                                            </Button>
-                                        ))}
+                                        {menu.subMenus
+                                            .filter(submenu => submenu.roles.some(role => userRoles.includes(role)))
+                                            .map((submenu, subIndex) => (
+                                                <Button
+                                                    key={subIndex}
+                                                    variant="ghost"
+                                                    onClick={() => handleNavigate(submenu.path)}
+                                                    className={`
+                                                        w-full justify-start 
+                                                        pl-6 
+                                                        h-auto min-h-9 
+                                                        py-1.5 
+                                                        ${isSubmenuActive(submenu.path)
+                                                            ? 'bg-gray-100 dark:bg-gray-700 text-gray-900 dark:text-gray-100'
+                                                            : 'text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-gray-100 hover:bg-gray-50 dark:hover:bg-gray-700/50'
+                                                        }
+                                                    `}
+                                                >
+                                                    <span className="truncate text-xs sm:text-sm">{submenu.title}</span>
+                                                </Button>
+                                            ))}
                                     </div>
                                 )}
                             </div>

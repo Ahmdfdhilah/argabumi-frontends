@@ -1,31 +1,41 @@
-import React, { useState, useMemo, useEffect } from 'react';
-import {
-    Card,
-    CardContent,
-    CardHeader,
-    CardTitle,
-} from "@workspace/ui/components/card";
-import { Input } from "@workspace/ui/components/input";
+import React, { useState, useMemo } from 'react';
+import { Card, CardContent, CardHeader, CardTitle } from '@workspace/ui/components/card';
+import { Input } from '@workspace/ui/components/input';
 import Sidebar from '@/components/Sidebar';
-import {
-    ChevronUp, ChevronDown, Minus, ChevronRight, Search,
-} from 'lucide-react';
 import Header from '@/components/Header';
-import Filtering from '@/components/Filtering';
-import { Table, TableBody, TableCell, TableHeader, TableRow } from '@workspace/ui/components/table';
-import { dummyData } from '../lib/bscMocks';
 import Breadcrumb from '@/components/Breadcrumb';
+import { ChevronDown, ChevronRight, Search } from 'lucide-react';
+import { Table, TableBody, TableCell, TableHeader, TableRow } from '@workspace/ui/components/table';
+import { mpmDataMock } from '@/lib/mpmMocks';
+import Filtering from '@/components/Filtering';
 import Pagination from '@/components/Pagination';
 import Footer from '@/components/Footer';
-import { BSCEntry } from '@/lib/types';
+import { ExpandedContent } from '@/components/MPM/ExpandedContent';
 
 // Types
-type Period = 'Jan-25' | 'Feb-25' | 'Mar-25' | 'Apr-25' | 'All' | '2022' | '2023' | '2024' | '2025';
-type BSCType = 'Monthly' | 'Quarterly' | 'Yearly';
-type Perspective = 'Financial' | 'Customer' | 'Internal Business Process' | 'Learning & Growth';
+type UOMType = 'Number' | '%' | 'Days' | 'Kriteria' | 'Number (Ton)';
+type Category = 'Max' | 'Min' | 'On Target';
+type YTDCalculation = 'Accumulative' | 'Average' | 'Last Value';
+type Perspective = 'Financial' | 'Customer' | 'Internal Process' | 'Learning and Growth';
 
-const BSCDashboard = () => {
-    const [selectedPeriod, setSelectedPeriod] = useState<Period>('Jan-25');
+type MPMEntry = {
+    id: number;
+    perspective: Perspective;
+    kpi: string;
+    kpiDefinition: string;
+    weight: number;
+    uom: UOMType;
+    category: Category;
+    ytdCalculation: YTDCalculation;
+    targets: Record<string, number>;
+    actuals: Record<string, number>;
+    achievements: Record<string, number>;
+    problemIdentification?: string;
+    correctiveAction?: string;
+    pic?: string;
+};
+
+const MPMDashboard: React.FC = () => {
     const [isSidebarOpen, setIsSidebarOpen] = useState(() => {
         if (typeof window !== 'undefined') {
             return window.innerWidth >= 768;
@@ -33,82 +43,29 @@ const BSCDashboard = () => {
         return true;
     });
     const [isDarkMode, setIsDarkMode] = useState(false);
-    const [currentRole, setCurrentRole] = useState('admin');
-    const [selectedType, setSelectedType] = useState<BSCType>('Monthly');
+    const [currentRole] = useState('admin');
+    const [selectedYear, setSelectedYear] = useState('2025');
     const [expandedRow, setExpandedRow] = useState<number | null>(null);
-    const [startDate, setStartDate] = useState<string>('');
-    const [endDate, setEndDate] = useState<string>('');
-    const [isEndDateDisabled, setIsEndDateDisabled] = useState<boolean>(false);
 
-    // Pagination state
-    const [currentPage, setCurrentPage] = useState(1);
-    const [itemsPerPage, setItemsPerPage] = useState(10);
-    
     // Search functionality
     const [searchTerm, setSearchTerm] = useState('');
     const [selectedPerspective, setSelectedPerspective] = useState<string>('All');
     const [selectedCategory, setSelectedCategory] = useState<string>('All');
 
-    const handleStartDateChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-        setStartDate(e.target.value);
-        if (selectedType !== 'Yearly') {
-            setIsEndDateDisabled(true);
-        }
-    };
+    // Pagination state
+    const [currentPage, setCurrentPage] = useState(1);
+    const [itemsPerPage, setItemsPerPage] = useState(10);
 
-    const handleEndDateChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-        setEndDate(e.target.value);
-    };
-
-    const handleTypeChange = (value: string) => {
-        if (isBSCType(value)) {
-            setSelectedType(value);
-            if (value !== 'Yearly') {
-                setIsEndDateDisabled(true);
-                setEndDate('');
-            } else {
-                setIsEndDateDisabled(false);
-            }
-        }
-    };
-
-    const isBSCType = (value: string): value is BSCType => {
-        return ['Monthly', 'Quarterly', 'Yearly'].includes(value);
-    };
-
-    const isPeriod = (value: string): value is Period => {
-        return ['Jan-25', 'Feb-25', 'Mar-25', 'Apr-25', 'All', '2022', '2023', '2024', '2025'].includes(value);
-    };
-
-    const handlePeriodChange = (value: string) => {
-        if (isPeriod(value)) {
-            setSelectedPeriod(value);
-        }
-    };
-
-    const handlePerspectiveChange = (value: string) => {
-        setSelectedPerspective(value);
-        setCurrentPage(1); // Reset to first page when filter changes
-    };
-
-    const handleCategoryChange = (value: string) => {
-        setSelectedCategory(value);
-        setCurrentPage(1); // Reset to first page when filter changes
-    };
-
-    const handleSearchChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-        setSearchTerm(e.target.value);
-        setCurrentPage(1); // Reset to first page when search changes
-    };
+    // Mock data
+    const [mpmData, _] = useState<MPMEntry[]>(mpmDataMock);
 
     // Filter and search data
     const filteredData = useMemo(() => {
-        return dummyData.filter(item => {
+        return mpmData.filter(item => {
             // Search term filter
             const matchesSearch =
                 searchTerm === '' ||
                 item.kpi.toLowerCase().includes(searchTerm.toLowerCase()) ||
-                item.code.toLowerCase().includes(searchTerm.toLowerCase()) ||
                 item.kpiDefinition.toLowerCase().includes(searchTerm.toLowerCase());
 
             // Perspective filter
@@ -123,7 +80,7 @@ const BSCDashboard = () => {
 
             return matchesSearch && matchesPerspective && matchesCategory;
         });
-    }, [dummyData, searchTerm, selectedPerspective, selectedCategory]);
+    }, [mpmData, searchTerm, selectedPerspective, selectedCategory]);
 
     // Handle pagination
     const paginatedData = useMemo(() => {
@@ -138,59 +95,43 @@ const BSCDashboard = () => {
             if (!acc[curr.perspective]) {
                 acc[curr.perspective] = [];
             }
-            acc[curr.perspective].push(curr as BSCEntry);
+            acc[curr.perspective].push(curr);
             return acc;
-        }, {} as Record<Perspective, BSCEntry[]>);
+        }, {} as Record<Perspective, MPMEntry[]>);
     }, [paginatedData]);
-
-    // Reset to first page when items per page changes
-    useEffect(() => {
-        setCurrentPage(1);
-    }, [itemsPerPage]);
-
-    // Status indicator component
-    const StatusIndicator: React.FC<{ value?: number }> = ({ value }) => {
-        if (value ? value > 100 : '') return <ChevronUp className="text-green-500" />;
-        if (value ? value < 100 : '') return <ChevronDown className="text-red-500" />;
-        return <Minus className="text-yellow-500" />;
-    };
 
     // Calculate totals
     const totals = useMemo(() => {
-        return filteredData.reduce((acc, curr) => ({
-            weight: acc.weight + (curr.weight ?? 0),
-            score: acc.score + (curr.score ?? 0),
-            activeWeight: acc.activeWeight + (curr.activeWeight ?? 0),
-            totalScore: acc.totalScore + (curr.totalScore ?? 0),
-            endScore: acc.endScore + (curr.endScore ?? 0),
-        }), {
+        return filteredData.reduce((acc, curr) => {
+            const achievement = curr.achievements[selectedYear] || 0;
+            const score = (curr.weight * Math.min(achievement, 120) / 100);
+            return {
+                weight: acc.weight + curr.weight,
+                score: acc.score + score,
+            };
+        }, {
             weight: 0,
             score: 0,
-            activeWeight: 0,
-            totalScore: 0,
-            endScore: 0,
         });
-    }, [filteredData]);
+    }, [filteredData, selectedYear]);
 
-    // Calculate subtotals by perspective
-    const perspectiveSubtotals = useMemo(() => {
-        return filteredData.reduce((acc, curr) => {
-            const perspective = curr.perspective;
-            if (!acc[perspective]) {
-                acc[perspective] = {
-                    weight: 0,
-                    score: 0,
-                    endScore: 0
-                };
-            }
-            
-            acc[perspective].weight += (curr.weight ?? 0);
-            acc[perspective].score += (curr.score ?? 0);
-            acc[perspective].endScore += (curr.endScore ?? 0);
-            
-            return acc;
-        }, {} as Record<string, { weight: number, score: number, endScore: number }>);
-    }, [filteredData]);
+    // Handler for perspective filter
+    const handlePerspectiveChange = (value: string) => {
+        setSelectedPerspective(value);
+        setCurrentPage(1); // Reset to first page when filter changes
+    };
+
+    // Handler for category filter
+    const handleCategoryChange = (value: string) => {
+        setSelectedCategory(value);
+        setCurrentPage(1); // Reset to first page when filter changes
+    };
+
+    // Handler for search
+    const handleSearchChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+        setSearchTerm(e.target.value);
+        setCurrentPage(1); // Reset to first page when search changes
+    };
 
     // Row expansion handler
     const handleRowClick = (id: number) => {
@@ -204,32 +145,15 @@ const BSCDashboard = () => {
 
     const handleItemsPerPageChange = (value: string) => {
         setItemsPerPage(Number(value));
-        setCurrentPage(1);
+        setCurrentPage(1); // Reset to first page when items per page changes
     };
 
-    const ExpandedContent = ({ item }: { item: BSCEntry }) => (
-        <div className="space-y-2">
-            <p className="text-[#1B6131] dark:text-[#46B749]">
-                <strong>KPI Definition:</strong> {item.kpiDefinition}
-            </p>
-            {item.problemIdentification && (
-                <p className="text-[#1B6131] dark:text-[#46B749]">
-                    <strong>Problem Identification:</strong> {item.problemIdentification}
-                </p>
-            )}
-            {item.correctiveAction && (
-                <p className="text-[#1B6131] dark:text-[#46B749]">
-                    <strong>Corrective Action:</strong> {item.correctiveAction}
-                </p>
-            )}
-        </div>
-    );
-
     // Get unique perspectives for filter
-    const perspectives = ['All', ...new Set(dummyData.map(item => item.perspective))];
+    const perspectives = ['All', ...Array.from(new Set(mpmData.map(item => item.perspective)))];
 
     // Get unique categories for filter
-    const categories = ['All', ...new Set(dummyData.map(item => item.category))];
+    const categories = ['All', ...Array.from(new Set(mpmData.map(item => item.category)))];
+
 
     return (
         <div className="font-montserrat min-h-screen bg-white dark:bg-gray-900">
@@ -238,54 +162,49 @@ const BSCDashboard = () => {
                 setIsSidebarOpen={setIsSidebarOpen}
                 isDarkMode={isDarkMode}
                 setIsDarkMode={setIsDarkMode}
-                currentRole={currentRole}
-                setCurrentRole={setCurrentRole}
-                currentSystem='Performance Management System'
+                
+                
+                
             />
 
-            <div className="flex">
+            <div className="flex flex-col md:flex-row">
                 <Sidebar
                     isSidebarOpen={isSidebarOpen}
                     setIsSidebarOpen={setIsSidebarOpen}
-                    role={currentRole}
-                    system="performance-management"
+                    
+                    
                 />
 
                 <div className={`flex flex-col mt-4 transition-all duration-300 ease-in-out ${isSidebarOpen ? 'lg:ml-64' : 'lg:ml-0'} w-full`}>
-                    <main className='flex-1 px-2  md:px-4  pt-16 pb-12 transition-all duration-300 ease-in-out  w-full'>
-                        <div className="space-y-6">
+                    <main className='flex-1 px-2 md:px-4 pt-16 pb-12 transition-all duration-300 ease-in-out w-full'>
+                        <div className="space-y-6 w-full">
                             <Breadcrumb
                                 items={[]}
-                                currentPage="BSC Dashboard"
+                                currentPage="MPM Dashboard"
+                                subtitle={`MPM ${currentRole == 'admin' ? 'Company' : 'IT Department'} Dashboard`}
                                 showHomeIcon={true}
                             />
 
-                            {/* Filter Section */}
+                            {/* Enhanced Filtering with Search and Categories */}
                             <Filtering
-                                startDate={startDate}
-                                endDate={endDate}
-                                handleStartDateChange={handleStartDateChange}
-                                handleEndDateChange={handleEndDateChange}
-                                isEndDateDisabled={isEndDateDisabled}
-                                handlePeriodChange={handlePeriodChange}
-                                selectedPeriod={selectedPeriod}
-                                handleTypeChange={handleTypeChange}
-                                selectedType={selectedType}
+                                handlePeriodChange={setSelectedYear}
+                                selectedPeriod={selectedYear}
                             >
-                                {/* Custom Filter Options */}
-                                <div className="space-y-3 md:col-span-2">
+                                {/* Search Filter */}
+                                <div className="space-y-3 md:col-span-1">
                                     <label className="flex items-center space-x-2 text-sm font-medium text-gray-700 dark:text-gray-200">
                                         <Search className="h-4 w-4 text-[#46B749] dark:text-[#1B6131]" />
                                         <span>Search</span>
                                     </label>
                                     <Input
-                                        placeholder="Search by KPI, Code, or Definition..."
+                                        placeholder="Search by KPI or Definition..."
                                         value={searchTerm}
                                         onChange={handleSearchChange}
                                         className="w-full bg-white dark:bg-gray-800 border border-[#46B749] dark:border-[#1B6131] p-2 h-10 rounded-md focus:ring-2 focus:ring-[#46B749] dark:focus:ring-[#1B6131] focus:outline-none"
                                     />
                                 </div>
 
+                                {/* Perspective Filter */}
                                 <div className="space-y-3">
                                     <label className="flex items-center space-x-2 text-sm font-medium text-gray-700 dark:text-gray-200">
                                         <span>Perspective</span>
@@ -303,6 +222,7 @@ const BSCDashboard = () => {
                                     </select>
                                 </div>
 
+                                {/* Category Filter */}
                                 <div className="space-y-3">
                                     <label className="flex items-center space-x-2 text-sm font-medium text-gray-700 dark:text-gray-200">
                                         <span>Category</span>
@@ -321,29 +241,26 @@ const BSCDashboard = () => {
                                 </div>
                             </Filtering>
 
-                            {/* BSC Table Card */}
+                            {/* MPM Table */}
                             <Card className="border-[#46B749] dark:border-[#1B6131] shadow-md pb-8">
                                 <CardHeader className="bg-gradient-to-r from-[#f0f9f0] to-[#e6f3e6] dark:from-[#0a2e14] dark:to-[#0a3419] pb-4">
                                     <CardTitle className="font-semibold text-gray-700 dark:text-gray-200 flex items-center">
-                                        BSC Performance Metrics
+                                        MPM Performance Metrics
                                     </CardTitle>
                                 </CardHeader>
                                 <CardContent className="dark:bg-gray-900 m-0 p-0">
                                     <Table>
                                         <TableHeader>
-                                            <TableRow>
-                                                <th className="p-4 text-left font-medium text-white">Perspective</th>
-                                                <th className="p-4 text-left font-medium text-white">Code</th>
-                                                <th className="p-4 text-left font-medium text-white">KPI</th>
-                                                <th className="p-4 text-left font-medium text-white">Weight</th>
-                                                <th className="p-4 text-left font-medium text-white">UOM</th>
-                                                <th className="p-4 text-left font-medium text-white">Category</th>
-                                                <th className="p-4 text-left font-medium text-white">Target</th>
-                                                <th className="p-4 text-left font-medium text-white">Actual</th>
-                                                <th className="p-4 text-left font-medium text-white">Achievement</th>
-                                                <th className="p-4 text-left font-medium text-white">Status</th>
-                                                <th className="p-4 text-left font-medium text-white">Score</th>
-                                                <th className="p-4 text-left font-medium text-white">Score Akhir</th>
+                                            <TableRow className="bg-[#1B6131] text-white">
+                                                <TableCell className="p-4 text-left font-medium text-white">Perspective</TableCell>
+                                                <TableCell className="p-4 text-left font-medium text-white">KPI</TableCell>
+                                                <TableCell className="p-4 text-left font-medium text-white">Weight</TableCell>
+                                                <TableCell className="p-4 text-left font-medium text-white">UOM</TableCell>
+                                                <TableCell className="p-4 text-left font-medium text-white">Category</TableCell>
+                                                <TableCell className="p-4 text-left font-medium text-white">Target</TableCell>
+                                                <TableCell className="p-4 text-left font-medium text-white">Actual</TableCell>
+                                                <TableCell className="p-4 text-left font-medium text-white">Achievement</TableCell>
+                                                <TableCell className="p-4 text-left font-medium text-white">Score</TableCell>
                                             </TableRow>
                                         </TableHeader>
                                         <TableBody>
@@ -354,12 +271,12 @@ const BSCDashboard = () => {
                                                     isExpanded: expandedRow === item.id
                                                 }));
 
-                                                // Get the subtotals for this perspective
-                                                const perspectiveSubtotal = perspectiveSubtotals[perspective] || { 
-                                                    weight: 0, 
-                                                    score: 0, 
-                                                    endScore: 0 
-                                                };
+                                                // Calculate perspective subtotals once
+                                                const perspectiveWeightTotal = items.reduce((sum, item) => sum + item.weight, 0).toFixed(1);
+                                                const perspectiveScoreTotal = items.reduce((sum, item) => {
+                                                    const achievement = item.achievements[selectedYear] || 0;
+                                                    return sum + ((item.weight * Math.min(achievement, 120)) / 100);
+                                                }, 0).toFixed(1);
 
                                                 return (
                                                     <React.Fragment key={perspective}>
@@ -367,12 +284,13 @@ const BSCDashboard = () => {
                                                         {itemsWithExpanded.map((item, index) => {
                                                             const isFirstInGroup = index === 0;
                                                             const totalRowsInPerspective = items.length +
-                                                                itemsWithExpanded.filter(i => i.isExpanded).length + 1;
+                                                                itemsWithExpanded.filter(i => i.isExpanded).length + 1; 
+
                                                             return (
                                                                 <React.Fragment key={item.id}>
                                                                     <TableRow
                                                                         onClick={() => handleRowClick(item.id)}
-                                                                        className="hover:bg-[#E4EFCF]/50 dark:hover:bg-[#1B6131]/20"
+                                                                        className="hover:bg-[#E4EFCF]/50 dark:hover:bg-[#1B6131]/20 cursor-pointer"
                                                                     >
                                                                         {isFirstInGroup && (
                                                                             <TableCell
@@ -383,29 +301,36 @@ const BSCDashboard = () => {
                                                                             </TableCell>
                                                                         )}
                                                                         <TableCell className="flex items-center gap-2 text-[#1B6131] dark:text-[#46B749]">
-                                                                            {expandedRow === item.id ? (
+                                                                            {item.isExpanded ? (
                                                                                 <ChevronDown size={16} />
                                                                             ) : (
                                                                                 <ChevronRight size={16} />
                                                                             )}
-                                                                            {item.code}
+                                                                            {item.kpi}
                                                                         </TableCell>
-                                                                        <TableCell>{item.kpi}</TableCell>
                                                                         <TableCell>{item.weight}%</TableCell>
                                                                         <TableCell>{item.uom}</TableCell>
                                                                         <TableCell>{item.category}</TableCell>
-                                                                        <TableCell>{item.target}</TableCell>
-                                                                        <TableCell>{item.actual}</TableCell>
-                                                                        <TableCell>{item.achievement}%</TableCell>
                                                                         <TableCell>
-                                                                            <StatusIndicator value={item.achievement} />
+                                                                            {item.targets[selectedYear] ?? 'N/A'}
                                                                         </TableCell>
-                                                                        <TableCell>{item.score?.toFixed(2)}</TableCell>
-                                                                        <TableCell>{item.endScore?.toFixed(2)}</TableCell>
+                                                                        <TableCell>
+                                                                            {item.actuals[selectedYear] ?? 'N/A'}
+                                                                        </TableCell>
+                                                                        <TableCell>
+                                                                            {item.achievements[selectedYear] ?
+                                                                                `${item.achievements[selectedYear]}%` : 'N/A'}
+                                                                        </TableCell>
+                                                                        <TableCell>
+                                                                            {item.achievements[selectedYear] ?
+                                                                                ((item.weight * Math.min(item.achievements[selectedYear], 120)) / 100).toFixed(1) : 'N/A'}
+                                                                        </TableCell>
                                                                     </TableRow>
-                                                                    {expandedRow === item.id && (
-                                                                        <TableRow className="bg-[#E4EFCF]/30 dark:bg-[#1B6131]/10">
-                                                                            <TableCell colSpan={11} className="px-4 py-2 bg-gray-50 dark:bg-gray-800/50">
+
+                                                                    {/* Show expanded content if row is expanded */}
+                                                                    {item.isExpanded && (
+                                                                        <TableRow>
+                                                                            <TableCell colSpan={9} className="px-4 py-2 bg-gray-50 dark:bg-gray-800/50">
                                                                                 <ExpandedContent item={item} />
                                                                             </TableCell>
                                                                         </TableRow>
@@ -414,20 +339,17 @@ const BSCDashboard = () => {
                                                             );
                                                         })}
 
-                                                        {/* Render perspective subtotal row with weight, score, and score akhir */}
+                                                        {/* Add perspective subtotal row ONCE per perspective group */}
                                                         <TableRow className="bg-[#E4EFCF]/50 dark:bg-[#1B6131]/30">
-                                                            <TableCell colSpan={2} className="font-medium">
+                                                            <TableCell colSpan={1} className="font-medium">
                                                                 {perspective} Subtotal
                                                             </TableCell>
                                                             <TableCell className="font-medium">
-                                                                {perspectiveSubtotal.weight.toFixed(2)}%
+                                                                {perspectiveWeightTotal}%
                                                             </TableCell>
-                                                            <TableCell colSpan={6}></TableCell>
+                                                            <TableCell colSpan={5}></TableCell>
                                                             <TableCell className="font-medium">
-                                                                {perspectiveSubtotal.score.toFixed(2)}
-                                                            </TableCell>
-                                                            <TableCell className="font-medium">
-                                                                {perspectiveSubtotal.endScore.toFixed(2)}
+                                                                {perspectiveScoreTotal}
                                                             </TableCell>
                                                         </TableRow>
                                                     </React.Fragment>
@@ -436,7 +358,7 @@ const BSCDashboard = () => {
 
                                             {paginatedData.length === 0 && (
                                                 <TableRow>
-                                                    <TableCell colSpan={12} className="text-center py-8 text-gray-500">
+                                                    <TableCell colSpan={9} className="text-center py-8 text-gray-500">
                                                         No results found. Try adjusting your filters.
                                                     </TableCell>
                                                 </TableRow>
@@ -445,15 +367,15 @@ const BSCDashboard = () => {
                                             {/* Totals Row - Only show when we have data */}
                                             {paginatedData.length > 0 && (
                                                 <TableRow className="font-bold bg-[#1B6131] text-white dark:bg-[#1B6131]">
-                                                    <TableCell colSpan={3}>Total</TableCell>
-                                                    <TableCell>{totals.weight.toFixed(2)}%</TableCell>
-                                                    <TableCell colSpan={6}></TableCell>
-                                                    <TableCell>{totals.score.toFixed(2)}</TableCell>
-                                                    <TableCell>{totals.endScore.toFixed(2)}</TableCell>
+                                                    <TableCell colSpan={2}>Total</TableCell>
+                                                    <TableCell>{totals.weight.toFixed(1)}%</TableCell>
+                                                    <TableCell colSpan={5}></TableCell>
+                                                    <TableCell>{totals.score.toFixed(1)}</TableCell>
                                                 </TableRow>
                                             )}
                                         </TableBody>
                                     </Table>
+
                                     <Pagination
                                         currentPage={currentPage}
                                         totalPages={Math.ceil(filteredData.length / itemsPerPage)}
@@ -469,9 +391,8 @@ const BSCDashboard = () => {
                     <Footer />
                 </div>
             </div>
-
         </div>
     );
-};
+}
 
-export default BSCDashboard;
+export default MPMDashboard;

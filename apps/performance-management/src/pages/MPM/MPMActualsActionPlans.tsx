@@ -48,7 +48,7 @@ const MPMActualsActionPlans: React.FC = () => {
         return true;
     });
     const [isDarkMode, setIsDarkMode] = useState(false);
-    const [currentRole, setCurrentRole] = useState('admin');
+   
     const [isEditIndividualDialogOpen, setIsEditIndividualDialogOpen] = useState(false);
     const [selectedIndividual, setSelectedIndividual] = useState<IndividualKPIActual | null>(null);
 
@@ -209,17 +209,17 @@ const MPMActualsActionPlans: React.FC = () => {
                 setIsSidebarOpen={setIsSidebarOpen}
                 isDarkMode={isDarkMode}
                 setIsDarkMode={setIsDarkMode}
-                currentRole={currentRole}
-                setCurrentRole={setCurrentRole}
-                currentSystem='Performance Management System'
+                
+                
+                
             />
 
             <div className="flex flex-col md:flex-row">
                 <Sidebar
                     isSidebarOpen={isSidebarOpen}
                     setIsSidebarOpen={setIsSidebarOpen}
-                    role={currentRole}
-                    system="performance-management"
+                    
+                    
                 />
 
                 <div className={`flex flex-col mt-4 transition-all duration-300 ease-in-out ${isSidebarOpen ? 'lg:ml-64' : 'lg:ml-0'} w-full`}>

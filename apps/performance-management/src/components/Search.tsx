@@ -20,7 +20,6 @@ interface SearchBarProps {
   placeholder?: string;
   className?: string;
   mobileClassName?: string;
-  currentRole: string;
 }
 
 const SearchBar: React.FC<SearchBarProps> = ({
@@ -30,7 +29,6 @@ const SearchBar: React.FC<SearchBarProps> = ({
   placeholder = 'Search dashboards, reports, KPIs...',
   className = '',
   mobileClassName = '',
-  currentRole = 'employee',
 }) => {
   const navigate = useNavigate(); // Add useNavigate hook
   const [searchQuery, setSearchQuery] = useState('');
@@ -48,9 +46,9 @@ const SearchBar: React.FC<SearchBarProps> = ({
     { id: 'home', title: 'Home', path: '/', type: 'menu', roles: ['admin', 'manager', 'sm_dept', 'employee'] },
     { id: 'dashboard', title: 'Dashboard', path: '/performance-management/dashboard', type: 'menu', roles: ['admin', 'manager', 'sm_dept'] },
     { id: 'period-master', title: 'Period Master', path: '/performance-management/period-master', type: 'menu', roles: ['admin', 'manager', 'sm_dept'] },
-    { id: 'departments', title: 'Department Management', path: '/performance-management/company-management/departments', type: 'menu', roles: ['admin'] },
-    { id: 'teams', title: 'Teams Management', path: '/performance-management/company-management/teams', type: 'menu', roles: ['admin'] },
-    { id: 'employees', title: 'Employee Management', path: '/performance-management/company-management/employees', type: 'menu', roles: ['admin'] },
+    { id: 'departments', title: 'Department Management', path: '/performance-management/organization-units/departments', type: 'menu', roles: ['admin'] },
+    { id: 'teams', title: 'Teams Management', path: '/performance-management/organization-units/teams', type: 'menu', roles: ['admin'] },
+    { id: 'employees', title: 'Employee Management', path: '/performance-management/organization-units/employees', type: 'menu', roles: ['admin'] },
     { id: 'bsc-dashboard', title: 'BSC Dashboard', path: '/performance-management/bsc/dashboard', type: 'menu', roles: ['admin', 'manager', 'sm_dept'] },
     { id: 'bsc-input', title: 'BSC KPI Input', path: '/performance-management/bsc/input', type: 'menu', roles: ['admin', 'manager'] },
     { id: 'ipm', title: 'Individual Performance', path: '/performance-management/ipm', type: 'menu', roles: ['admin', 'employee', 'manager', 'sm_dept'] },
@@ -142,10 +140,6 @@ const SearchBar: React.FC<SearchBarProps> = ({
 
     // Filter navigation items based on query and user role
     const filteredNavItems = navigationItems
-      .filter(item =>
-        item.roles.includes(currentRole) &&
-        item.title.toLowerCase().includes(debouncedSearchQuery.toLowerCase())
-      )
       .map(item => ({
         id: item.id,
         title: item.title,
@@ -179,7 +173,7 @@ const SearchBar: React.FC<SearchBarProps> = ({
 
     setSuggestions(sortedResults);
     setIsLoading(false);
-  }, [debouncedSearchQuery, currentRole, isSearchOpen, showSuggestions, recentSearches]);
+  }, [debouncedSearchQuery, isSearchOpen, showSuggestions, recentSearches]);
 
   const handleSearch = (e: React.FormEvent) => {
     e.preventDefault();

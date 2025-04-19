@@ -9,17 +9,24 @@ import { Button } from "@workspace/ui/components/button";
 import { Input } from "@workspace/ui/components/input";
 import Sidebar from '@/components/Sidebar';
 import Header from '@/components/Header';
-import { Plus, Save, Trash2, FileSpreadsheet, Edit, Search, Layers, EyeIcon } from 'lucide-react';
-import * as XLSX from 'xlsx';
+import { Plus, Save, Trash2, Edit, Search, Layers, EyeIcon } from 'lucide-react';
 import KPIFormDialog from '@/components/BSC/KPIFormDialog';
-import { BSCEntry } from '@/lib/types';
 import Breadcrumb from '@/components/Breadcrumb';
 import Pagination from '@/components/Pagination';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@workspace/ui/components/select";
 import Filtering from '@/components/Filtering';
 import Footer from '@/components/Footer';
+import { useToast } from "@workspace/ui/components/sonner";
+
+// Import services
+import kpiDefinitionService, { KPIDefinitionResponse } from '@/services/kpiDefinitionService';
+import { kpiPerspectiveService, KPIPerspective } from '@/services/kpiPerspectiveService';
+import { periodService, Period } from '@/services/periodService';
+import organizationUnitService, { OrganizationUnitResponse } from '@/services/organizationUnitService';
+import { useAppSelector } from '@/redux/hooks';
 
 const BSCEntryPage = () => {
+    const { toast } = useToast();
     const [isSidebarOpen, setIsSidebarOpen] = useState(() => {
         if (typeof window !== 'undefined') {
             return window.innerWidth >= 768;
@@ -27,10 +34,17 @@ const BSCEntryPage = () => {
         return true;
     });
     const [isDarkMode, setIsDarkMode] = useState(false);
-    const [currentRole, setCurrentRole] = useState('admin');
-    const [allEntries, setAllEntries] = useState<BSCEntry[]>([]);
-    const [filteredEntries, setFilteredEntries] = useState<BSCEntry[]>([]);
-    const [displayedEntries, setDisplayedEntries] = useState<BSCEntry[]>([]);
+   
+    const [allEntries, setAllEntries] = useState<KPIDefinitionResponse[]>([]);
+    const [filteredEntries, setFilteredEntries] = useState<KPIDefinitionResponse[]>([]);
+    const [displayedEntries, setDisplayedEntries] = useState<KPIDefinitionResponse[]>([]);
+    const { user } = useAppSelector((state) => state.auth);
+
+    // States for dropdown options
+    const [perspectives, setPerspectives] = useState<KPIPerspective[]>([]);
+    const [_, setPeriods] = useState<Period[]>([]); //nanti filter by period
+    const [organizationUnits, setOrganizationUnits] = useState<OrganizationUnitResponse[]>([]);
+    const [activePeriod, setActivePeriod] = useState<Period | null>(null);
 
     // Pagination state
     const [currentPage, setCurrentPage] = useState(1);
@@ -44,10 +58,84 @@ const BSCEntryPage = () => {
 
     // State for dialog management
     const [isDialogOpen, setIsDialogOpen] = useState(false);
-    const [currentEditingEntry, setCurrentEditingEntry] = useState<Partial<BSCEntry> | undefined>(undefined);
+    const [currentEditingEntry, setCurrentEditingEntry] = useState<Partial<KPIDefinitionResponse> | undefined>(undefined);
     const [dialogMode, setDialogMode] = useState<'create' | 'edit'>('create');
 
     const fileInputRef = useRef<HTMLInputElement>(null);
+
+    // Fetch initial data on component mount
+    useEffect(() => {
+        loadInitialData();
+    }, []);
+
+    const loadInitialData = async () => {
+        try {
+            // Get active period
+            const activeP = await periodService.getActivePeriod();
+            setActivePeriod(activeP);
+            
+            // Load data based on active period
+            if (activeP) {
+                loadBSCEntries(activeP.period_id);
+                loadPerspectives();
+                loadOrganizationUnits();
+                loadPeriods();
+            }
+        } catch (error) {
+            console.error("Error loading initial data:", error);
+            toast({
+                title: "Error",
+                description: "Failed to load initial data",
+                variant: "destructive",
+            });
+        }
+    };
+
+    const loadBSCEntries = async (periodId: number) => {
+        try {
+            // Get BSC type KPIs only
+            const bscEntries = await kpiDefinitionService.getKPIsByType('BSC', periodId);
+            // Filter out entries that have parent (we only want top level BSC entries)
+            const topLevelBSC = bscEntries.filter(entry => !entry.kpi_parent_id);
+            setAllEntries(topLevelBSC);
+            setFilteredEntries(topLevelBSC);
+        } catch (error) {
+            console.error("Error loading BSC entries:", error);
+            toast({
+                title: "Error",
+                description: "Failed to load BSC entries",
+                variant: "destructive",
+            });
+        }
+    };
+
+    const loadPerspectives = async () => {
+        try {
+            const perspList = await kpiPerspectiveService.getPerspectives();
+            setPerspectives(perspList);
+        } catch (error) {
+            console.error("Error loading perspectives:", error);
+        }
+    };
+
+    const loadPeriods = async () => {
+        try {
+            const periodList = await periodService.getPeriods();
+            setPeriods(periodList);
+        } catch (error) {
+            console.error("Error loading periods:", error);
+        }
+    };
+
+    const loadOrganizationUnits = async () => {
+        try {
+            const orgUnits = await organizationUnitService.getOrganizationUnits();
+            const topLevelOrgUnits = orgUnits.filter(ou => !ou.org_unit_parent_id);
+            setOrganizationUnits(topLevelOrgUnits);
+        } catch (error) {
+            console.error("Error loading organization units:", error);
+        }
+    };
 
     // Calculate total pages whenever filtered entries change
     useEffect(() => {
@@ -65,6 +153,7 @@ const BSCEntryPage = () => {
     // Update displayed entries based on pagination
     useEffect(() => {
         updateDisplayedEntries();
+        console.log(user);
     }, [currentPage, filteredEntries]);
 
     // Apply filters whenever search term or filter selections change
@@ -85,20 +174,19 @@ const BSCEntryPage = () => {
         if (searchTerm) {
             const lowercasedSearch = searchTerm.toLowerCase();
             filtered = filtered.filter(entry =>
-                (entry.kpi?.toLowerCase().includes(lowercasedSearch)) ||
-                (entry.code?.toLowerCase().includes(lowercasedSearch)) ||
-                (entry.relatedPIC?.toLowerCase().includes(lowercasedSearch))
+                (entry.kpi_name?.toLowerCase().includes(lowercasedSearch)) ||
+                (entry.kpi_code?.toLowerCase().includes(lowercasedSearch))
             );
         }
 
         // Apply perspective filter
-        if (selectedPerspective) {
-            filtered = filtered.filter(entry => entry.perspective === selectedPerspective);
+        if (selectedPerspective && selectedPerspective !== 'all') {
+            filtered = filtered.filter(entry => entry.kpi_perspective_id.toString() === selectedPerspective);
         }
 
         // Apply category filter
-        if (selectedCategory) {
-            filtered = filtered.filter(entry => entry.category === selectedCategory);
+        if (selectedCategory && selectedCategory !== 'all') {
+            filtered = filtered.filter(entry => entry.kpi_category === selectedCategory);
         }
 
         setFilteredEntries(filtered);
@@ -113,86 +201,141 @@ const BSCEntryPage = () => {
         setCurrentPage(1);
     };
 
-    const handleFileUpload = (event: React.ChangeEvent<HTMLInputElement>) => {
-        const file = event.target.files?.[0];
-        if (file) {
-            const reader = new FileReader();
-            reader.onload = (e) => {
-                try {
-                    const data = new Uint8Array(e.target?.result as ArrayBuffer);
-                    const workbook = XLSX.read(data, { type: 'array' });
-                    const worksheet = workbook.Sheets[workbook.SheetNames[0]];
-                    const jsonData = XLSX.utils.sheet_to_json(worksheet);
-
-                    // Transform the Excel data to match KPIEntry format
-                    const newEntries: BSCEntry[] = jsonData.map((row: any, index: number) => ({
-                        id: Date.now() + index, // Generate unique IDs
-                        perspective: row.Perspective,
-                        code: row.code,
-                        kpiNumber: 0,
-                        kpi: row.KPI,
-                        kpiDefinition: row['KPI Definition'],
-                        weight: Number(row.Weight),
-                        uom: row.UOM,
-                        category: row.Category,
-                        ytdCalculation: row['YTD Calculation'],
-                        relatedPIC: row['Related PIC'],
-                        target: Number(row.Target)
-                    }));
-
-                    setAllEntries(prev => [...prev, ...newEntries]);
-                    // Reset file input
-                    if (fileInputRef.current) {
-                        fileInputRef.current.value = '';
-                    }
-                } catch (error) {
-                    console.error('Error parsing Excel file:', error);
-                }
-            };
-            reader.readAsArrayBuffer(file);
-        }
-    };
-
     const handleOpenCreateDialog = () => {
-        setCurrentEditingEntry(undefined);
+        setCurrentEditingEntry({
+            kpi_code: '',
+            kpi_name: '',
+            kpi_definition: '',
+            kpi_weight: 0,
+            kpi_uom: '',
+            kpi_category: '',
+            kpi_calculation: '',
+            kpi_target: 0,
+            kpi_org_unit_id: undefined,
+            kpi_perspective_id: 0,
+            kpi_owner_id: user?.user_employee_id || 0 
+        });
         setDialogMode('create');
         setIsDialogOpen(true);
     };
 
-    const handleOpenEditDialog = (entry: BSCEntry) => {
+    const handleOpenEditDialog = (entry: KPIDefinitionResponse) => {
         setCurrentEditingEntry({ ...entry });
         setDialogMode('edit');
         setIsDialogOpen(true);
     };
 
-    const handleSaveKPI = (kpi: BSCEntry) => {
-        if (dialogMode === 'create') {
-            // Add new entry
-            const newEntry = { ...kpi, id: Date.now() };
-            setAllEntries(prev => [...prev, newEntry]);
-        } else {
-            // Edit existing entry
-            setAllEntries(prev =>
-                prev.map(entry =>
-                    entry.id === currentEditingEntry?.id ? { ...kpi, id: entry.id } : entry
-                )
-            );
+    const handleSaveKPI = async (kpi: KPIDefinitionResponse) => {
+        try {
+         
+            
+            if (dialogMode === 'create') {
+                // Create new BSC entry
+                const createData = {
+                    kpi_code: kpi.kpi_code,
+                    kpi_name: kpi.kpi_name,
+                    kpi_org_unit_id: kpi.kpi_org_unit_id,
+                    kpi_period_id: activePeriod?.period_id || 0,
+                    kpi_perspective_id: kpi.kpi_perspective_id,
+                    kpi_owner_id: kpi.kpi_owner_id || user?.user_employee_id || 0,
+                    kpi_definition: kpi.kpi_definition,
+                    kpi_weight: kpi.kpi_weight,
+                    kpi_uom: kpi.kpi_uom,
+                    kpi_category: kpi.kpi_category,
+                    kpi_calculation: kpi.kpi_calculation || '',
+                    kpi_target: kpi.kpi_target,
+                    kpi_is_action_plan: false,
+                    kpi_is_ipm: false,
+                    kpi_visibility_level: 'org_unit',
+                    kpi_status: 'Active',
+                    kpi_employee_id: null,
+                    kpi_parent_id: null,
+                };
+                
+                await kpiDefinitionService.createKPIDefinition(createData);
+                // Refresh the list
+                if (activePeriod) {
+                    loadBSCEntries(activePeriod.period_id);
+                }
+            } else {
+                // Update existing entry
+                if (!kpi.kpi_id) {
+                    throw new Error("KPI ID is required for update");
+                }
+                
+                const updateData = {
+                    kpi_code: kpi.kpi_code,
+                    kpi_name: kpi.kpi_name,
+                    kpi_org_unit_id: kpi.kpi_org_unit_id,
+                    kpi_perspective_id: kpi.kpi_perspective_id,
+                    kpi_owner_id: kpi.kpi_owner_id,
+                    kpi_definition: kpi.kpi_definition,
+                    kpi_weight: kpi.kpi_weight,
+                    kpi_uom: kpi.kpi_uom,
+                    kpi_category: kpi.kpi_category,
+                    kpi_calculation: kpi.kpi_calculation,
+                    kpi_target: kpi.kpi_target,
+                    kpi_employee_id: null,
+                    kpi_parent_id: null,
+                };
+                
+                await kpiDefinitionService.updateKPIDefinition(kpi.kpi_id, updateData);
+                // Refresh the list
+                if (activePeriod) {
+                    loadBSCEntries(activePeriod.period_id);
+                }
+            }
+            
+            setIsDialogOpen(false);
+        } catch (error) {
+            console.error("Error saving KPI:", error);
+            toast({
+                title: "Error",
+                description: "Failed to save KPI",
+                variant: "destructive",
+            });
         }
-        setIsDialogOpen(false);
     };
 
-    const handleDeleteEntry = (id: number) => {
-        setAllEntries(prev => prev.filter(entry => entry.id !== id));
+    const handleDeleteEntry = async (id: number) => {
+        try {
+            await kpiDefinitionService.deleteKPIDefinition(id);
+            // Refresh the list after deletion
+            if (activePeriod) {
+                loadBSCEntries(activePeriod.period_id);
+            }
+        } catch (error) {
+            console.error("Error deleting KPI:", error);
+            toast({
+                title: "Error",
+                description: "Failed to delete KPI",
+                variant: "destructive",
+            });
+        }
     };
 
     const handleSaveAll = () => {
-        console.log('Saving entries:', allEntries);
-        // Implement your save logic here
+        toast({
+            title: "Information",
+            description: "All changes are automatically saved when editing individual KPIs",
+        });
     };
 
-    // Get unique perspectives and categories for filters
-    const perspectives = Array.from(new Set(allEntries.map(entry => entry.perspective))).filter(Boolean);
-    const categories = Array.from(new Set(allEntries.map(entry => entry.category))).filter(Boolean);
+    // Get unique categories for filters
+    const categories = Array.from(new Set(allEntries.map(entry => entry.kpi_category))).filter(Boolean);
+
+    // Helper function to find perspective name by ID
+    const getPerspectiveName = (perspectiveId: number) => {
+        const perspective = perspectives.find(p => p.perspective_id === perspectiveId);
+        return perspective ? perspective.perspective_name : '';
+    };
+
+    // Helper function to find organization unit name by ID
+    const getOrgUnitName = (orgUnitId: number | null | undefined) => {
+        if (!orgUnitId) return '';
+        const orgUnit = organizationUnits.find(ou => ou.org_unit_id === orgUnitId);
+        return orgUnit ? orgUnit.org_unit_name : '';
+    };
 
     return (
         <div className="font-montserrat min-h-screen bg-white dark:bg-gray-900">
@@ -201,21 +344,16 @@ const BSCEntryPage = () => {
                 setIsSidebarOpen={setIsSidebarOpen}
                 isDarkMode={isDarkMode}
                 setIsDarkMode={setIsDarkMode}
-                currentRole={currentRole}
-                setCurrentRole={setCurrentRole}
-                currentSystem='Performance Management System'
             />
 
             <div className="flex">
                 <Sidebar
                     isSidebarOpen={isSidebarOpen}
                     setIsSidebarOpen={setIsSidebarOpen}
-                    role={currentRole}
-                    system="performance-management"
                 />
 
                 <div className={`flex flex-col mt-4 transition-all duration-300 ease-in-out ${isSidebarOpen ? 'lg:ml-64' : 'lg:ml-0'} w-full`}>
-                    <main className='flex-1 px-2  md:px-4  pt-16 pb-12 transition-all duration-300 ease-in-out  w-full'>
+                    <main className='flex-1 px-2 md:px-4 pt-16 pb-12 transition-all duration-300 ease-in-out w-full'>
                         <div className="space-y-6 max-w-full">
                             <Breadcrumb
                                 items={[]}
@@ -232,7 +370,7 @@ const BSCEntryPage = () => {
                                     </label>
                                     <Input
                                         type="text"
-                                        placeholder="Search KPI, Code, or PIC..."
+                                        placeholder="Search KPI, Code..."
                                         value={searchTerm}
                                         onChange={(e) => setSearchTerm(e.target.value)}
                                         className="w-full bg-white dark:bg-gray-800 border-[#46B749] dark:border-[#1B6131] h-10"
@@ -253,7 +391,9 @@ const BSCEntryPage = () => {
                                         <SelectContent>
                                             <SelectItem value="all">All Perspectives</SelectItem>
                                             {perspectives.map((perspective) => (
-                                                <SelectItem key={perspective} value={perspective}>{perspective}</SelectItem>
+                                                <SelectItem key={perspective.perspective_id} value={perspective.perspective_id.toString()}>
+                                                    {perspective.perspective_name}
+                                                </SelectItem>
                                             ))}
                                         </SelectContent>
                                     </Select>
@@ -284,25 +424,15 @@ const BSCEntryPage = () => {
                             <Card className="border-[#46B749] dark:border-[#1B6131] shadow-md pb-8">
                                 <CardHeader className="bg-gradient-to-r from-[#f0f9f0] to-[#e6f3e6] dark:from-[#0a2e14] dark:to-[#0a3419]">
                                     <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
-                                        <CardTitle className="text-gray-700 dark:text-gray-200  flex p-0">
-                                            KPI Entries
+                                        <CardTitle className="text-gray-700 dark:text-gray-200 flex p-0">
+                                            KPI Entries {activePeriod && `- ${activePeriod.period_name} (${activePeriod.period_year})`}
                                         </CardTitle>
                                         <div className="flex flex-wrap gap-2 sm:gap-4 w-full sm:w-auto justify-start sm:justify-end">
                                             <input
                                                 type="file"
                                                 ref={fileInputRef}
-                                                onChange={handleFileUpload}
-                                                accept=".xlsx,.xls"
                                                 className="hidden"
                                             />
-                                            <Button
-                                                onClick={() => fileInputRef.current?.click()}
-                                                className="bg-[#1B6131] hover:bg-[#144d27] dark:bg-[#46B749] dark:hover:bg-[#3da33f] w-full sm:w-auto"
-                                                size="sm"
-                                            >
-                                                <FileSpreadsheet className="mr-2 h-4 w-4" />
-                                                Import Excel
-                                            </Button>
                                             <Button
                                                 onClick={handleSaveAll}
                                                 className="bg-[#1B6131] hover:bg-[#144d27] dark:bg-[#46B749] dark:hover:bg-[#3da33f] w-full sm:w-auto"
@@ -340,15 +470,15 @@ const BSCEntryPage = () => {
                                             </thead>
                                             <tbody>
                                                 {displayedEntries.map((entry) => (
-                                                    <tr key={entry.id} className="border-b hover:bg-[#E4EFCF]/50 dark:hover:bg-[#1B6131]/20">
-                                                        <td className="p-4">{entry.perspective}</td>
-                                                        <td className="p-4">{entry.code}</td>
-                                                        <td className="p-4">{entry.kpi}</td>
-                                                        <td className="p-4">{entry.weight}%</td>
-                                                        <td className="p-4">{entry.uom}</td>
-                                                        <td className="p-4">{entry.category}</td>
-                                                        <td className="p-4">{entry.target}</td>
-                                                        <td className="p-4">{entry.relatedPIC}</td>
+                                                    <tr key={entry.kpi_id} className="border-b hover:bg-[#E4EFCF]/50 dark:hover:bg-[#1B6131]/20">
+                                                        <td className="p-4">{getPerspectiveName(entry.kpi_perspective_id)}</td>
+                                                        <td className="p-4">{entry.kpi_code}</td>
+                                                        <td className="p-4">{entry.kpi_name}</td>
+                                                        <td className="p-4">{entry.kpi_weight?.toString()}%</td>
+                                                        <td className="p-4">{entry.kpi_uom}</td>
+                                                        <td className="p-4">{entry.kpi_category}</td>
+                                                        <td className="p-4">{entry.kpi_target?.toString()}</td>
+                                                        <td className="p-4">{getOrgUnitName(entry.kpi_org_unit_id)}</td>
                                                         <td className="p-4 flex space-x-2">
                                                             <Button
                                                                 onClick={() => handleOpenEditDialog(entry)}
@@ -358,7 +488,7 @@ const BSCEntryPage = () => {
                                                                 <Edit className="h-4 w-4" />
                                                             </Button>
                                                             <Button
-                                                                onClick={() => handleDeleteEntry(entry.id!)}
+                                                                onClick={() => handleDeleteEntry(entry.kpi_id)}
                                                                 variant="destructive"
                                                                 size="sm"
                                                             >
@@ -386,12 +516,11 @@ const BSCEntryPage = () => {
                                         totalItems={filteredEntries.length}
                                         onPageChange={handlePageChange}
                                         onItemsPerPageChange={handleItemsPerPageChange}
-                                       
                                     />
                                 </CardContent>
                             </Card>
 
-                            {/* KPI Form Dialog */}
+                            {/* KPI Form Dialog - needs updating to use types from services */}
                             <KPIFormDialog
                                 isOpen={isDialogOpen}
                                 onClose={() => {
@@ -401,6 +530,8 @@ const BSCEntryPage = () => {
                                 onSave={handleSaveKPI}
                                 initialData={currentEditingEntry || {}}
                                 mode={dialogMode}
+                                perspectives={perspectives}
+                                organizationUnits={organizationUnits}
                             />
                         </div>
                     </main>

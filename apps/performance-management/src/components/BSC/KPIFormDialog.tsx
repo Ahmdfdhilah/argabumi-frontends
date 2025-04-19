@@ -11,20 +11,18 @@ import { Button } from '@workspace/ui/components/button';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@workspace/ui/components/select';
 import { Input } from '@workspace/ui/components/input';
 import { Label } from '@workspace/ui/components/label';
-import {
-    BSCEntry,
-    Perspective,
-    YTDCalculation,
-    UOMType,
-    Category
-} from '../../lib/types';
+import { KPIDefinitionResponse } from '../../services/kpiDefinitionService';
+import { KPIPerspective } from '../../services/kpiPerspectiveService';
+import { OrganizationUnitResponse } from '../../services/organizationUnitService';
 
 type KPIFormDialogProps = {
     isOpen: boolean;
     onClose: () => void;
-    onSave: (kpi: BSCEntry) => void;
-    initialData?: Partial<BSCEntry>;
+    onSave: (kpi: KPIDefinitionResponse) => void;
+    initialData?: Partial<KPIDefinitionResponse>;
     mode: 'create' | 'edit';
+    perspectives: KPIPerspective[];
+    organizationUnits: OrganizationUnitResponse[];
 };
 
 const KPIFormDialog: React.FC<KPIFormDialogProps> = ({
@@ -32,28 +30,42 @@ const KPIFormDialog: React.FC<KPIFormDialogProps> = ({
     onClose,
     onSave,
     initialData = {},
-    mode
+    mode,
+    perspectives,
+    organizationUnits
 }) => {
-    const [newKPI, setNewKPI] = useState<Partial<BSCEntry>>({});
+    const [formData, setFormData] = useState<Partial<KPIDefinitionResponse>>({});
 
     // Reset the form when the dialog opens or mode changes
     useEffect(() => {
         if (isOpen) {
             if (mode === 'create') {
                 // When creating, always start with an empty object
-                setNewKPI({});
+                setFormData({
+                    kpi_code: '',
+                    kpi_name: '',
+                    kpi_definition: '',
+                    kpi_weight: 0,
+                    kpi_uom: '',
+                    kpi_category: '',
+                    kpi_calculation: '',
+                    kpi_target: 0,
+                    kpi_org_unit_id: undefined,
+                    kpi_perspective_id: 0,
+                    kpi_owner_id: undefined
+                });
             } else if (mode === 'edit' && initialData) {
                 // When editing, use the initial data
-                setNewKPI(initialData);
+                setFormData(initialData);
             }
         }
     }, [isOpen, mode, initialData]);
 
     const handleSave = () => {
-        if (newKPI) {
-            const finalKPI: BSCEntry = {
-                ...newKPI,
-            } as BSCEntry;
+        if (formData) {
+            const finalKPI = {
+                ...formData,
+            } as KPIDefinitionResponse;
 
             onSave(finalKPI);
             onClose();
@@ -73,65 +85,79 @@ const KPIFormDialog: React.FC<KPIFormDialogProps> = ({
                 </DialogHeader>
 
                 <div className="grid grid-cols-2 gap-4">
-                    {/* Perspective Select */}
+                    {/* KPI Perspective Select */}
                     <div className="space-y-2">
                         <Label>Perspective</Label>
                         <Select
-                            value={newKPI.perspective}
+                            value={formData.kpi_perspective_id?.toString()}
                             onValueChange={(value) =>
-                                setNewKPI({ ...newKPI, perspective: value as Perspective })
+                                setFormData({ ...formData, kpi_perspective_id: parseInt(value) })
                             }
                         >
                             <SelectTrigger>
                                 <SelectValue placeholder="Select Perspective" />
                             </SelectTrigger>
                             <SelectContent>
-                                <SelectItem value="Financial">Financial</SelectItem>
-                                <SelectItem value="Customer">Customer</SelectItem>
-                                <SelectItem value="Internal Business Process">
-                                    Internal Business Process
-                                </SelectItem>
-                                <SelectItem value="Learning & Growth">
-                                    Learning & Growth
-                                </SelectItem>
+                                {perspectives.map((perspective) => (
+                                    <SelectItem
+                                        key={perspective.perspective_id}
+                                        value={perspective.perspective_id.toString()}
+                                    >
+                                        {perspective.perspective_name}
+                                    </SelectItem>
+                                ))}
                             </SelectContent>
                         </Select>
                     </div>
 
+                    {/* KPI Code */}
                     <div className="space-y-2">
-                        <Label>KPI</Label>
+                        <Label>KPI Code</Label>
                         <Input
-                            placeholder="Enter KPI name"
-                            value={newKPI.kpi || ''}
-                            onChange={(e) => setNewKPI({ ...newKPI, kpi: e.target.value })}
+                            placeholder="Enter KPI code"
+                            value={formData.kpi_code || ''}
+                            onChange={(e) => setFormData({ ...formData, kpi_code: e.target.value })}
                         />
                     </div>
 
+                    {/* KPI Name */}
+                    <div className="space-y-2">
+                        <Label>KPI Name</Label>
+                        <Input
+                            placeholder="Enter KPI name"
+                            value={formData.kpi_name || ''}
+                            onChange={(e) => setFormData({ ...formData, kpi_name: e.target.value })}
+                        />
+                    </div>
+
+                    {/* KPI Definition */}
                     <div className="space-y-2">
                         <Label>KPI Definition</Label>
                         <Input
                             placeholder="Enter KPI definition"
-                            value={newKPI.kpiDefinition || ''}
-                            onChange={(e) => setNewKPI({ ...newKPI, kpiDefinition: e.target.value })}
+                            value={formData.kpi_definition || ''}
+                            onChange={(e) => setFormData({ ...formData, kpi_definition: e.target.value })}
                         />
                     </div>
 
+                    {/* Weight */}
                     <div className="space-y-2">
                         <Label>Weight (%)</Label>
                         <Input
                             type="number"
                             placeholder="Enter weight"
-                            value={newKPI.weight || ''}
-                            onChange={(e) => setNewKPI({ ...newKPI, weight: Number(e.target.value) })}
+                            value={formData.kpi_weight?.toString() || ''}
+                            onChange={(e) => setFormData({ ...formData, kpi_weight: Number(e.target.value) })}
                         />
                     </div>
 
+                    {/* UOM */}
                     <div className="space-y-2">
                         <Label>UOM</Label>
                         <Select
-                            value={newKPI.uom}
+                            value={formData.kpi_uom}
                             onValueChange={(value) =>
-                                setNewKPI({ ...newKPI, uom: value as UOMType })
+                                setFormData({ ...formData, kpi_uom: value })
                             }
                         >
                             <SelectTrigger>
@@ -146,12 +172,13 @@ const KPIFormDialog: React.FC<KPIFormDialogProps> = ({
                         </Select>
                     </div>
 
+                    {/* Category */}
                     <div className="space-y-2">
                         <Label>Category</Label>
                         <Select
-                            value={newKPI.category}
+                            value={formData.kpi_category}
                             onValueChange={(value) =>
-                                setNewKPI({ ...newKPI, category: value as Category })
+                                setFormData({ ...formData, kpi_category: value })
                             }
                         >
                             <SelectTrigger>
@@ -165,12 +192,13 @@ const KPIFormDialog: React.FC<KPIFormDialogProps> = ({
                         </Select>
                     </div>
 
+                    {/* YTD Calculation */}
                     <div className="space-y-2">
                         <Label>YTD Calculation</Label>
                         <Select
-                            value={newKPI.ytdCalculation}
+                            value={formData.kpi_calculation}
                             onValueChange={(value) =>
-                                setNewKPI({ ...newKPI, ytdCalculation: value as YTDCalculation })
+                                setFormData({ ...formData, kpi_calculation: value })
                             }
                         >
                             <SelectTrigger>
@@ -184,24 +212,45 @@ const KPIFormDialog: React.FC<KPIFormDialogProps> = ({
                         </Select>
                     </div>
 
+                    {/* Related PIC (Organization Unit) */}
                     <div className="space-y-2">
                         <Label>Related PIC</Label>
-                        <Input
-                            placeholder="Enter Related PIC"
-                            value={newKPI.relatedPIC || ''}
-                            onChange={(e) => setNewKPI({ ...newKPI, relatedPIC: e.target.value })}
-                        />
+                        <Select
+                            value={formData.kpi_org_unit_id?.toString() || ''}
+                            onValueChange={(value) =>
+                                setFormData({ ...formData, kpi_org_unit_id: parseInt(value) })
+                            }
+                        >
+                            <SelectTrigger>
+                                <SelectValue placeholder="Select Organization Unit" />
+                            </SelectTrigger>
+                            <SelectContent>
+                                {organizationUnits.map((orgUnit) => (
+                                    <SelectItem
+                                        key={orgUnit.org_unit_id}
+                                        value={orgUnit.org_unit_id.toString()}
+                                    >
+                                        {orgUnit.org_unit_name}
+                                    </SelectItem>
+                                ))}
+                            </SelectContent>
+                        </Select>
                     </div>
 
+                    {/* Target */}
                     <div className="space-y-2">
-                        <Label>Targets</Label>
+                        <Label>Target</Label>
                         <Input
                             type="number"
-                            placeholder="Enter targets"
-                            value={newKPI.target || ''}
-                            onChange={(e) => setNewKPI({ ...newKPI, target: Number(e.target.value) })}
+                            placeholder="Enter target"
+                            value={formData.kpi_target?.toString() || ''}
+                            onChange={(e) => setFormData({ ...formData, kpi_target: Number(e.target.value) })}
                         />
                     </div>
+                    <input
+                        type="hidden"
+                        value={formData.kpi_owner_id}
+                    />
                 </div>
 
                 <DialogFooter className='space-y-4'>
@@ -211,11 +260,11 @@ const KPIFormDialog: React.FC<KPIFormDialogProps> = ({
                         </Button>
                         <Button
                             onClick={handleSave}
+                            className="bg-[#1B6131] hover:bg-[#144d27] dark:bg-[#46B749] dark:hover:bg-[#3da33f]"
                         >
                             Save KPI
                         </Button>
                     </div>
-
                 </DialogFooter>
             </DialogContent>
         </Dialog>

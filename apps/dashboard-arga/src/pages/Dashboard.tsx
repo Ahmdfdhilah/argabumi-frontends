@@ -6,7 +6,6 @@ import Footer from '@/components/Footer';
 import Sidebar from '@/components/Sidebar';
 import { useAppSelector } from '@/redux/hooks';
 import { applicationService } from '@/services/applicationService';
-import { useToast } from "@workspace/ui/components/sonner";
 
 interface System {
   id: number;
@@ -20,7 +19,6 @@ const Dashboard = () => {
   const [isDarkMode, setIsDarkMode] = useState(false);
   const [systems, setSystems] = useState<System[]>([]);
   const [loading, setLoading] = useState(true);
-  const { toast } = useToast();
   const navigate = useNavigate();
   
   // Get user data from Redux store
@@ -56,35 +54,56 @@ const Dashboard = () => {
           return;
         }
         
-        // For regular users, get only their allowed applications
-        const allowedAppCodes = user.allowed_apps.map(app => app.code);
-        
-        if (allowedAppCodes.length === 0) {
-          setSystems([]);
-          return;
+        // Handle case where allowed_apps might not exist in the token
+        if (user.allowed_apps && user.allowed_apps.length > 0) {
+          // For regular users with allowed_apps in token, use that data
+          const allowedAppCodes = user.allowed_apps.map(app => app.code);
+          
+          if (allowedAppCodes.length === 0) {
+            setSystems([]);
+            return;
+          }
+          
+          // Fetch all applications and filter by allowed codes
+          const allApps = await applicationService.fetchApplications();
+          const filteredApps = allApps.filter(app => 
+            allowedAppCodes.includes(app.code)
+          );
+          
+          setSystems(filteredApps.map(app => ({
+            id: app.id,
+            title: app.name,
+            description: app.description || '',
+            base_url: app.base_url,
+            code: app.code
+          })));
+        } else {
+          // If allowed_apps doesn't exist in token, fetch user's apps from backend
+          try {
+            if (!user.id) {
+              setSystems([]);
+              return;
+            }
+            
+            // Use the fetchUserApplications service function
+            const userApps = await applicationService.fetchUserApplications(user.id);
+            
+            setSystems(userApps.map(app => ({
+              id: app.id,
+              title: app.name,
+              description: app.description || '',
+              base_url: app.base_url,
+              code: app.code
+            })));
+          } catch (err) {
+            console.error("Error fetching user applications:", err);
+            setSystems([]);
+          }
         }
         
-        // Fetch all applications and filter by allowed codes
-        const allApps = await applicationService.fetchApplications();
-        const filteredApps = allApps.filter(app => 
-          allowedAppCodes.includes(app.code)
-        );
-        
-        setSystems(filteredApps.map(app => ({
-          id: app.id,
-          title: app.name,
-          description: app.description || '',
-          base_url: app.base_url,
-          code: app.code
-        })));
-        
       } catch (error) {
-        toast({
-          title: "Error",
-          description: "Failed to load applications",
-          variant: "destructive",
-        });
         console.error("Error fetching applications:", error);
+        setSystems([]);
       } finally {
         setLoading(false);
       }

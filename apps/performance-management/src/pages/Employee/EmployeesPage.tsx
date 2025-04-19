@@ -17,9 +17,10 @@ import {
     UserX,
     UserCheck,
     Building2,
-    Users2,
+    Briefcase,
+    Trash2,
+    Eye,
 } from 'lucide-react';
-import Breadcrumb from '@/components/Breadcrumb';
 import Pagination from '@/components/Pagination';
 import {
     Table,
@@ -34,40 +35,37 @@ import {
     DropdownMenuContent,
     DropdownMenuItem,
     DropdownMenuTrigger,
+    DropdownMenuSeparator,
 } from "@workspace/ui/components/dropdown-menu";
 import { Input } from "@workspace/ui/components/input";
 import { Badge } from "@workspace/ui/components/badge";
 import Filtering from '@/components/Filtering';
 import Footer from '@/components/Footer';
+import { useToast } from "@workspace/ui/components/sonner";
+import employeeService, { Employee } from '@/services/employeeService';
+import { 
+    AlertDialog,
+    AlertDialogAction,
+    AlertDialogCancel,
+    AlertDialogContent,
+    AlertDialogDescription,
+    AlertDialogFooter,
+    AlertDialogHeader,
+    AlertDialogTitle
+} from "@workspace/ui/components/alert-dialog";
+import { useNavigate } from 'react-router-dom';
 
-// Dummy data types based on your database schema
-type Employee = {
-    employee_id: number;
-    employee_number: string;
-    employee_name: string;
-    employee_department_id: number;
-    employee_team_id: number;
-    employee_email: string;
-    employee_phone: string;
-    employee_is_active: boolean;
-    employee_created_at: string;
-    employee_updated_at: string;
-    department_name?: string;
-    team_name?: string;
-    is_manager?: boolean;
-};
-
-type Department = {
-    department_id: number;
-    department_name: string;
-};
-
-type Team = {
-    team_id: number;
-    team_name: string;
-};
+// Types for filtering
+interface OrgUnit {
+    org_unit_id: number;
+    org_unit_name: string;
+}
 
 const EmployeeManagementPage = () => {
+    const navigate = useNavigate();
+    const { toast } = useToast();
+    
+    // UI State
     const [isSidebarOpen, setIsSidebarOpen] = useState(() => {
         if (typeof window !== 'undefined') {
             return window.innerWidth >= 768;
@@ -75,131 +73,207 @@ const EmployeeManagementPage = () => {
         return true;
     });
     const [isDarkMode, setIsDarkMode] = useState(false);
-    const [currentRole, setCurrentRole] = useState('admin');
+    
+    // Data State
     const [employees, setEmployees] = useState<Employee[]>([]);
-    const [departments, setDepartments] = useState<Department[]>([]);
-    const [teams, setTeams] = useState<Team[]>([]);
     const [filteredEmployees, setFilteredEmployees] = useState<Employee[]>([]);
+    const [orgUnits, setOrgUnits] = useState<OrgUnit[]>([]);
+    const [isLoading, setIsLoading] = useState(true);
     const [searchTerm, setSearchTerm] = useState('');
+    
+    // Pagination State
     const [currentPage, setCurrentPage] = useState(1);
     const [itemsPerPage, setItemsPerPage] = useState(10);
+    const [totalItems, setTotalItems] = useState(0);
+    
+    // Filters State
     const [filters, setFilters] = useState({
-        department: '',
-        team: '',
+        orgUnit: '',
         status: 'all',
-        isManager: 'all'
+        supervisorId: '',
     });
+    
+    // Delete confirmation dialog
+    const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
+    const [employeeToDelete, setEmployeeToDelete] = useState<number | null>(null);
 
-    // Generate dummy data
+    // Fetch employees data
     useEffect(() => {
-        // Dummy departments
-        const dummyDepartments: Department[] = [
-            { department_id: 1, department_name: 'Information Technology' },
-            { department_id: 2, department_name: 'Human Resources' },
-            { department_id: 3, department_name: 'Finance' },
-            { department_id: 4, department_name: 'Marketing' },
-            { department_id: 5, department_name: 'Operations' },
-        ];
+        const fetchEmployees = async () => {
+            setIsLoading(true);
+            try {
+                const skip = (currentPage - 1) * itemsPerPage;
+                const data = await employeeService.getEmployees(skip, itemsPerPage);
+                setEmployees(data);
+                setFilteredEmployees(data);
+                // In a real API, you would get the total count from the response
+                // For now, we'll estimate it
+                setTotalItems(data.length + skip);
+                
+                // Fetch org units for filtering (in a real app, you'd have a separate service)
+                // This is a mock - you should replace with actual API call
+                const uniqueOrgUnits = Array.from(
+                    new Set(data.map(emp => emp.employee_org_unit_id))
+                ).filter(id => id !== null && id !== undefined);
+                
+                const orgUnitsList = uniqueOrgUnits.map(id => {
+                    const emp = data.find(e => e.employee_org_unit_id === id);
+                    return {
+                        org_unit_id: id as number,
+                        org_unit_name: emp?.org_unit_name || `Department ${id}`
+                    };
+                });
+                
+                setOrgUnits(orgUnitsList);
+            } catch (error) {
+                console.error("Failed to fetch employees:", error);
+               
+            } finally {
+                setIsLoading(false);
+            }
+        };
 
-        // Dummy teams
-        const dummyTeams: Team[] = [
-            { team_id: 1, team_name: 'Frontend Development' },
-            { team_id: 2, team_name: 'Backend Development' },
-            { team_id: 3, team_name: 'Recruitment' },
-            { team_id: 4, team_name: 'Payroll' },
-            { team_id: 5, team_name: 'Digital Marketing' },
-        ];
+        fetchEmployees();
+    }, [currentPage, itemsPerPage]);
 
-        // Dummy employees
-        const dummyEmployees: Employee[] = Array.from({ length: 50 }, (_, i) => ({
-            employee_id: i + 1,
-            employee_number: `EMP${String(i + 1).padStart(4, '0')}`,
-            employee_name: `Employee ${i + 1}`,
-            employee_department_id: dummyDepartments[Math.floor(Math.random() * dummyDepartments.length)].department_id,
-            employee_team_id: dummyTeams[Math.floor(Math.random() * dummyTeams.length)].team_id,
-            employee_email: `employee${i + 1}@company.com`,
-            employee_phone: `+62 812-${String(Math.floor(1000 + Math.random() * 9000))}-${String(Math.floor(1000 + Math.random() * 9000))}`,
-            employee_is_active: Math.random() > 0.2,
-            employee_created_at: new Date(Date.now() - Math.floor(Math.random() * 1000 * 60 * 60 * 24 * 365)).toISOString(),
-            employee_updated_at: new Date(Date.now() - Math.floor(Math.random() * 1000 * 60 * 60 * 24 * 30)).toISOString(),
-            is_manager: Math.random() > 0.7,
-        }));
-
-        // Add department and team names to employees
-        const employeesWithDetails = dummyEmployees.map(emp => ({
-            ...emp,
-            department_name: dummyDepartments.find(d => d.department_id === emp.employee_department_id)?.department_name,
-            team_name: dummyTeams.find(t => t.team_id === emp.employee_team_id)?.team_name
-        }));
-
-        setDepartments(dummyDepartments);
-        setTeams(dummyTeams);
-        setEmployees(employeesWithDetails);
-        setFilteredEmployees(employeesWithDetails);
-    }, []);
-
-    // Apply filters and search
+    // Handle search
     useEffect(() => {
-        let result = [...employees];
-
-        // Apply search
-        if (searchTerm) {
-            const term = searchTerm.toLowerCase();
-            result = result.filter(emp =>
-                emp.employee_name.toLowerCase().includes(term) ||
-                emp.employee_number.toLowerCase().includes(term) ||
-                emp.employee_email.toLowerCase().includes(term)
-            );
+        if (!searchTerm.trim()) {
+            setFilteredEmployees(employees);
+            return;
         }
+        
+        const searchEmployees = async () => {
+            try {
+                const results = await employeeService.searchEmployees(searchTerm, 20);
+                setFilteredEmployees(results);
+            } catch (error) {
+                console.error("Error searching employees:", error);
+            }
+        };
+        
+        const debounce = setTimeout(() => {
+            searchEmployees();
+        }, 500);
+        
+        return () => clearTimeout(debounce);
+    }, [searchTerm, employees]);
 
-        // Apply department filter
-        if (filters.department) {
-            result = result.filter(emp =>
-                emp.employee_department_id === parseInt(filters.department)
-            );
-        }
-
-        // Apply team filter
-        if (filters.team) {
-            result = result.filter(emp =>
-                emp.employee_team_id === parseInt(filters.team)
-            );
-        }
-
-        // Apply status filter
-        if (filters.status !== 'all') {
-            const activeStatus = filters.status === 'active';
-            result = result.filter(emp => emp.employee_is_active === activeStatus);
-        }
-
-        // Apply manager filter
-        if (filters.isManager !== 'all') {
-            const isManager = filters.isManager === 'yes';
-            result = result.filter(emp => emp.is_manager === isManager);
-        }
-
-        setFilteredEmployees(result);
-        setCurrentPage(1); // Reset to first page when filters change
-    }, [searchTerm, filters, employees]);
-
-    // Pagination logic
-    const indexOfLastItem = currentPage * itemsPerPage;
-    const indexOfFirstItem = indexOfLastItem - itemsPerPage;
-    const currentItems = filteredEmployees.slice(indexOfFirstItem, indexOfLastItem);
-    const totalPages = Math.ceil(filteredEmployees.length / itemsPerPage);
-
+    // Handle filter changes
     const handleFilterChange = (name: string, value: string) => {
         setFilters(prev => ({
             ...prev,
             [name]: value
         }));
+        
+        // Reset to first page when filters change
+        setCurrentPage(1);
     };
 
+    // Apply filters
+    useEffect(() => {
+        let result = [...employees];
+        
+        // Apply org unit filter
+        if (filters.orgUnit) {
+            result = result.filter(emp => 
+                emp.employee_org_unit_id === parseInt(filters.orgUnit)
+            );
+        }
+        
+        // Apply status filter
+        if (filters.status !== 'all') {
+            const activeStatus = filters.status === 'active';
+            result = result.filter(emp => emp.is_active === activeStatus);
+        }
+        
+        // Apply supervisor filter
+        if (filters.supervisorId) {
+            result = result.filter(emp => 
+                emp.employee_supervisor_id === parseInt(filters.supervisorId)
+            );
+        }
+        
+        setFilteredEmployees(result);
+    }, [filters, employees]);
+
+    // Handle items per page change
     const handleItemsPerPageChange = (value: string) => {
         setItemsPerPage(parseInt(value));
         setCurrentPage(1); // Reset to first page when items per page changes
     };
+    
+    // Navigate to create new employee page
+    const handleCreateEmployee = () => {
+        navigate('/performance-management/employees/add');
+    };
+    
+    // Navigate to employee details page
+    const handleViewEmployee = (employeeId: number) => {
+        navigate(`/performance-management/employees/${employeeId}/details`);
+    };
+    
+    // Navigate to edit employee page
+    const handleEditEmployee = (employeeId: number) => {
+        navigate(`/performance-management/employees/${employeeId}/edit`);
+    };
+    
+    // Handle employee status toggle
+    const handleToggleStatus = async (employeeId: number, currentStatus: boolean) => {
+        try {
+            await employeeService.updateEmployee(employeeId, {
+                is_active: !currentStatus
+            });
+            
+            // Update local state
+            setEmployees(prevEmployees => 
+                prevEmployees.map(emp => 
+                    emp.employee_id === employeeId 
+                        ? { ...emp, is_active: !currentStatus } 
+                        : emp
+                )
+            );
+            
+            toast({
+                title: "Success",
+                description: `Employee ${currentStatus ? 'deactivated' : 'activated'} successfully`,
+            });
+        } catch (error) {
+            console.error("Failed to update employee status:", error);
+        }
+    };
+    
+    // Handle employee delete
+    const handleDeleteClick = (employeeId: number) => {
+        setEmployeeToDelete(employeeId);
+        setIsDeleteDialogOpen(true);
+    };
+    
+    const confirmDelete = async () => {
+        if (!employeeToDelete) return;
+        
+        try {
+            await employeeService.deleteEmployee(employeeToDelete);
+            
+            // Remove from local state
+            setEmployees(prev => prev.filter(emp => emp.employee_id !== employeeToDelete));
+            setFilteredEmployees(prev => prev.filter(emp => emp.employee_id !== employeeToDelete));
+            
+            toast({
+                title: "Success",
+                description: "Employee deleted successfully",
+            });
+        } catch (error) {
+            console.error("Failed to delete employee:", error);
+        } finally {
+            setIsDeleteDialogOpen(false);
+            setEmployeeToDelete(null);
+        }
+    };
 
+    // Calculate pagination
+    const totalPages = Math.ceil(totalItems / itemsPerPage);
+    
     return (
         <div className="min-h-screen bg-white dark:bg-gray-900 font-montserrat">
             <Header
@@ -207,27 +281,23 @@ const EmployeeManagementPage = () => {
                 setIsSidebarOpen={setIsSidebarOpen}
                 isDarkMode={isDarkMode}
                 setIsDarkMode={setIsDarkMode}
-                currentRole={currentRole}
-                setCurrentRole={setCurrentRole}
-                currentSystem='Performance Management System'
             />
 
             <div className="flex">
                 <Sidebar
                     isSidebarOpen={isSidebarOpen}
                     setIsSidebarOpen={setIsSidebarOpen}
-                    role={currentRole}
-                    system="performance-management"
                 />
 
                 <div className={`flex flex-col mt-4 transition-all duration-300 ease-in-out ${isSidebarOpen ? 'lg:ml-64' : 'lg:ml-0'} w-full`}>
-                    <main className='flex-1 px-2  md:px-4  pt-16 pb-12 transition-all duration-300 ease-in-out  w-full'>     <Breadcrumb
-                        items={[]}
-                        currentPage="Employee Management"
-                        showHomeIcon={true}
-                    />
+                    <main className='flex-1 px-2 md:px-4 pt-16 pb-12 transition-all duration-300 ease-in-out w-full'>
+                        {/* <Breadcrumb
+                            items={[{label: 'Dashboard', href: '/'}]}
+                            currentPage="Employee Management"
+                            showHomeIcon={true}
+                        /> */}
 
-                        {/* Search and Filter Section - using the FilterSection component */}
+                        {/* Search and Filter Section */}
                         <div className="mb-6">
                             <Filtering>
                                 <div className="space-y-3 md:col-span-2">
@@ -243,23 +313,23 @@ const EmployeeManagementPage = () => {
                                             value={searchTerm}
                                             onChange={(e) => setSearchTerm(e.target.value)}
                                         />
-
                                     </div>
                                 </div>
 
                                 <div className="space-y-3">
                                     <label className="flex items-center space-x-2 text-sm font-medium text-gray-700 dark:text-gray-200">
-                                        <span>Department</span>
+                                        <Building2 className="h-4 w-4 text-[#46B749] dark:text-[#1B6131]" />
+                                        <span>Organization Unit</span>
                                     </label>
                                     <select
                                         className="w-full bg-white dark:bg-gray-800 border border-[#46B749] dark:border-[#1B6131] p-2 h-10 rounded-md"
-                                        value={filters.department}
-                                        onChange={(e) => handleFilterChange('department', e.target.value)}
+                                        value={filters.orgUnit}
+                                        onChange={(e) => handleFilterChange('orgUnit', e.target.value)}
                                     >
-                                        <option value="">All Departments</option>
-                                        {departments.map(dept => (
-                                            <option key={dept.department_id} value={String(dept.department_id)}>
-                                                {dept.department_name}
+                                        <option value="">All Organization Units</option>
+                                        {orgUnits.map(unit => (
+                                            <option key={unit.org_unit_id} value={unit.org_unit_id}>
+                                                {unit.org_unit_name}
                                             </option>
                                         ))}
                                     </select>
@@ -267,24 +337,7 @@ const EmployeeManagementPage = () => {
 
                                 <div className="space-y-3">
                                     <label className="flex items-center space-x-2 text-sm font-medium text-gray-700 dark:text-gray-200">
-                                        <span>Team</span>
-                                    </label>
-                                    <select
-                                        className="w-full bg-white dark:bg-gray-800 border border-[#46B749] dark:border-[#1B6131] p-2 h-10 rounded-md"
-                                        value={filters.team}
-                                        onChange={(e) => handleFilterChange('team', e.target.value)}
-                                    >
-                                        <option value="">All Teams</option>
-                                        {teams.map(team => (
-                                            <option key={team.team_id} value={String(team.team_id)}>
-                                                {team.team_name}
-                                            </option>
-                                        ))}
-                                    </select>
-                                </div>
-
-                                <div className="space-y-3">
-                                    <label className="flex items-center space-x-2 text-sm font-medium text-gray-700 dark:text-gray-200">
+                                        <UserCheck className="h-4 w-4 text-[#46B749] dark:text-[#1B6131]" />
                                         <span>Status</span>
                                     </label>
                                     <select
@@ -297,34 +350,19 @@ const EmployeeManagementPage = () => {
                                         <option value="inactive">Inactive</option>
                                     </select>
                                 </div>
-
-                                <div className="space-y-3">
-                                    <label className="flex items-center space-x-2 text-sm font-medium text-gray-700 dark:text-gray-200">
-                                        <span>Role</span>
-                                    </label>
-                                    <select
-                                        className="w-full bg-white dark:bg-gray-800 border border-[#46B749] dark:border-[#1B6131] p-2 h-10 rounded-md"
-                                        value={filters.isManager}
-                                        onChange={(e) => handleFilterChange('isManager', e.target.value)}
-                                    >
-                                        <option value="all">All Roles</option>
-                                        <option value="yes">Managers</option>
-                                        <option value="no">Non-Managers</option>
-                                    </select>
-                                </div>
                             </Filtering>
                         </div>
 
                         {/* Employee Table */}
                         <Card className="border-[#46B749] dark:border-[#1B6131] shadow-md">
-                        <CardHeader className="bg-gradient-to-r from-[#f0f9f0] to-[#e6f3e6] dark:from-[#0a2e14] dark:to-[#0a3419]">
+                            <CardHeader className="bg-gradient-to-r from-[#f0f9f0] to-[#e6f3e6] dark:from-[#0a2e14] dark:to-[#0a3419]">
                                 <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
-                                    <CardTitle className="text-gray-700 dark:text-gray-200  flex p-0">
+                                    <CardTitle className="text-gray-700 dark:text-gray-200 flex p-0">
                                         Employee List
                                     </CardTitle>
                                     <div className="flex items-center space-x-2">
                                         <Button
-
+                                            onClick={handleCreateEmployee}
                                             className="bg-[#1B6131] hover:bg-[#144d27] dark:bg-[#46B749] dark:hover:bg-[#3da33f]"
                                         >
                                             <Plus className="h-4 w-4 mr-2" />
@@ -341,54 +379,57 @@ const EmployeeManagementPage = () => {
                                                 <TableHead>Employee ID</TableHead>
                                                 <TableHead>Name</TableHead>
                                                 <TableHead>Email</TableHead>
-                                                <TableHead>Department</TableHead>
-                                                <TableHead>Team</TableHead>
+                                                <TableHead>Organization</TableHead>
+                                                <TableHead>Position</TableHead>
                                                 <TableHead>Status</TableHead>
-                                                <TableHead>Role</TableHead>
                                                 <TableHead>Actions</TableHead>
                                             </TableRow>
                                         </TableHeader>
                                         <TableBody>
-                                            {currentItems.length > 0 ? (
-                                                currentItems.map((employee) => (
+                                            {isLoading ? (
+                                                <TableRow>
+                                                    <TableCell colSpan={7} className="h-24 text-center">
+                                                        <div className="flex justify-center items-center">
+                                                            <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-[#46B749]"></div>
+                                                        </div>
+                                                    </TableCell>
+                                                </TableRow>
+                                            ) : filteredEmployees.length > 0 ? (
+                                                filteredEmployees.map((employee) => (
                                                     <TableRow key={employee.employee_id}>
                                                         <TableCell>{employee.employee_number}</TableCell>
                                                         <TableCell>
                                                             <div className="flex items-center space-x-2">
                                                                 <User className="h-4 w-4 text-[#1B6131] dark:text-[#46B749]" />
                                                                 <span>{employee.employee_name}</span>
-
                                                             </div>
                                                         </TableCell>
                                                         <TableCell>
                                                             <div className="flex items-center space-x-2">
                                                                 <Mail className="h-4 w-4 text-[#1B6131] dark:text-[#46B749]" />
-                                                                <span>{employee.employee_email}</span>
+                                                                <span>{employee.employee_email || '-'}</span>
                                                             </div>
                                                         </TableCell>
                                                         <TableCell>
                                                             <div className="flex items-center space-x-2">
                                                                 <Building2 className="h-4 w-4 text-[#1B6131] dark:text-[#46B749]" />
-                                                                <span>{employee.department_name}</span>
+                                                                <span>{employee.org_unit_name || '-'}</span>
                                                             </div>
                                                         </TableCell>
 
                                                         <TableCell>
                                                             <div className="flex items-center space-x-2">
-                                                                <Users2 className="h-4 w-4 text-[#1B6131] dark:text-[#46B749]" />
-                                                                <span>{employee.team_name}</span>
+                                                                <Briefcase className="h-4 w-4 text-[#1B6131] dark:text-[#46B749]" />
+                                                                <span>{employee.employee_position || '-'}</span>
                                                             </div>
                                                         </TableCell>
                                                         <TableCell>
                                                             <Badge
-                                                                variant={employee.employee_is_active ? 'default' : 'secondary'}
-                                                                className={employee.employee_is_active ? 'bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-300' : 'bg-gray-100 text-gray-800 dark:bg-gray-700 dark:text-gray-300'}
+                                                                variant={employee.is_active ? 'default' : 'secondary'}
+                                                                className={employee.is_active ? 'bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-300' : 'bg-gray-100 text-gray-800 dark:bg-gray-700 dark:text-gray-300'}
                                                             >
-                                                                {employee.employee_is_active ? 'Active' : 'Inactive'}
+                                                                {employee.is_active ? 'Active' : 'Inactive'}
                                                             </Badge>
-                                                        </TableCell>
-                                                        <TableCell>
-                                                            {employee.is_manager ? 'Manager' : 'Employee'}
                                                         </TableCell>
                                                         <TableCell>
                                                             <DropdownMenu>
@@ -399,12 +440,16 @@ const EmployeeManagementPage = () => {
                                                                     </Button>
                                                                 </DropdownMenuTrigger>
                                                                 <DropdownMenuContent align="end">
-                                                                    <DropdownMenuItem>
+                                                                    <DropdownMenuItem onClick={() => handleViewEmployee(employee.employee_id)}>
+                                                                        <Eye className="h-4 w-4 mr-2" />
+                                                                        View Details
+                                                                    </DropdownMenuItem>
+                                                                    <DropdownMenuItem onClick={() => handleEditEmployee(employee.employee_id)}>
                                                                         <Edit className="h-4 w-4 mr-2" />
                                                                         Edit
                                                                     </DropdownMenuItem>
-                                                                    <DropdownMenuItem>
-                                                                        {employee.employee_is_active ? (
+                                                                    <DropdownMenuItem onClick={() => handleToggleStatus(employee.employee_id, employee.is_active)}>
+                                                                        {employee.is_active ? (
                                                                             <>
                                                                                 <UserX className="h-4 w-4 mr-2" />
                                                                                 Deactivate
@@ -416,6 +461,14 @@ const EmployeeManagementPage = () => {
                                                                             </>
                                                                         )}
                                                                     </DropdownMenuItem>
+                                                                    <DropdownMenuSeparator />
+                                                                    <DropdownMenuItem 
+                                                                        onClick={() => handleDeleteClick(employee.employee_id)}
+                                                                        className="text-red-600 focus:text-red-600"
+                                                                    >
+                                                                        <Trash2 className="h-4 w-4 mr-2" />
+                                                                        Delete
+                                                                    </DropdownMenuItem>
                                                                 </DropdownMenuContent>
                                                             </DropdownMenu>
                                                         </TableCell>
@@ -423,7 +476,7 @@ const EmployeeManagementPage = () => {
                                                 ))
                                             ) : (
                                                 <TableRow>
-                                                    <TableCell colSpan={8} className="h-24 text-center">
+                                                    <TableCell colSpan={7} className="h-24 text-center">
                                                         No employees found
                                                     </TableCell>
                                                 </TableRow>
@@ -432,13 +485,13 @@ const EmployeeManagementPage = () => {
                                     </Table>
                                 </div>
 
-                                {/* Updated Pagination Component */}
+                                {/* Pagination Component */}
                                 {filteredEmployees.length > 0 && (
                                     <Pagination
                                         currentPage={currentPage}
                                         totalPages={totalPages}
                                         itemsPerPage={itemsPerPage}
-                                        totalItems={filteredEmployees.length}
+                                        totalItems={totalItems}
                                         onPageChange={setCurrentPage}
                                         onItemsPerPageChange={handleItemsPerPageChange}
                                     />
@@ -449,6 +502,27 @@ const EmployeeManagementPage = () => {
                     <Footer />
                 </div>
             </div>
+            
+            {/* Delete Confirmation Dialog */}
+            <AlertDialog open={isDeleteDialogOpen} onOpenChange={setIsDeleteDialogOpen}>
+                <AlertDialogContent>
+                    <AlertDialogHeader>
+                        <AlertDialogTitle>Confirm Deletion</AlertDialogTitle>
+                        <AlertDialogDescription>
+                            Are you sure you want to delete this employee? This action cannot be undone.
+                        </AlertDialogDescription>
+                    </AlertDialogHeader>
+                    <AlertDialogFooter>
+                        <AlertDialogCancel>Cancel</AlertDialogCancel>
+                        <AlertDialogAction 
+                            onClick={confirmDelete}
+                            className="bg-red-600 hover:bg-red-700 text-white"
+                        >
+                            Delete
+                        </AlertDialogAction>
+                    </AlertDialogFooter>
+                </AlertDialogContent>
+            </AlertDialog>
         </div>
     );
 };

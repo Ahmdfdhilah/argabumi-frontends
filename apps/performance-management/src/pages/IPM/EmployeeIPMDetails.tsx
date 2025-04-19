@@ -76,7 +76,7 @@ const EmployeeIPMDetailsPage = () => {
     });
     const [isDarkMode, setIsDarkMode] = useState(false);
     const [reviewDialogOpen, setReviewDialogOpen] = useState<{ [key: string]: boolean }>({});
-    const [currentRole, setCurrentRole] = useState('admin'); // employee, manager, sm_dept, admin
+    const [currentRole] = useState('admin'); // employee, manager, sm_dept, admin
     const [evidenceComment, setEvidenceComment] = useState('');
     const [selectedFile, setSelectedFile] = useState<File | null>(null);
 
@@ -531,17 +531,17 @@ const EmployeeIPMDetailsPage = () => {
                 setIsSidebarOpen={setIsSidebarOpen}
                 isDarkMode={isDarkMode}
                 setIsDarkMode={setIsDarkMode}
-                currentRole={currentRole}
-                setCurrentRole={setCurrentRole}
-                currentSystem='Performance Management System'
+                
+                
+                
             />
 
             <div className="flex">
                 <Sidebar
                     isSidebarOpen={isSidebarOpen}
                     setIsSidebarOpen={setIsSidebarOpen}
-                    role={currentRole}
-                    system="performance-management"
+                    
+                    
                 />
 
                 <div className={`flex flex-col mt-4 transition-all duration-300 ease-in-out ${isSidebarOpen ? 'lg:ml-64' : 'lg:ml-0'} w-full`}>

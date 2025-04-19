@@ -135,6 +135,8 @@ export const kpiDefinitionService = {
   // Create a new KPI definition
   createKPIDefinition: async (kpiData: KPIDefinitionCreate): Promise<KPIDefinitionResponse> => {
     try {
+      console.log(kpiData);
+      
       const response = await pmApi.post("/kpi-definitions/", kpiData);
       toast({
         title: "Success",
