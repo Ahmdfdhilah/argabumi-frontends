@@ -51,6 +51,11 @@ const performanceMenus: MenuItem[] = [
                 path: '/performance-management/employees',
                 roles: ['admin'],
             },
+            {
+                title: 'Roles Management',
+                path: '/performance-management/roles',
+                roles: ['admin'],
+            },
             // {
             //     title: 'Organization Hierarchy',
             //     path: '/performance-management/organization-units/hierarchy',
@@ -106,11 +111,11 @@ const performanceMenus: MenuItem[] = [
         icon: Target,
         roles: ['admin', 'director', 'division_head', 'department_head'],
         subMenus: [
-            {
-                title: 'MPM Dashboard',
-                path: '/performance-management/mpm/dashboard',
-                roles: ['admin', 'director', 'division_head', 'department_head'],
-            },
+            // {
+            //     title: 'MPM Dashboard',
+            //     path: '/performance-management/mpm/dashboard',
+            //     roles: ['admin', 'director', 'division_head', 'department_head'],
+            // },
             {
                 title: 'MPM Actual',
                 path: '/performance-management/mpm/actual',

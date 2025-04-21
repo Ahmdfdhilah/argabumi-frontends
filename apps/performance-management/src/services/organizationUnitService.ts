@@ -6,6 +6,7 @@ export interface OrganizationUnitBase {
   org_unit_code: string;
   org_unit_name: string;
   org_unit_type: string;
+  org_unit_head_id?: number | null;
   org_unit_parent_id?: number | null;
   org_unit_level: number;
   org_unit_description?: string | null;
@@ -30,6 +31,7 @@ export interface OrganizationUnitUpdate {
   org_unit_code?: string;
   org_unit_name?: string;
   org_unit_type?: string;
+  org_unit_head_id?: number | null;
   org_unit_parent_id?: number | null;
   org_unit_level?: number;
   org_unit_description?: string | null;

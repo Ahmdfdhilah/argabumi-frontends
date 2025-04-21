@@ -6,13 +6,14 @@ import {
   CheckCircle,
   LucideIcon
 } from 'lucide-react';
+import { motion } from 'framer-motion';
 
 interface StatItem {
   label: string;
   value: number;
   icon: LucideIcon;
-  valueLabel?: string; // Tambahkan properti untuk label nilai
-  className?: string; // Tambahkan properti untuk className
+  valueLabel?: string;
+  className?: string;
 }
 
 const stats: StatItem[] = [
@@ -22,29 +23,32 @@ const stats: StatItem[] = [
   { label: 'Proyek Sukses', value: 120, icon: CheckCircle },
 ];
 
-// Simple animated counter hook
+// Enhanced animated counter hook
 const useCounter = (end: number, duration = 2000): number => {
   const [count, setCount] = useState(0);
-  
+
   useEffect(() => {
     let startTime: number | null = null;
     let animationFrame: number;
-    
+
     const animate = (timestamp: number) => {
       if (!startTime) startTime = timestamp;
       const progress = Math.max(timestamp - (startTime || 0), 0);
       const percentage = Math.min(progress / duration, 1);
-      setCount(Math.floor(percentage * end));
-      
+
+      // Using easeOutQuart easing function for a more natural counting effect
+      const easing = 1 - Math.pow(1 - percentage, 4);
+      setCount(Math.floor(easing * end));
+
       if (percentage < 1) {
         animationFrame = requestAnimationFrame(animate);
       }
     };
-    
+
     animationFrame = requestAnimationFrame(animate);
     return () => cancelAnimationFrame(animationFrame);
   }, [end, duration]);
-  
+
   return count;
 };
 
@@ -53,14 +57,14 @@ interface InViewProps {
   className?: string;
 }
 
-// Simple intersection observer component
+// Intersection observer component
 const InView: FC<InViewProps> = ({ children, className }) => {
   const [isVisible, setIsVisible] = useState(false);
   const [ref, setRef] = useState<HTMLDivElement | null>(null);
-  
+
   useEffect(() => {
     if (!ref) return;
-    
+
     const observer = new IntersectionObserver(
       ([entry]) => {
         if (entry.isIntersecting) {
@@ -70,14 +74,14 @@ const InView: FC<InViewProps> = ({ children, className }) => {
       },
       { threshold: 0.1 }
     );
-    
+
     observer.observe(ref);
-    
+
     return () => {
       if (ref) observer.unobserve(ref);
     };
   }, [ref]);
-  
+
   return <div className={className}>{children({ ref: setRef, isVisible })}</div>;
 };
 
@@ -91,18 +95,18 @@ interface StatCardProps {
   className?: string;
 }
 
-// Stats card component
-const StatCard: FC<StatCardProps> = ({ 
-  label, 
-  value, 
-  icon: Icon, 
-  isVisible, 
-  index, 
-  valueLabel = '', 
-  className = 'bg-primary-500' 
+// Enhanced Stats card component with improved bouncing animation
+const StatCard: FC<StatCardProps> = ({
+  label,
+  value,
+  icon: Icon,
+  isVisible,
+  index,
+  valueLabel = '',
+  className = 'bg-primary-500'
 }) => {
   const count = isVisible ? useCounter(value) : 0;
-  
+
   // Format nilai dengan label
   const formatValue = (val: number) => {
     if (valueLabel === 'k' && val >= 1000) {
@@ -110,22 +114,37 @@ const StatCard: FC<StatCardProps> = ({
     }
     return `${val.toLocaleString()}${valueLabel}`;
   };
-  
+
   return (
-    <div
-      className={`${className} backdrop-blur-sm border border-white/20 text-white p-6 rounded-2xl shadow-xl hover:scale-105 transition-transform duration-300 ${
-        isVisible ? `animate-fade-in-${index}` : ''
-      }`}
-      style={{
-        animation: isVisible ? `fadeIn 0.5s ease-out ${index * 0.2}s forwards` : 'none',
+    <motion.div
+      className={`${className} backdrop-blur-sm border border-white/20 text-white p-6 rounded-2xl shadow-xl transition-colors duration-300 ${isVisible ? `animate-fade-in-${index}` : ''
+        }`}
+      animate="animate"
+      variants={{
+        initial: { y: 0 },
+        animate: {
+          y: [0, -10, 0],
+          transition: {
+            duration: 2,
+            repeat: Infinity,
+            repeatType: "reverse",
+            ease: "easeInOut"
+          }
+        },
       }}
     >
-      <Icon className="w-10 h-10 mx-auto mb-4 text-white/80" />
+      <motion.div
+        initial={{ rotate: 0 }}
+        animate={{ rotate: isVisible ? [0, 15, -15, 0] : 0 }}
+        transition={{ delay: 0.5 + index * 0.2, duration: 0.8, ease: "easeInOut" }}
+      >
+        <Icon className="w-10 h-10 mx-auto mb-4 text-white/80" />
+      </motion.div>
       <h3 className="text-4xl font-bold text-white">
         {formatValue(count)}
       </h3>
       <p className="mt-2 text-sm font-medium text-white/80">{label}</p>
-    </div>
+    </motion.div>
   );
 };
 
@@ -141,7 +160,7 @@ export default function StatsSection({
   gridClassName = 'grid-cols-1 sm:grid-cols-2 lg:grid-cols-4'
 }: StatsSectionProps) {
   const displayStats = customStats || stats;
-  
+
   return (
     <section className={`bg-transparent ${className}`}>
       <style>
@@ -161,11 +180,11 @@ export default function StatsSection({
           {({ ref, isVisible }) => (
             <div ref={ref} className={`grid ${gridClassName} gap-6 lg:gap-10`}>
               {displayStats.map((stat, index) => (
-                <StatCard 
-                  key={index} 
-                  {...stat} 
-                  isVisible={isVisible} 
-                  index={index} 
+                <StatCard
+                  key={index}
+                  {...stat}
+                  isVisible={isVisible}
+                  index={index}
                 />
               ))}
             </div>

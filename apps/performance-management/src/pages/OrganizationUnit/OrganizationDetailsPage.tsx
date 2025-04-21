@@ -339,7 +339,7 @@ const OrganizationUnitDetailsPage = () => {
                                                                             <Building2 className="h-4 w-4 mr-2 text-[#1B6131] dark:text-[#46B749]" />
                                                                             <span 
                                                                                 className="text-[#1B6131] dark:text-[#46B749] hover:underline cursor-pointer"
-                                                                                onClick={() => navigate(`/performance-management/organization-units/${unit.org_unit_id}`)}
+                                                                                onClick={() => navigate(`/performance-management/organization-units/${unit.org_unit_id}/details`)}
                                                                             >
                                                                                 {unit.org_unit_name}
                                                                             </span>

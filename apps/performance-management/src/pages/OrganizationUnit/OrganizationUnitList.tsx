@@ -184,8 +184,8 @@ const OrganizationUnitsPage = () => {
                                                 <th className="p-4 text-left font-medium">Code</th>
                                                 <th className="p-4 text-left font-medium">Name</th>
                                                 <th className="p-4 text-left font-medium">Type</th>
+                                                <th className="p-4 text-left font-medium">Head</th>
                                                 <th className="p-4 text-left font-medium">Level</th>
-                                                <th className="p-4 text-left font-medium">Path</th>
                                                 <th className="p-4 text-left font-medium">Status</th>
                                                 <th className="p-4 text-left font-medium">Actions</th>
                                             </tr>
@@ -215,10 +215,10 @@ const OrganizationUnitsPage = () => {
                                                             <span>{unit.org_unit_type}</span>
                                                         </td>
                                                         <td className="p-4">
-                                                            <span>Level {unit.org_unit_level}</span>
+                                                            <span>{unit.org_unit_head_id ? unit.org_unit_head_id : 'N/A'}</span>
                                                         </td>
-                                                        <td className="p-4 max-w-xs truncate">
-                                                            <span title={unit.org_unit_path}>{unit.org_unit_path}</span>
+                                                        <td className="p-4">
+                                                            <span>Level {unit.org_unit_level}</span>
                                                         </td>
                                                         <td className="p-4">
                                                             <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${

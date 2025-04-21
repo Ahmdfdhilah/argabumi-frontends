@@ -21,7 +21,7 @@ interface BreadcrumbItem {
 interface BreadcrumbProps {
   items: BreadcrumbItem[];
   currentPage: string;
-  subtitle?: string;
+  subtitle?: string | React.ReactNode;
   showHomeIcon?: boolean;
   className?: string;
   isLoading?: boolean;

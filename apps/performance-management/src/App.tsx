@@ -11,7 +11,6 @@ import EmployeeIPMDetailsPage from "./pages/IPM/EmployeeIPMDetails";
 import MPMActuals from "./pages/MPM/MPMActuals";
 import MPMActualList from "./pages/MPM/MPMActualList";
 import MPMTargetList from "./pages/MPM/MPMTargetsList";
-import MPMActualsTeamKPI from "./pages/MPM/MPMActualsTeamKPI";
 import MPMActualsActionPlans from "./pages/MPM/MPMActualsActionPlans";
 import MPMDashboard from "./pages/MPM/MPMDashboard";
 import { Toaster } from "@workspace/ui/components/sonner";
@@ -31,7 +30,8 @@ import EmployeeDetailsPage from "./pages/Employee/EmployeeDetailsPage";
 import EmployeeHierarchyPage from "./pages/Employee/EmployeeHierarchyPage";
 import PeriodMasterPage from "./pages/Periods/PeriodMasterPage";
 import PeriodFormPage from "./pages/Periods/PeriodFormPage";
-import MPMActionPlan from "./pages/MPM/MPMActionPlan";
+import MPMTargetActionPlan from "./pages/MPM/MPMTargetActionPlan";
+import RoleManagementPage from "./pages/Roles/RoleManagement";
 
 function App() {
   return (
@@ -68,6 +68,11 @@ function App() {
                   <Route path=":id/hierarchy" element={<AuthGuard><EmployeeHierarchyPage /></AuthGuard>} />
                 </Route>
 
+                {/* Role Management Routes */}
+                <Route path="roles">
+                  <Route index element={<AuthGuard><RoleManagementPage /></AuthGuard>} />
+                </Route>
+
                 {/* BSC Routes */}
                 <Route path="bsc">
                   <Route path="dashboard" element={<AuthGuard><BSCDashboard /></AuthGuard>} />
@@ -86,17 +91,16 @@ function App() {
                     <Route index element={<AuthGuard><MPMTargetList /></AuthGuard>} />
                     <Route path=":submissionId" element={<AuthGuard><MPMTargets /></AuthGuard>} />
                     <Route path=":submissionId/kpi/:kpiId">
-                      <Route path="action-plans" element={<AuthGuard><MPMActionPlan /></AuthGuard>} />
+                      <Route path="action-plans" element={<AuthGuard><MPMTargetActionPlan /></AuthGuard>} />
                       {/* <Route path="teams/:teamId" element={<AuthGuard><MPMTargetsActionPlans /></AuthGuard>} /> */}
                     </Route>
                   </Route>
 
                   <Route path="actual">
                     <Route index element={<AuthGuard><MPMActualList /></AuthGuard>} />
-                    <Route path=":mpmActualId" element={<AuthGuard><MPMActuals /></AuthGuard>} />
-                    <Route path=":mpmActualId/entri/:mpmId">
-                      <Route path="teams" element={<AuthGuard><MPMActualsTeamKPI /></AuthGuard>} />
-                      <Route path="teams/:teamId" element={<AuthGuard><MPMActualsActionPlans /></AuthGuard>} />
+                    <Route path=":submissionId" element={<AuthGuard><MPMActuals /></AuthGuard>} />
+                    <Route path=":submissionId/kpi/:kpiId">
+                      <Route path="action-plans" element={<AuthGuard><MPMActualsActionPlans /></AuthGuard>} />
                     </Route>
                   </Route>
 

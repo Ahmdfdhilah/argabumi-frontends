@@ -34,8 +34,6 @@ const MPMTargets = () => {
 
   // Get current user data from Redux store
   const { user } = useAppSelector((state: any) => state.auth);
-  const currentUserOrgUnitId = user?.org_unit_data?.org_unit_id ?? null;
-  const currentEmployeeId = user?.employee_data?.employee_id ?? null;
 
   // Layout states
   const [isSidebarOpen, setIsSidebarOpen] = useState(() => {
@@ -56,12 +54,6 @@ const MPMTargets = () => {
   const [approvalNotes, setApprovalNotes] = useState<string>('');
   const [selectedEntry, setSelectedEntry] = useState<any | null>(null);
 
-  // Authorization states
-  const [isAuthorized, setIsAuthorized] = useState<boolean>(false);
-  const [isApprover, setIsApprover] = useState<boolean>(false);
-  const [submissionStatus, setSubmissionStatus] = useState<string>('');
-  const [approvalId, setApprovalId] = useState<number | null>(null);
-
   // Filtering states
   const [selectedPerspective, setSelectedPerspective] = useState<string>('');
   const [startDate, setStartDate] = useState<string>('');
@@ -79,49 +71,14 @@ const MPMTargets = () => {
   const [isProcessingApproval, setIsProcessingApproval] = useState(false);
 
   // Fetch data using our custom hook
-  const { loading, error, entriesWithTargets, refreshData } = useMPMTargets();
-
-  // Check if user is authorized to submit targets or is an approver
-  useEffect(() => {
-    const checkAuthorization = async () => {
-      if (submissionId && currentUserOrgUnitId && currentEmployeeId) {
-        try {
-          // Fetch submission details
-          const submissionData = await submissionService.getSubmission(parseInt(submissionId));
-
-          // Check if submission org unit matches user's org unit
-          const isUserAuthorized = submissionData.org_unit_id === currentUserOrgUnitId;
-
-
-          setIsAuthorized(isUserAuthorized);
-          setSubmissionStatus(submissionData.submission_status);
-
-          // Check if user is an approver for this submission
-          const approvalData = await approvalService.getApprovalsBySubmission(parseInt(submissionId));
-          console.log(approvalData);
-
-          // Find if current user is an approver with pending approval
-          const userApproval = approvalData.find(
-            approval => approval.approver_id === currentEmployeeId &&
-              approval.approval_status === 'Pending'
-          );
-
-          if (userApproval) {
-            setIsApprover(true);
-            setApprovalId(userApproval.approval_id);
-          } else {
-            setIsApprover(false);
-          }
-        } catch (error) {
-          console.error('Error checking authorization:', error);
-          setIsAuthorized(false);
-          setIsApprover(false);
-        }
-      }
-    };
-
-    checkAuthorization();
-  }, [submissionId, currentUserOrgUnitId, currentEmployeeId]);
+  const {
+    loading,
+    error,
+    submission,
+    entriesWithTargets,
+    refreshData,
+    authStatus,
+  } = useMPMTargets();
 
   // Fetch perspectives on component mount
   useEffect(() => {
@@ -203,7 +160,7 @@ const MPMTargets = () => {
 
   // Submit function
   const handleSubmitTargets = async () => {
-    if (!submissionId || !isAuthorized) return;
+    if (!submissionId || !authStatus.canSubmit) return;
 
     setIsSubmitting(true);
     try {
@@ -220,9 +177,7 @@ const MPMTargets = () => {
       });
 
       setIsSubmitDialogOpen(false);
-      // Update submission status
-      setSubmissionStatus('Submitted');
-      // Refresh data
+      // Refresh data to get updated submission status
       refreshData();
     } catch (error) {
       console.error('Error submitting targets:', error);
@@ -238,30 +193,45 @@ const MPMTargets = () => {
 
   // Approve function
   const handleApprove = async () => {
-    if (!approvalId) return;
+    if (!submissionId || !authStatus.canApprove) return;
 
     setIsProcessingApproval(true);
     try {
+      // First get the approval ID for the current user
+      const approvalData = await approvalService.getApprovalsBySubmission(parseInt(submissionId));
+      const userApproval = approvalData.find(
+        approval => approval.approver_id === user?.employee_data?.employee_id &&
+          approval.approval_status === 'Pending'
+      );
+
+      if (!userApproval?.approval_id) {
+        throw new Error("No pending approval found for current user");
+      }
+
       const statusUpdate: ApprovalStatusUpdate = {
         approval_status: 'Approved',
         approval_notes: approvalNotes
       };
 
-      await approvalService.updateApprovalStatus(approvalId, statusUpdate);
+      await approvalService.updateApprovalStatus(userApproval.approval_id, statusUpdate);
 
       setIsApproveDialogOpen(false);
       setApprovalNotes('');
-      setIsApprover(false);
 
-      // Refresh submission status
-      if (submissionId) {
-        const submissionData = await submissionService.getSubmission(parseInt(submissionId));
-        setSubmissionStatus(submissionData.submission_status);
-      }
-
+      // Refresh data to get updated status
       refreshData();
+
+      toast({
+        title: "Success",
+        description: "Targets approved successfully",
+      });
     } catch (error) {
       console.error('Error approving submission:', error);
+      toast({
+        title: "Error",
+        description: "Failed to approve targets",
+        variant: "destructive",
+      });
     } finally {
       setIsProcessingApproval(false);
     }
@@ -269,30 +239,49 @@ const MPMTargets = () => {
 
   // Reject function
   const handleReject = async () => {
-    if (!approvalId) return;
+    if (!submissionId || !authStatus.canReject) return;
 
     setIsProcessingApproval(true);
     try {
+      // First get the approval ID for the current user
+      const approvalData = await approvalService.getApprovalsBySubmission(parseInt(submissionId));
+      console.log("approvalData", approvalData);
+      console.log("user", user);
+      
+      const userApproval = approvalData.find(
+        approval => approval.approver_id === user?.employee_data?.employee_id &&
+          approval.approval_status === 'Pending'
+      );
+      console.log("userApproval", userApproval);
+
+      if (!userApproval?.approval_id) {
+        throw new Error("No pending approval found for current user");
+      }
+
       const statusUpdate: ApprovalStatusUpdate = {
         approval_status: 'Rejected',
         approval_notes: approvalNotes
       };
 
-      await approvalService.updateApprovalStatus(approvalId, statusUpdate);
+      await approvalService.updateApprovalStatus(userApproval.approval_id, statusUpdate);
 
       setIsRejectDialogOpen(false);
       setApprovalNotes('');
-      setIsApprover(false);
 
-      // Refresh submission status
-      if (submissionId) {
-        const submissionData = await submissionService.getSubmission(parseInt(submissionId));
-        setSubmissionStatus(submissionData.submission_status);
-      }
-
+      // Refresh data to get updated status
       refreshData();
+
+      toast({
+        title: "Success",
+        description: "Targets rejected successfully",
+      });
     } catch (error) {
       console.error('Error rejecting submission:', error);
+      toast({
+        title: "Error",
+        description: "Failed to reject targets",
+        variant: "destructive",
+      });
     } finally {
       setIsProcessingApproval(false);
     }
@@ -382,14 +371,6 @@ const MPMTargets = () => {
     setCurrentPage(1);
   };
 
-  // Check if user can submit targets
-  const canSubmitTargets = isAuthorized && submissionStatus === 'Draft';
-
-  // Check if submission can be approved
-  const canApproveOrReject = isApprover && submissionStatus === 'Submitted';
-  // Submit Dialog Component
-  
-
   if (loading) {
     return <div className="flex justify-center items-center h-screen">Loading...</div>;
   }
@@ -424,7 +405,7 @@ const MPMTargets = () => {
                 }]}
                 currentPage="MPM Targets"
                 showHomeIcon={true}
-                subtitle={`MPM Targets ID : ${submissionId} ${submissionStatus ? `(${submissionStatus})` : ''}`}
+                subtitle={`MPM Targets ID : ${submissionId} ${submission ? `(${submission.submission_status})` : ''}`}
               />
 
               {/* Filter Section */}
@@ -466,8 +447,8 @@ const MPMTargets = () => {
                       KPI Targets Table
                     </CardTitle>
                     <div className="flex flex-col sm:flex-row space-y-2 sm:space-y-0 sm:space-x-4 w-full md:w-auto">
-                      {/* Approval Buttons - Only show if user is an approver and submission is in submitted status */}
-                      {canApproveOrReject && (
+                      {/* Approval Buttons - Only show if user can approve/reject */}
+                      {authStatus.canApprove && (
                         <>
                           <Button
                             variant="outline"
@@ -489,8 +470,8 @@ const MPMTargets = () => {
                         </>
                       )}
 
-                      {/* Submit Button - Only show if user is authorized and submission is in draft status */}
-                      {canSubmitTargets && (
+                      {/* Submit Button - Only show if user can submit */}
+                      {authStatus.canSubmit && (
                         <Button
                           variant="outline"
                           className="w-full sm:w-auto border-[#1B6131] text-[#1B6131] hover:bg-[#E4EFCF] flex items-center justify-center dark:text-white"
@@ -515,6 +496,7 @@ const MPMTargets = () => {
                           <th className="p-4 text-center whitespace-nowrap">UOM</th>
                           <th className="p-4 text-center whitespace-nowrap">Category</th>
                           <th className="p-4 text-center whitespace-nowrap">YTD Calculation</th>
+
                           {/* Render all 12 month headers using utility function */}
                           {allMonths.map((month) => (
                             <th
@@ -549,8 +531,8 @@ const MPMTargets = () => {
                                     >
                                       <Eye className="h-4 w-4" />
                                     </Button>
-                                    {/* Edit button - only show if user is authorized and status is Draft */}
-                                    {canSubmitTargets && (
+                                    {/* Edit button - only show if user can edit */}
+                                    {authStatus.canEdit && (
                                       <Button
                                         variant="ghost"
                                         size="icon"
@@ -598,13 +580,13 @@ const MPMTargets = () => {
       </div>
 
       {selectedEntry && (
-      <EditMonthlyTargetDialog
-        isOpen={isEditMonthlyTargetOpen}
-        onClose={() => setIsEditMonthlyTargetOpen(false)}
-        kpi={selectedEntry}
-        onSave={handleSaveTargets}
-      />
-    )}
+        <EditMonthlyTargetDialog
+          isOpen={isEditMonthlyTargetOpen}
+          onClose={() => setIsEditMonthlyTargetOpen(false)}
+          kpi={selectedEntry}
+          onSave={handleSaveTargets}
+        />
+      )}
 
       <SubmitDialog
         isOpen={isSubmitDialogOpen}

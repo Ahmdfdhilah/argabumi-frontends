@@ -92,7 +92,7 @@ const HeroSection = ({
 
             {/* Content */}
             <motion.div 
-                className="relative z-10 w-full px-4 mb-8"
+                className="relative z-10 w-full px-4 mb-8 lg:mb-24"
                 initial="hidden"
                 animate="visible"
                 variants={{
@@ -103,12 +103,14 @@ const HeroSection = ({
                 <motion.div 
                     className="mx-auto max-w-3xl text-center"
                     animate={{
-                        y: [0, -10, 0],
+                        y: 0, 
                         transition: {
-                            duration: 2,
+                            from: -10, 
+                            duration: 1.2,
                             repeat: Infinity,
                             repeatType: "reverse",
-                            ease: "easeInOut"
+                            ease: "easeInOut",
+                            delay: 0.8
                         }
                     }}
                 >

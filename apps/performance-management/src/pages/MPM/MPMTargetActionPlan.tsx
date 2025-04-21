@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useMemo } from 'react';
-import { useParams, useNavigate } from 'react-router-dom';
+import { useParams } from 'react-router-dom';
 import {
     Card,
     CardContent,
@@ -7,7 +7,7 @@ import {
     CardTitle
 } from '@workspace/ui/components/card';
 import { Button } from '@workspace/ui/components/button';
-import { Edit, Eye, Info, PlusCircle, Trash2, Search } from 'lucide-react';
+import { Edit, Info, PlusCircle, Trash2, Search } from 'lucide-react';
 import { Input } from '@workspace/ui/components/input';
 import Header from '@/components/Header';
 import Sidebar from '@/components/Sidebar';
@@ -26,9 +26,8 @@ import ActionPlanEditDialog from '@/components/MPM/ActionPlanEditDialog';
 type KPIDefinitionResponse = any; // Use the actual type from kpiDefinitionService
 type ActionPlanData = any; // Define the structure based on your requirements
 
-const MPMActionPlan: React.FC = () => {
+const MPMTargetActionPlan: React.FC = () => {
     const { submissionId, kpiId } = useParams<{ submissionId: string, kpiId: string }>();
-    const navigate = useNavigate();
     const { toast } = useToast();
 
     // Get current user data from Redux store
@@ -110,6 +109,8 @@ const MPMActionPlan: React.FC = () => {
 
     // Paginate the filtered data
     const paginatedData = useMemo(() => {
+        console.log(filteredData);
+
         const startIndex = (currentPage - 1) * itemsPerPage;
         return filteredData.slice(startIndex, startIndex + itemsPerPage);
     }, [filteredData, currentPage, itemsPerPage]);
@@ -143,14 +144,14 @@ const MPMActionPlan: React.FC = () => {
                 kpi_definition: newActionPlan.kpi_definition || null,
                 kpi_weight: newActionPlan.kpi_weight,
                 kpi_target: newActionPlan.kpi_target,
-                kpi_is_ipm:  newActionPlan.assignType === 'Employee' ? true: false,
+                kpi_is_ipm: newActionPlan.assignType === 'Employee' ? true : false,
                 kpi_is_action_plan: true,
                 kpi_org_unit_id: newActionPlan.assignType === 'Unit' ? newActionPlan.assigneeId : null,
                 kpi_employee_id: newActionPlan.assignType === 'Employee' ? newActionPlan.assigneeId : null,
                 kpi_metadata: newActionPlan.kpi_metadata || null
             };
             console.log(actionPlanData);
-            await kpiDefinitionService.createActionPlan(actionPlanData);     
+            await kpiDefinitionService.createActionPlan(actionPlanData);
 
             // Refresh the action plans list
             const updatedPlans = await kpiDefinitionService.getKPIActionPlans(parseInt(kpiId!));
@@ -346,7 +347,7 @@ const MPMActionPlan: React.FC = () => {
                                         <table className="w-full border-collapse">
                                             <thead className="bg-[#1B6131] text-white">
                                                 <tr>
-                                                    <th className="p-4 text-center">Actions</th>
+                                                    {isAuthorized && <th className="p-4 text-center">Actions</th>}
                                                     <th className="p-4 text-center">Action Plan</th>
                                                     <th className="p-4 text-center">Target</th>
                                                     <th className="p-4 text-center">Weight</th>
@@ -361,46 +362,38 @@ const MPMActionPlan: React.FC = () => {
                                                         key={plan.kpi_id}
                                                         className="hover:bg-[#E4EFCF]/50 dark:hover:bg-[#1B6131]/20"
                                                     >
-                                                        <td className="p-4 text-center">
+                                                        {isAuthorized && (<td className="p-4 text-center">
                                                             <div className="flex justify-center space-x-2">
-                                                                <Button
-                                                                    variant="ghost"
-                                                                    size="icon"
-                                                                    className="hover:text-[#1B6131]"
-                                                                    onClick={() => navigate(`/performance-management/mpm/target/${submissionId}/kpi/${kpiId}/action-plans/${plan.kpi_id}`)}
-                                                                >
-                                                                    <Eye className="h-4 w-4" />
-                                                                </Button>
-                                                                {isAuthorized && (
-                                                                    <>
-                                                                        <Button
-                                                                            variant="ghost"
-                                                                            size="icon"
-                                                                            onClick={() => {
-                                                                                setSelectedActionPlan(plan);
-                                                                                setIsEditActionPlanDialogOpen(true);
-                                                                            }}
-                                                                        >
-                                                                            <Edit className="h-4 w-4" />
-                                                                        </Button>
-                                                                        <Button
-                                                                            variant="ghost"
-                                                                            size="icon"
-                                                                            onClick={() => handleDeleteActionPlan(plan.kpi_id)}
-                                                                        >
-                                                                            <Trash2 className="h-4 w-4" />
-                                                                        </Button>
-                                                                    </>
-                                                                )}
+
+                                                                <>
+                                                                    <Button
+                                                                        variant="ghost"
+                                                                        size="icon"
+                                                                        onClick={() => {
+                                                                            setSelectedActionPlan(plan);
+                                                                            setIsEditActionPlanDialogOpen(true);
+                                                                        }}
+                                                                    >
+                                                                        <Edit className="h-4 w-4" />
+                                                                    </Button>
+                                                                    <Button
+                                                                        variant="ghost"
+                                                                        size="icon"
+                                                                        onClick={() => handleDeleteActionPlan(plan.kpi_id)}
+                                                                    >
+                                                                        <Trash2 className="h-4 w-4" />
+                                                                    </Button>
+                                                                </>
                                                             </div>
                                                         </td>
+                                                        )}
                                                         <td className="p-4 text-center">{plan.kpi_name}</td>
                                                         <td className="p-4 text-center">{plan.kpi_target ? plan.kpi_target.toString() : '-'}</td>
                                                         <td className="p-4 text-center">{plan.kpi_weight ? plan.kpi_weight.toString() + '%' : '-'}</td>
                                                         <td className="p-4 text-center">{plan.kpi_org_unit_id ? 'Unit' : plan.kpi_employee_id ? 'Employee' : '-'}</td>
                                                         <td className="p-4 text-center">
                                                             {plan.kpi_org_unit_id ?
-                                                                plan.organization_unit_name || plan.kpi_org_unit_id :
+                                                                plan.org_unit_name || plan.kpi_org_unit_id :
                                                                 plan.kpi_employee_id ?
                                                                     plan.employee_name || plan.kpi_employee_id :
                                                                     '-'}
@@ -468,4 +461,4 @@ const MPMActionPlan: React.FC = () => {
     );
 };
 
-export default MPMActionPlan;
+export default MPMTargetActionPlan;

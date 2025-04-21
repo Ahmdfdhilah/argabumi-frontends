@@ -14,7 +14,8 @@ import {
     Building2,
     Save,
     X,
-    ArrowLeft
+    ArrowLeft,
+    User
 } from 'lucide-react';
 // import Breadcrumb from '@/components/Breadcrumb';
 import { Input } from "@workspace/ui/components/input";
@@ -38,12 +39,14 @@ import organizationUnitService, {
     OrganizationUnitCreate,
     OrganizationUnitUpdate
 } from '@/services/organizationUnitService';
+import employeeService, { Employee } from '@/services/employeeService';
 import { useParams, useNavigate, useSearchParams } from 'react-router-dom';
+
 const OrganizationUnitForm = () => {
     const params = useParams();
     const navigate = useNavigate();
     const [searchParams] = useSearchParams();
-    const parent = searchParams.get('parent'); 
+    const parent = searchParams.get('parent');
     const { id } = params;
     const isEditMode = Boolean(id);
 
@@ -58,11 +61,16 @@ const OrganizationUnitForm = () => {
     const [isSaving, setIsSaving] = useState(false);
     const [parentUnit, setParentUnit] = useState<OrganizationUnitResponse | null>(null);
     const [availableParents, setAvailableParents] = useState<OrganizationUnitResponse[]>([]);
+    const [employees, setEmployees] = useState<Employee[]>([]);
+    const [selectedEmployee, setSelectedEmployee] = useState<Employee | null>(null);
+    const [searchTerm, _] = useState('');
+    const [isSearching, setIsSearching] = useState(false);
 
     const [formData, setFormData] = useState<OrganizationUnitCreate | OrganizationUnitUpdate>({
         org_unit_code: '',
         org_unit_name: '',
         org_unit_type: 'Division',
+        org_unit_head_id: null,
         org_unit_parent_id: null,
         org_unit_level: 1,
         org_unit_description: '',
@@ -84,6 +92,20 @@ const OrganizationUnitForm = () => {
         fetchOrganizationUnits();
     }, []);
 
+    // Fetch employees for unit head selection
+    useEffect(() => {
+        const fetchEmployees = async () => {
+            try {
+                const data = await employeeService.getEmployees(0, 20);
+                setEmployees(data);
+            } catch (error) {
+                console.error('Failed to fetch employees:', error);
+            }
+        };
+
+        fetchEmployees();
+    }, []);
+
     // If editing, fetch the organization unit details
     useEffect(() => {
         const fetchOrganizationUnit = async () => {
@@ -95,6 +117,7 @@ const OrganizationUnitForm = () => {
                         org_unit_code: data.org_unit_code,
                         org_unit_name: data.org_unit_name,
                         org_unit_type: data.org_unit_type,
+                        org_unit_head_id: data.org_unit_head_id,
                         org_unit_parent_id: data.org_unit_parent_id,
                         org_unit_level: data.org_unit_level,
                         org_unit_description: data.org_unit_description || '',
@@ -109,6 +132,16 @@ const OrganizationUnitForm = () => {
                             setParentUnit(parentData);
                         } catch (error) {
                             console.error('Failed to fetch parent unit:', error);
+                        }
+                    }
+
+                    // Fetch unit head if exists
+                    if (data.org_unit_head_id) {
+                        try {
+                            const headData = await employeeService.getEmployeeById(data.org_unit_head_id);
+                            setSelectedEmployee(headData);
+                        } catch (error) {
+                            console.error('Failed to fetch unit head:', error);
                         }
                     }
                 } catch (error) {
@@ -143,15 +176,40 @@ const OrganizationUnitForm = () => {
         fetchParentUnit();
     }, [parent, isEditMode]);
 
+    // Handle employee search
+    useEffect(() => {
+        const searchEmployees = async () => {
+            if (searchTerm.length >= 2) {
+                setIsSearching(true);
+                try {
+                    const results = await employeeService.searchEmployees(searchTerm, 10);
+                    setEmployees(results);
+                } catch (error) {
+                    console.error('Failed to search employees:', error);
+                } finally {
+                    setIsSearching(false);
+                }
+            } else if (searchTerm === '') {
+                // Reset to default list if search term is cleared
+                try {
+                    const data = await employeeService.getEmployees(0, 20);
+                    setEmployees(data);
+                } catch (error) {
+                    console.error('Failed to fetch employees:', error);
+                }
+            }
+        };
+
+        // Debounce search
+        const handler = setTimeout(() => {
+            searchEmployees();
+        }, 300);
+
+        return () => clearTimeout(handler);
+    }, [searchTerm]);
+
     const handleInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
         const { name, value } = e.target;
-        setFormData(prev => ({
-            ...prev,
-            [name]: value
-        }));
-    };
-
-    const handleSelectChange = (name: string, value: string) => {
         setFormData(prev => ({
             ...prev,
             [name]: value
@@ -178,6 +236,28 @@ const OrganizationUnitForm = () => {
                 }));
             } catch (error) {
                 console.error('Failed to fetch parent unit:', error);
+            }
+        }
+    };
+
+    const handleUnitHeadChange = async (value: string) => {
+        if (value === "null") {
+            setFormData(prev => ({
+                ...prev,
+                org_unit_head_id: null
+            }));
+            setSelectedEmployee(null);
+        } else {
+            const employeeId = Number(value);
+            try {
+                const data = await employeeService.getEmployeeById(employeeId);
+                setSelectedEmployee(data);
+                setFormData(prev => ({
+                    ...prev,
+                    org_unit_head_id: employeeId
+                }));
+            } catch (error) {
+                console.error('Failed to fetch employee details:', error);
             }
         }
     };
@@ -212,8 +292,6 @@ const OrganizationUnitForm = () => {
             setIsSaving(false);
         }
     };
-
-    const unitTypes = ['Division', 'Department', 'Branch', 'Team', 'Unit', 'Section', 'Group'];
 
     return (
         <div className="min-h-screen bg-white dark:bg-gray-900 font-montserrat">
@@ -292,21 +370,14 @@ const OrganizationUnitForm = () => {
 
                                                 <div className="space-y-2">
                                                     <Label htmlFor="org_unit_type">Unit Type <span className="text-red-500">*</span></Label>
-                                                    <Select
+                                                    <Input
+                                                        id="org_unit_type"
+                                                        name="org_unit_type"
+                                                        placeholder="Enter unit type"
                                                         value={formData.org_unit_type}
-                                                        onValueChange={(value) => handleSelectChange('org_unit_type', value)}
-                                                    >
-                                                        <SelectTrigger>
-                                                            <SelectValue placeholder="Select unit type" />
-                                                        </SelectTrigger>
-                                                        <SelectContent>
-                                                            {unitTypes.map((type) => (
-                                                                <SelectItem key={type} value={type}>
-                                                                    {type}
-                                                                </SelectItem>
-                                                            ))}
-                                                        </SelectContent>
-                                                    </Select>
+                                                        onChange={handleInputChange}
+                                                        required
+                                                    />
                                                 </div>
 
                                                 <div className="space-y-2">
@@ -331,6 +402,52 @@ const OrganizationUnitForm = () => {
                                                         <p className="text-xs text-gray-500">
                                                             Parent: {parentUnit.org_unit_name} (Level {parentUnit.org_unit_level})
                                                         </p>
+                                                    )}
+                                                </div>
+
+                                                <div className="space-y-2">
+                                                    <Label htmlFor="org_unit_head_id">Unit Head</Label>
+                                                    <div className="space-y-2">
+                                                        <Select
+                                                            value={formData.org_unit_head_id?.toString() || "null"}
+                                                            onValueChange={handleUnitHeadChange}
+                                                        >
+                                                            <SelectTrigger>
+                                                                <SelectValue placeholder="Select unit head (optional)" />
+                                                            </SelectTrigger>
+                                                            <SelectContent>
+                                                                <SelectItem value="null">None</SelectItem>
+                                                                {isSearching ? (
+                                                                    <div className="p-2 text-center text-sm text-gray-500">
+                                                                        Searching...
+                                                                    </div>
+                                                                ) : employees.length === 0 ? (
+                                                                    <div className="p-2 text-center text-sm text-gray-500">
+                                                                        No employees found
+                                                                    </div>
+                                                                ) : (
+                                                                    employees.map((employee) => (
+                                                                        <SelectItem key={employee.employee_id} value={employee.employee_id.toString()}>
+                                                                            {employee.employee_name} ({employee.employee_number})
+                                                                        </SelectItem>
+                                                                    ))
+                                                                )}
+                                                            </SelectContent>
+                                                        </Select>
+                                                    </div>
+                                                    {selectedEmployee && (
+                                                        <div className="mt-2 p-2 bg-gray-50 dark:bg-gray-800 rounded border border-gray-200 dark:border-gray-700">
+                                                            <div className="flex items-center gap-2">
+                                                                <User className="h-4 w-4 text-gray-500" />
+                                                                <div>
+                                                                    <p className="text-sm font-medium">{selectedEmployee.employee_name}</p>
+                                                                    <p className="text-xs text-gray-500">
+                                                                        {selectedEmployee.employee_position || 'No position'}
+                                                                        {selectedEmployee.employee_email ? ` • ${selectedEmployee.employee_email}` : ''}
+                                                                    </p>
+                                                                </div>
+                                                            </div>
+                                                        </div>
                                                     )}
                                                 </div>
                                             </div>

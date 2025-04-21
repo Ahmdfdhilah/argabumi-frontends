@@ -3,7 +3,7 @@ import React, { Suspense, useEffect } from 'react';
 import { Helmet } from 'react-helmet-async';
 import { motion } from 'framer-motion';
 
-import { AnimatedSection, slideInBottom, slideInLeft, slideInRight } from '@workspace/ui/components/ui/animated-section';
+import { AnimatedSection, fadeInUp, slideInLeft, slideInRight } from '@workspace/ui/components/ui/animated-section';
 import { Section } from '@workspace/ui/components/ui/section';
 import { newsItems, partnerLogos, serviceItems } from '../mocks/homepageData';
 import Loader from '@workspace/ui/components/ui/loading';
@@ -55,6 +55,7 @@ function HomePage() {
                         initial={{ opacity: 0 }}
                         animate={{ opacity: 1 }}
                         transition={{ duration: 0.5 }}
+
                     >
                         <HeroSection
                             title="Empowering Agriculture Through Innovation"
@@ -68,11 +69,20 @@ function HomePage() {
 
                     {/* Stats Section */}
                     <AnimatedSection
-                        variants={slideInBottom}
-                        triggerOnce={false}
-                        delay={0.4}
+                        variants={fadeInUp}
+                        delay={0.8}
+                        duration={0.7}
+                        infinite={{
+                            enabled: true,
+                            type: "float",
+                            params: {
+                                range: [0, -10], 
+                                duration: 1.2 
+                            },
+                            delay: 0
+                        }}
                     >
-                        <StatsSection className='relative z-10 -mt-12 md:-mt-16 lg:-mt-24' />
+                        <StatsSection className='relative z-10 -mt-8 lg:-mt-12' />
                     </AnimatedSection>
 
                     {/* News Gallery */}
