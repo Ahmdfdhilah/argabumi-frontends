@@ -15,10 +15,10 @@ import {
     NavigationMenuList,
     NavigationMenuTrigger,
 } from '@workspace/ui/components/navigation-menu';
-import logo from '../assets/logo_abi_lightmode.png';
+import logo from '../../assets/logo_abi_lightmode.png';
 
 
-export default function Header({ isTransparent = false }) {
+export default function Navbar({ isTransparent = false }) {
     const [isScrolled, setIsScrolled] = useState(false);
     const [activeDropdown, setActiveDropdown] = useState('');
     const [isSheetOpen, setIsSheetOpen] = useState(false);

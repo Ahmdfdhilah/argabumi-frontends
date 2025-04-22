@@ -5,30 +5,34 @@ import { motion } from 'framer-motion';
 
 import { AnimatedSection, fadeInUp, slideInLeft, slideInRight } from '@workspace/ui/components/ui/animated-section';
 import { Section } from '@workspace/ui/components/ui/section';
-import { newsItems, partnerLogos, serviceItems } from '../mocks/homepageData';
+import { newsItems, partnerLogos, serviceItems } from '../../mocks/homepageData';
 import Loader from '@workspace/ui/components/ui/loading';
-import { testimonialsData } from '../mocks/aboutData';
+import { testimonialsData } from '../../mocks/aboutData';
+import { useAppSelector } from '@/redux/hooks';
 // Prefetch komponen besar saat aplikasi dimuat
 const prefetchComponents = () => {
-    import('../components/HeroSection');
+    import('../../components/client/HeroSection');
     import('@workspace/ui/components/ui/auto-swipe-gallery');
-    import('../components/CTOSection');
-    import('../components/VerticalGridStream');
-    import('../components/StatsSection');
-    import('../components/TestimonialSection');
-    import('../components/ProcessWorkflow');
+    import('../../components/client/CTOSection');
+    import('../../components/client/VerticalGridStream');
+    import('../../components/client/StatsSection');
+    import('../../components/client/TestimonialSection');
+    import('../../components/client/ProcessWorkflow');
 };
 
 // Lazy loading components dengan chunk name untuk better caching
-const HeroSection = React.lazy(() => import(/* webpackChunkName: "HeroSection" */ '../components/HeroSection'));
+const HeroSection = React.lazy(() => import(/* webpackChunkName: "HeroSection" */ '../../components/client/HeroSection'));
 const AutoSwipeGallery = React.lazy(() => import(/* webpackChunkName: "AutoSwipeGallery" */ '@workspace/ui/components/ui/auto-swipe-gallery'));
-const CTOSection = React.lazy(() => import(/* webpackChunkName: "CTOSection" */ '../components/CTOSection'));
-const VerticalGridStream = React.lazy(() => import(/* webpackChunkName: "VerticalGridStream" */ '../components/VerticalGridStream'));
-const StatsSection = React.lazy(() => import(/* webpackChunkName: "StatsSection" */ '../components/StatsSection'));
-const TestimonialsSection = React.lazy(() => import(/* webpackChunkName: "TestimonialsSection" */ '../components/TestimonialSection'));
-const ProcessWorkflow = React.lazy(() => import(/* webpackChunkName: "ProcessWorkflow" */ '../components/ProcessWorkflow'));
+const CTOSection = React.lazy(() => import(/* webpackChunkName: "CTOSection" */ '../../components/client/CTOSection'));
+const VerticalGridStream = React.lazy(() => import(/* webpackChunkName: "VerticalGridStream" */ '../../components/client/VerticalGridStream'));
+const StatsSection = React.lazy(() => import(/* webpackChunkName: "StatsSection" */ '../../components/client/StatsSection'));
+const TestimonialsSection = React.lazy(() => import(/* webpackChunkName: "TestimonialsSection" */ '../../components/client/TestimonialSection'));
+const ProcessWorkflow = React.lazy(() => import(/* webpackChunkName: "ProcessWorkflow" */ '../../components/client/ProcessWorkflow'));
 function HomePage() {
+    const { user } = useAppSelector((state) => state.auth);
 
+    console.log(user);
+    
     useEffect(() => {
         prefetchComponents();
     }, []);

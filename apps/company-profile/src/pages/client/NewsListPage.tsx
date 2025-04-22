@@ -6,11 +6,11 @@ import { Button } from '@workspace/ui/components/button';
 import { Input } from '@workspace/ui/components/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@workspace/ui/components/select';
 
-import { newsItems } from '../mocks/newsData';
+import { newsItems } from '../../mocks/newsData';
 import { Search } from 'lucide-react';
-import NewsListSkeleton from '../components/skeleton/NewsListSkeleton';
+import NewsListSkeleton from '../../components/skeleton/NewsListSkeleton';
 import { NewsCard } from '@workspace/ui/components/ui/news-card';
-import { NewsItem } from '../utils/types';
+import { NewsItem } from '../../utils/types';
 import CarouselHero from '@workspace/ui/components/ui/carousel';
 
 const NewsListPage = () => {

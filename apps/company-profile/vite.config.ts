@@ -11,7 +11,8 @@ export default defineConfig({
   resolve: {
     alias: {
       '@workspace/ui': path.resolve(__dirname, '../../packages/ui/src') ,
-      '@workspace/tailwind': path.resolve(__dirname, '../../packages/tailwind')
+      '@workspace/tailwind': path.resolve(__dirname, '../../packages/tailwind'),
+      "@": path.resolve(__dirname, "./src"),
     }
   },
   optimizeDeps: {

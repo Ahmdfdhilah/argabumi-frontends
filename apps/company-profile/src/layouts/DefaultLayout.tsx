@@ -1,7 +1,7 @@
 // src/layouts/DefaultLayout.jsx
 import { Outlet, useLocation } from 'react-router-dom';
-import Header from '../components/Header';
-import Footer from '../components/Footer';
+import Navbar from '../components/client/Navbar';
+import Footer from '../components/client/Footer';
 import { footerData } from '../mocks/footerData';
 
 const Layout = () => {
@@ -13,7 +13,7 @@ const Layout = () => {
 
     return (
         <div className="min-h-screen flex flex-col">
-            <Header isTransparent={isHeaderTransparent} />
+            <Navbar isTransparent={isHeaderTransparent} />
             <main className="flex-grow">
                 <Outlet />
             </main>

@@ -5,11 +5,11 @@ import { AnimatedSection } from '@workspace/ui/components/ui/animated-section';
 import { Section } from '@workspace/ui/components/ui/section';
 import { Button } from '@workspace/ui/components/button';
 import { Card, CardContent } from '@workspace/ui/components/card';
-import NewsDetailSkeleton from '../components/skeleton/NewsDetailSkeleton';
-import RecentNewsSidebar from '../components/RecentNewsSidebar';
-import { newsItems } from '../mocks/newsData';
+import NewsDetailSkeleton from '../../components/skeleton/NewsDetailSkeleton';
+import RecentNewsSidebar from '../../components/client/RecentNewsSidebar';
+import { newsItems } from '../../mocks/newsData';
 import { ChevronLeft, Calendar, User, Tag } from 'lucide-react';
-import { NewsItem } from '../utils/types';
+import { NewsItem } from '../../utils/types';
 
 const NewsDetailPage = () => {
   const { id } = useParams();
@@ -44,7 +44,7 @@ const NewsDetailPage = () => {
           <h1 className="text-3xl font-bold mb-4">Berita Tidak Ditemukan</h1>
           <p className="text-gray-600 mb-6">Maaf, berita yang Anda cari tidak tersedia.</p>
           <Button asChild>
-            <Link to="/news">Kembali ke Daftar Berita</Link>
+            <Link to="/admin/news">Kembali ke Daftar Berita</Link>
           </Button>
         </div>
       </Section>
@@ -59,10 +59,10 @@ const NewsDetailPage = () => {
             <title>{newsItem.title} | Company Name</title>
             <meta name="description" content={newsItem.description} />
             <meta name="keywords" content={newsItem.tags?.join(', ')} />
-            <link rel="canonical" href={`https://yourcompany.com/news/${newsItem.id}`} />
+            <link rel="canonical" href={`https://yourcompany.com/admin/news/${newsItem.id}`} />
             <meta property="og:title" content={`${newsItem.title} | Company Name`} />
             <meta property="og:description" content={newsItem.description} />
-            <meta property="og:url" content={`https://yourcompany.com/news/${newsItem.id}`} />
+            <meta property="og:url" content={`https://yourcompany.com/admin/news/${newsItem.id}`} />
             <meta property="og:type" content="article" />
             <meta property="og:image" content={newsItem.imageUrl} />
             <meta property="article:published_time" content={newsItem.date} />
@@ -79,7 +79,7 @@ const NewsDetailPage = () => {
           <Section className="py-16">
             <div className="mb-6">
               <Button variant="ghost" size="sm" asChild className="inline-flex items-center">
-                <Link to="/news">
+                <Link to="/admin/news">
                   <ChevronLeft className="h-4 w-4 mr-1" />
                   Kembali ke Daftar Berita
                 </Link>

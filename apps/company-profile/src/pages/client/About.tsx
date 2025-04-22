@@ -6,16 +6,16 @@ import { AnimatedSection, fadeIn } from '@workspace/ui/components/ui/animated-se
 import { Section } from '@workspace/ui/components/ui/section';
 
 // Mock data
-import { teamMembers, milestones, partnerLogos } from '../mocks/aboutData';
+import { teamMembers, milestones, partnerLogos } from '../../mocks/aboutData';
 import Loader from '@workspace/ui/components/ui/loading';
 import aboutImage from '../assets/about.jpg';
-import CTOSection from '../components/CTOSection';
+import CTOSection from '../../components/client/CTOSection';
 
 // Lazy loading components
-const TeamSection = React.lazy(() => import(/* webpackChunkName: "TeamSection" */ '../components/TeamSection'));
-const MissionVisionSection = React.lazy(() => import(/* webpackChunkName: "MissionVisionSection" */ '../components/MissionVision'));
-const TimelineSection = React.lazy(() => import(/* webpackChunkName: "TimelineSection" */ '../components/TimelineSection'));
-const VerticalGridStream = React.lazy(() => import(/* webpackChunkName: "VerticalGridStream" */ '../components/VerticalGridStream'));
+const TeamSection = React.lazy(() => import(/* webpackChunkName: "TeamSection" */ '../../components/client/TeamSection'));
+const MissionVisionSection = React.lazy(() => import(/* webpackChunkName: "MissionVisionSection" */ '../../components/client/MissionVision'));
+const TimelineSection = React.lazy(() => import(/* webpackChunkName: "TimelineSection" */ '../../components/client/TimelineSection'));
+const VerticalGridStream = React.lazy(() => import(/* webpackChunkName: "VerticalGridStream" */ '../../components/client/VerticalGridStream'));
 
 function AboutPage() {
     return (

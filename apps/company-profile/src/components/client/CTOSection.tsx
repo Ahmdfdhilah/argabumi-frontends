@@ -1,8 +1,8 @@
 // src/components/AnimatedCTOSection.jsx
 import { Link } from 'react-router-dom';
 import { ArrowRight, ChevronRight } from 'lucide-react';
-import app from '../assets/app.png';
-import app2 from '../assets/app2.png';
+import app from '../../assets/app.png';
+import app2 from '../../assets/app2.png';
 import { AnimatedSection, fadeInUp, slideInRight, slideInLeft, StaggeredList } from '@workspace/ui/components/ui/animated-section';
 
 export type CTOSectionProps = {

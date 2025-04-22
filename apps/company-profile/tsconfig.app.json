@@ -20,7 +20,14 @@
     "noUnusedLocals": true,
     "noUnusedParameters": true,
     "noFallthroughCasesInSwitch": true,
-    "noUncheckedSideEffectImports": true
+    "noUncheckedSideEffectImports": true,
+
+    "baseUrl": ".",
+    "paths": {
+      "@/*": ["src/*"],
+      "@workspace/ui/*": ["../../packages/ui/src/*"],
+      "@workspace/tailwind/*": ["../../packages/tailwind/*"]
+    },
   },
   "include": ["src"]
 }
