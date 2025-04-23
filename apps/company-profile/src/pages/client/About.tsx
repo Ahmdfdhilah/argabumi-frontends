@@ -6,10 +6,10 @@ import { AnimatedSection, fadeIn } from '@workspace/ui/components/ui/animated-se
 import { Section } from '@workspace/ui/components/ui/section';
 
 // Mock data
-import { teamMembers, milestones, partnerLogos } from '../../mocks/aboutData';
+import { teamMembers, milestones, partnerLogos } from '@/mocks/aboutData';
 import Loader from '@workspace/ui/components/ui/loading';
-import aboutImage from '../assets/about.jpg';
-import CTOSection from '../../components/client/CTOSection';
+import aboutImage from '@/assets/about.jpg';
+import CTOSection from '@/components/client/CTOSection';
 
 // Lazy loading components
 const TeamSection = React.lazy(() => import(/* webpackChunkName: "TeamSection" */ '../../components/client/TeamSection'));

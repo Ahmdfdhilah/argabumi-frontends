@@ -5,11 +5,11 @@ import { AnimatedSection } from '@workspace/ui/components/ui/animated-section';
 import { Section } from '@workspace/ui/components/ui/section';
 import { Button } from '@workspace/ui/components/button';
 import { Card, CardContent } from '@workspace/ui/components/card';
-import NewsDetailSkeleton from '../../components/skeleton/NewsDetailSkeleton';
-import RecentNewsSidebar from '../../components/client/RecentNewsSidebar';
-import { newsItems } from '../../mocks/newsData';
+import NewsDetailSkeleton from  '@/components/skeleton/NewsDetailSkeleton';
+import RecentNewsSidebar from '@/components/client/RecentNewsSidebar';
+import { newsItems } from '@/mocks/newsData';
 import { ChevronLeft, Calendar, User, Tag } from 'lucide-react';
-import { NewsItem } from '../../utils/types';
+import { NewsItem } from '@/utils/types';
 
 const NewsDetailPage = () => {
   const { id } = useParams();

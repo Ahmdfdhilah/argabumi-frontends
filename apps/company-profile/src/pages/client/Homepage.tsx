@@ -11,23 +11,23 @@ import { testimonialsData } from '../../mocks/aboutData';
 import { useAppSelector } from '@/redux/hooks';
 // Prefetch komponen besar saat aplikasi dimuat
 const prefetchComponents = () => {
-    import('../../components/client/HeroSection');
+    import('@/components/client/HeroSection');
     import('@workspace/ui/components/ui/auto-swipe-gallery');
-    import('../../components/client/CTOSection');
-    import('../../components/client/VerticalGridStream');
-    import('../../components/client/StatsSection');
-    import('../../components/client/TestimonialSection');
-    import('../../components/client/ProcessWorkflow');
+    import('@/components/client/CTOSection');
+    import('@/components/client/VerticalGridStream');
+    import('@/components/client/StatsSection');
+    import('@/components/client/TestimonialSection');
+    import('@/components/client/ProcessWorkflow');
 };
 
 // Lazy loading components dengan chunk name untuk better caching
-const HeroSection = React.lazy(() => import(/* webpackChunkName: "HeroSection" */ '../../components/client/HeroSection'));
+const HeroSection = React.lazy(() => import(/* webpackChunkName: "HeroSection" */ '@/components/client/HeroSection'));
 const AutoSwipeGallery = React.lazy(() => import(/* webpackChunkName: "AutoSwipeGallery" */ '@workspace/ui/components/ui/auto-swipe-gallery'));
-const CTOSection = React.lazy(() => import(/* webpackChunkName: "CTOSection" */ '../../components/client/CTOSection'));
-const VerticalGridStream = React.lazy(() => import(/* webpackChunkName: "VerticalGridStream" */ '../../components/client/VerticalGridStream'));
-const StatsSection = React.lazy(() => import(/* webpackChunkName: "StatsSection" */ '../../components/client/StatsSection'));
-const TestimonialsSection = React.lazy(() => import(/* webpackChunkName: "TestimonialsSection" */ '../../components/client/TestimonialSection'));
-const ProcessWorkflow = React.lazy(() => import(/* webpackChunkName: "ProcessWorkflow" */ '../../components/client/ProcessWorkflow'));
+const CTOSection = React.lazy(() => import(/* webpackChunkName: "CTOSection" */ '@/components/client/CTOSection'));
+const VerticalGridStream = React.lazy(() => import(/* webpackChunkName: "VerticalGridStream" */ '@/components/client/VerticalGridStream'));
+const StatsSection = React.lazy(() => import(/* webpackChunkName: "StatsSection" */ '@/components/client/StatsSection'));
+const TestimonialsSection = React.lazy(() => import(/* webpackChunkName: "TestimonialsSection" */ '@/components/client/TestimonialSection'));
+const ProcessWorkflow = React.lazy(() => import(/* webpackChunkName: "ProcessWorkflow" */ '@/components/client/ProcessWorkflow'));
 function HomePage() {
     const { user } = useAppSelector((state) => state.auth);
 
