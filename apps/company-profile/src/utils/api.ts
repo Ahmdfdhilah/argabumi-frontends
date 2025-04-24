@@ -1,6 +1,6 @@
 // src/utils/api.ts
 import axios, { AxiosInstance } from 'axios';
-import { API_BASE_URL_SSO,  API_BASE_URL_COMPANY_PROFILE } from '@/config';
+import { API_BASE_URL_SSO,  API_BASE_URL_COMPANY_PROFILE, API_BASE_URL_BROWSER } from '@/config';
 import { refreshToken, clearAuth } from '@/redux/features/authSlice';
 import { store } from '@/redux/store';
 import { jwtDecode } from 'jwt-decode';
@@ -24,6 +24,10 @@ export const ssoApi = axios.create({
 
 export const cpApi = axios.create({
   baseURL: API_BASE_URL_COMPANY_PROFILE,
+});
+
+export const browserApi = axios.create({
+  baseURL: API_BASE_URL_BROWSER,
 });
 
 // Track if a token refresh is in progress

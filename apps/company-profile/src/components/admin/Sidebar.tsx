@@ -25,7 +25,7 @@ const performanceMenus: MenuItem[] = [
     },
     {
         title: 'Dashboard',
-        path: '/performance-management/dashboard',
+        path: '/admin',
         icon: SquareKanban,
         roles: ['admin', 'director', 'division_head', 'department_head', 'employee'],
     },

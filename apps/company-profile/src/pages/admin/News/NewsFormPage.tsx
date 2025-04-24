@@ -35,7 +35,7 @@ import newsService, {
     UpdateNewsData,
     NewsResponse,
 } from "@/services/newsService";
-import { useParams } from "react-router-dom";
+import { useNavigate, useParams } from "react-router-dom";
 import { API_BASE_URL_COMPANY_PROFILE } from "@/config";
 
 // Define form schema using zod
@@ -53,12 +53,8 @@ const formSchema = z.object({
 
 type FormValues = z.infer<typeof formSchema>;
 
-// Props interface for the component
-interface NewsFormProps {
-    onSuccess?: (news: NewsResponse) => void;
-}
 
-const NewsForm = ({ onSuccess }: NewsFormProps) => {
+const NewsForm = () => {
     const { newsId } = useParams<{ newsId: string }>();
     const [isLoading, setIsLoading] = useState<boolean>(false);
     const [isSubmitting, setIsSubmitting] = useState<boolean>(false);
@@ -68,6 +64,7 @@ const NewsForm = ({ onSuccess }: NewsFormProps) => {
     const [imageFile, setImageFile] = useState<File | null>(null);
     const [imagePreview, setImagePreview] = useState<string | null>(null);
     const fileInputRef = useRef<HTMLInputElement>(null);
+    const navigate = useNavigate();
 
     // Initialize form
     const form = useForm<FormValues>({
@@ -117,7 +114,7 @@ const NewsForm = ({ onSuccess }: NewsFormProps) => {
                             : `${API_BASE_URL_COMPANY_PROFILE || ''}/${news.news_image_url}`;
                         setImagePreview(imageUrl);
                         console.log(imageUrl);
-                        
+
                     }
                 }
             } catch (err) {
@@ -158,6 +155,7 @@ const NewsForm = ({ onSuccess }: NewsFormProps) => {
 
         try {
             let result: NewsResponse;
+            console.log(values);
 
             if (newsId) {
                 // Update existing news
@@ -172,251 +170,248 @@ const NewsForm = ({ onSuccess }: NewsFormProps) => {
                 result = await newsService.uploadNewsImage(result.news_id, imageFile);
             }
 
-            // Call success callback if provided
-            if (onSuccess) {
-                onSuccess(result);
-            }
+            navigate('/admin/news');
         } catch (err: any) {
-            setError(err.message || "Failed to save news item. Please try again.");
-            console.error("Error submitting form:", err);
-        } finally {
-            setIsSubmitting(false);
-        }
-    };
-
-    if (isLoading) {
-        return (
-            <div className="flex items-center justify-center p-8">
-                <Loader2 className="w-8 h-8 animate-spin text-primary-600 dark:text-primary-400" />
-            </div>
-        );
+        setError(err.message || "Failed to save news item. Please try again.");
+        console.error("Error submitting form:", err);
+    } finally {
+        setIsSubmitting(false);
     }
+};
 
+if (isLoading) {
     return (
-        <Card className="w-full shadow-md border border-border dark:border-sidebar-border">
-            <CardHeader className="bg-accent/30 dark:bg-sidebar-accent/10">
-                <CardTitle className="text-xl font-semibold text-primary-700 dark:text-primary-300">
-                    {newsId ? "Edit News Item" : "Create News Item"}
-                </CardTitle>
-            </CardHeader>
-            <CardContent className="p-6">
-                {error && (
-                    <Alert variant="destructive" className="mb-6">
-                        <AlertDescription>{error}</AlertDescription>
-                    </Alert>
-                )}
-
-                <Form {...form}>
-                    <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
-                        {/* Title */}
-                        <FormField
-                            control={form.control}
-                            name="news_title"
-                            render={({ field }) => (
-                                <FormItem>
-                                    <FormLabel className="text-base font-medium">Title</FormLabel>
-                                    <FormControl>
-                                        <Input
-                                            placeholder="Enter news title"
-                                            className="border-input focus:border-primary-500"
-                                            {...field}
-                                        />
-                                    </FormControl>
-                                    <FormMessage />
-                                </FormItem>
-                            )}
-                        />
-
-                        {/* Description */}
-                        <FormField
-                            control={form.control}
-                            name="news_description"
-                            render={({ field }) => (
-                                <FormItem>
-                                    <FormLabel className="text-base font-medium">Description</FormLabel>
-                                    <FormControl>
-                                        <Textarea
-                                            placeholder="Enter a brief description"
-                                            className="min-h-[100px] border-input focus:border-primary-500"
-                                            {...field}
-                                        />
-                                    </FormControl>
-                                    <FormDescription>
-                                        This will appear as a summary in news listings
-                                    </FormDescription>
-                                    <FormMessage />
-                                </FormItem>
-                            )}
-                        />
-
-                        {/* Category */}
-                        <FormField
-                            control={form.control}
-                            name="news_category_id"
-                            render={({ field }) => (
-                                <FormItem>
-                                    <FormLabel className="text-base font-medium">Category</FormLabel>
-                                    <Select
-                                        onValueChange={(value) => field.onChange(parseInt(value, 10))}
-                                        value={field.value?.toString()}
-                                        defaultValue={field.value?.toString()}
-                                    >
-                                        <FormControl>
-                                            <SelectTrigger className="border-input focus:border-primary-500">
-                                                <SelectValue placeholder="Select a category" />
-                                            </SelectTrigger>
-                                        </FormControl>
-                                        <SelectContent>
-                                            {categories.map((category) => (
-                                                <SelectItem
-                                                    key={category.category_id}
-                                                    value={category.category_id.toString()}
-                                                >
-                                                    {category.category_name}
-                                                </SelectItem>
-                                            ))}
-                                        </SelectContent>
-                                    </Select>
-                                    <FormMessage />
-                                </FormItem>
-                            )}
-                        />
-
-                        {/* Tags */}
-                        <FormField
-                            control={form.control}
-                            name="tags"
-                            render={({ field }) => (
-                                <FormItem>
-                                    <FormLabel className="text-base font-medium">Tags</FormLabel>
-                                    <FormControl>
-                                        <MultiSelect
-                                            options={tags.map(tag => ({
-                                                value: tag.tag_id,
-                                                label: tag.tag_name
-                                            }))}
-                                            selected={field.value || []}
-                                            onChange={field.onChange}
-                                            placeholder="Select tags"
-                                        />
-                                    </FormControl>
-                                    <FormDescription>
-                                        Select one or more tags for better categorization
-                                    </FormDescription>
-                                    <FormMessage />
-                                </FormItem>
-                            )}
-                        />
-
-                        {/* Content Editor */}
-                        <FormField
-                            control={form.control}
-                            name="news_content"
-                            render={({ field }) => (
-                                <FormItem>
-                                    <FormLabel className="text-base font-medium">Content</FormLabel>
-                                    <FormControl>
-                                        <Editor
-                                            value={field.value}
-                                            onChange={field.onChange}
-                                            placeholder="Write your news content here..."
-                                        />
-                                    </FormControl>
-                                    <FormMessage />
-                                </FormItem>
-                            )}
-                        />
-
-                        {/* Featured Image */}
-                        <div className="space-y-2">
-                            <Label className="text-base font-medium">Featured Image</Label>
-                            <div className="mt-2">
-                                <input
-                                    type="file"
-                                    ref={fileInputRef}
-                                    onChange={handleImageChange}
-                                    accept="image/jpeg,image/png,image/webp,image/gif"
-                                    className="hidden"
-                                />
-
-                                {imagePreview ? (
-                                    <div className="relative group">
-                                        <img
-                                            src={imagePreview}
-                                            alt="Preview"
-                                            className="w-full h-60 object-cover rounded-md border border-border dark:border-sidebar-border"
-                                        />
-                                        <div
-                                            className="absolute inset-0 bg-black/50 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center cursor-pointer rounded-md"
-                                            onClick={handleImageClick}
-                                        >
-                                            <p className="text-white">Change Image</p>
-                                        </div>
-                                    </div>
-                                ) : (
-                                    <div
-                                        onClick={handleImageClick}
-                                        className="w-full h-60 border-2 border-dashed rounded-md border-border dark:border-sidebar-border flex flex-col items-center justify-center cursor-pointer hover:border-primary-500 dark:hover:border-primary-400 transition-colors"
-                                    >
-                                        <ImagePlus className="w-12 h-12 text-muted-foreground" />
-                                        <p className="mt-2 text-muted-foreground">
-                                            Click to upload an image
-                                        </p>
-                                        <p className="text-xs text-muted-foreground mt-1">
-                                            JPG, PNG, WebP or GIF (max 5MB)
-                                        </p>
-                                    </div>
-                                )}
-                            </div>
-                        </div>
-
-                        {/* Published Status */}
-                        <FormField
-                            control={form.control}
-                            name="news_is_published"
-                            render={({ field }) => (
-                                <FormItem className="flex flex-row items-center justify-between rounded-lg border p-4 shadow-sm">
-                                    <div className="space-y-0.5">
-                                        <FormLabel className="text-base font-medium">Published Status</FormLabel>
-                                        <FormDescription>
-                                            {field.value ? "This news is visible to the public" : "This news is saved as a draft"}
-                                        </FormDescription>
-                                    </div>
-                                    <FormControl>
-                                        <Switch
-                                            checked={field.value}
-                                            onCheckedChange={field.onChange}
-                                            className="data-[state=checked]:bg-primary-600 data-[state=checked]:dark:bg-primary-500"
-                                        />
-                                    </FormControl>
-                                </FormItem>
-                            )}
-                        />
-
-                        <div className="pt-2">
-                            <Button
-                                type="submit"
-                                className="w-full sm:w-auto bg-primary-600 hover:bg-primary-700 text-white dark:bg-primary-500 dark:hover:bg-primary-600"
-                                disabled={isSubmitting}
-                            >
-                                {isSubmitting ? (
-                                    <>
-                                        <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                                        {newsId ? "Updating..." : "Creating..."}
-                                    </>
-                                ) : (
-                                    <>
-                                        <Save className="mr-2 h-4 w-4" />
-                                        {newsId ? "Update News" : "Create News"}
-                                    </>
-                                )}
-                            </Button>
-                        </div>
-                    </form>
-                </Form>
-            </CardContent>
-        </Card>
+        <div className="flex items-center justify-center p-8">
+            <Loader2 className="w-8 h-8 animate-spin text-primary-600 dark:text-primary-400" />
+        </div>
     );
+}
+
+return (
+    <Card className="w-full shadow-md border border-border dark:border-sidebar-border">
+        <CardHeader className="bg-accent/30 dark:bg-sidebar-accent/10">
+            <CardTitle className="text-xl font-semibold text-primary-700 dark:text-primary-300">
+                {newsId ? "Edit News Item" : "Create News Item"}
+            </CardTitle>
+        </CardHeader>
+        <CardContent className="p-6">
+            {error && (
+                <Alert variant="destructive" className="mb-6">
+                    <AlertDescription>{error}</AlertDescription>
+                </Alert>
+            )}
+
+            <Form {...form}>
+                <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
+                    {/* Title */}
+                    <FormField
+                        control={form.control}
+                        name="news_title"
+                        render={({ field }) => (
+                            <FormItem>
+                                <FormLabel className="text-base font-medium">Title</FormLabel>
+                                <FormControl>
+                                    <Input
+                                        placeholder="Enter news title"
+                                        className="border-input focus:border-primary-500"
+                                        {...field}
+                                    />
+                                </FormControl>
+                                <FormMessage />
+                            </FormItem>
+                        )}
+                    />
+
+                    {/* Description */}
+                    <FormField
+                        control={form.control}
+                        name="news_description"
+                        render={({ field }) => (
+                            <FormItem>
+                                <FormLabel className="text-base font-medium">Description</FormLabel>
+                                <FormControl>
+                                    <Textarea
+                                        placeholder="Enter a brief description"
+                                        className="min-h-[100px] border-input focus:border-primary-500"
+                                        {...field}
+                                    />
+                                </FormControl>
+                                <FormDescription>
+                                    This will appear as a summary in news listings
+                                </FormDescription>
+                                <FormMessage />
+                            </FormItem>
+                        )}
+                    />
+
+                    {/* Category */}
+                    <FormField
+                        control={form.control}
+                        name="news_category_id"
+                        render={({ field }) => (
+                            <FormItem>
+                                <FormLabel className="text-base font-medium">Category</FormLabel>
+                                <Select
+                                    onValueChange={(value) => field.onChange(parseInt(value, 10))}
+                                    value={field.value?.toString()}
+                                    defaultValue={field.value?.toString()}
+                                >
+                                    <FormControl>
+                                        <SelectTrigger className="border-input focus:border-primary-500">
+                                            <SelectValue placeholder="Select a category" />
+                                        </SelectTrigger>
+                                    </FormControl>
+                                    <SelectContent>
+                                        {categories.map((category) => (
+                                            <SelectItem
+                                                key={category.category_id}
+                                                value={category.category_id.toString()}
+                                            >
+                                                {category.category_name}
+                                            </SelectItem>
+                                        ))}
+                                    </SelectContent>
+                                </Select>
+                                <FormMessage />
+                            </FormItem>
+                        )}
+                    />
+
+                    {/* Tags */}
+                    <FormField
+                        control={form.control}
+                        name="tags"
+                        render={({ field }) => (
+                            <FormItem>
+                                <FormLabel className="text-base font-medium">Tags</FormLabel>
+                                <FormControl>
+                                    <MultiSelect
+                                        options={tags.map(tag => ({
+                                            value: tag.tag_id,
+                                            label: tag.tag_name
+                                        }))}
+                                        selected={field.value || []}
+                                        onChange={field.onChange}
+                                        placeholder="Select tags"
+                                    />
+                                </FormControl>
+                                <FormDescription>
+                                    Select one or more tags for better categorization
+                                </FormDescription>
+                                <FormMessage />
+                            </FormItem>
+                        )}
+                    />
+
+                    {/* Content Editor */}
+                    <FormField
+                        control={form.control}
+                        name="news_content"
+                        render={({ field }) => (
+                            <FormItem>
+                                <FormLabel className="text-base font-medium">Content</FormLabel>
+                                <FormControl>
+                                    <Editor
+                                        value={field.value}
+                                        onChange={field.onChange}
+                                        placeholder="Write your news content here..."
+                                    />
+                                </FormControl>
+                                <FormMessage />
+                            </FormItem>
+                        )}
+                    />
+
+                    {/* Featured Image */}
+                    <div className="space-y-2">
+                        <Label className="text-base font-medium">Featured Image</Label>
+                        <div className="mt-2">
+                            <input
+                                type="file"
+                                ref={fileInputRef}
+                                onChange={handleImageChange}
+                                accept="image/jpeg,image/png,image/webp,image/gif"
+                                className="hidden"
+                            />
+
+                            {imagePreview ? (
+                                <div className="relative group">
+                                    <img
+                                        src={imagePreview}
+                                        alt="Preview"
+                                        className="w-full h-60 object-cover rounded-md border border-border dark:border-sidebar-border"
+                                    />
+                                    <div
+                                        className="absolute inset-0 bg-black/50 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center cursor-pointer rounded-md"
+                                        onClick={handleImageClick}
+                                    >
+                                        <p className="text-white">Change Image</p>
+                                    </div>
+                                </div>
+                            ) : (
+                                <div
+                                    onClick={handleImageClick}
+                                    className="w-full h-60 border-2 border-dashed rounded-md border-border dark:border-sidebar-border flex flex-col items-center justify-center cursor-pointer hover:border-primary-500 dark:hover:border-primary-400 transition-colors"
+                                >
+                                    <ImagePlus className="w-12 h-12 text-muted-foreground" />
+                                    <p className="mt-2 text-muted-foreground">
+                                        Click to upload an image
+                                    </p>
+                                    <p className="text-xs text-muted-foreground mt-1">
+                                        JPG, PNG, WebP or GIF (max 5MB)
+                                    </p>
+                                </div>
+                            )}
+                        </div>
+                    </div>
+
+                    {/* Published Status */}
+                    <FormField
+                        control={form.control}
+                        name="news_is_published"
+                        render={({ field }) => (
+                            <FormItem className="flex flex-row items-center justify-between rounded-lg border p-4 shadow-sm">
+                                <div className="space-y-0.5">
+                                    <FormLabel className="text-base font-medium">Published Status</FormLabel>
+                                    <FormDescription>
+                                        {field.value ? "This news is visible to the public" : "This news is saved as a draft"}
+                                    </FormDescription>
+                                </div>
+                                <FormControl>
+                                    <Switch
+                                        checked={field.value}
+                                        onCheckedChange={field.onChange}
+                                        className="data-[state=checked]:bg-primary-600 data-[state=checked]:dark:bg-primary-500"
+                                    />
+                                </FormControl>
+                            </FormItem>
+                        )}
+                    />
+
+                    <div className="pt-2">
+                        <Button
+                            type="submit"
+                            className="w-full sm:w-auto bg-primary-600 hover:bg-primary-700 text-white dark:bg-primary-500 dark:hover:bg-primary-600"
+                            disabled={isSubmitting}
+                        >
+                            {isSubmitting ? (
+                                <>
+                                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                                    {newsId ? "Updating..." : "Creating..."}
+                                </>
+                            ) : (
+                                <>
+                                    <Save className="mr-2 h-4 w-4" />
+                                    {newsId ? "Update News" : "Create News"}
+                                </>
+                            )}
+                        </Button>
+                    </div>
+                </form>
+            </Form>
+        </CardContent>
+    </Card>
+);
 };
 
 export default NewsForm;

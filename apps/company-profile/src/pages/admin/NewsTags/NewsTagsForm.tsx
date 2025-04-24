@@ -17,11 +17,10 @@ import {
 } from "@workspace/ui/components/form";
 import { Alert, AlertDescription } from "@workspace/ui/components/alert";
 import newsService, {
-    TagResponse,
     CreateTagData,
     UpdateTagData,
 } from "@/services/newsService";
-import { useParams } from "react-router-dom";
+import { useNavigate, useParams } from "react-router-dom";
 
 // Define form schema using zod
 const formSchema = z.object({
@@ -30,17 +29,13 @@ const formSchema = z.object({
 
 type FormValues = z.infer<typeof formSchema>;
 
-// Props interface for the component
-interface TagFormProps {
-    onSuccess?: (tag: TagResponse) => void;
-}
 
-const TagForm = ({ onSuccess }: TagFormProps) => {
+const TagForm = () => {
     const { tagId } = useParams<{ tagId: string }>();
     const [isLoading, setIsLoading] = useState<boolean>(false);
     const [isSubmitting, setIsSubmitting] = useState<boolean>(false);
     const [error, setError] = useState<string | null>(null);
-
+    const navigate = useNavigate();
     // Initialize form
     const form = useForm<FormValues>({
         resolver: zodResolver(formSchema),
@@ -53,11 +48,11 @@ const TagForm = ({ onSuccess }: TagFormProps) => {
     useEffect(() => {
         const fetchTag = async () => {
             if (!tagId) return;
-            
+
             setIsLoading(true);
             try {
                 const tag = await newsService.getTagById(parseInt(tagId, 10));
-                
+
                 // Set form values for editing
                 form.reset({
                     tag_name: tag.tag_name,
@@ -79,20 +74,16 @@ const TagForm = ({ onSuccess }: TagFormProps) => {
         setError(null);
 
         try {
-            let result: TagResponse;
 
             if (tagId) {
                 // Update existing tag
-                result = await newsService.updateTag(parseInt(tagId, 10), values as UpdateTagData);
+                await newsService.updateTag(parseInt(tagId, 10), values as UpdateTagData);
             } else {
                 // Create new tag
-                result = await newsService.createTag(values as CreateTagData);
+                await newsService.createTag(values as CreateTagData);
             }
 
-            // Call success callback if provided
-            if (onSuccess) {
-                onSuccess(result);
-            }
+            navigate('/admin/news/tags');
         } catch (err: any) {
             setError(err.message || "Failed to save tag. Please try again.");
             console.error("Error submitting form:", err);

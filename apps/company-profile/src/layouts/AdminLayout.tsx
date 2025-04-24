@@ -5,7 +5,6 @@ import Sidebar from '@/components/admin/Sidebar';
 import { useState, useEffect } from 'react';
 import { Outlet } from 'react-router-dom';
 
-
 const AdminLayout = () => {
     const [isSidebarOpen, setIsSidebarOpen] = useState(() => {
         if (typeof window !== 'undefined') {
@@ -29,7 +28,7 @@ const AdminLayout = () => {
     }, []);
 
     return (
-        <div className="min-h-screen bg-gray-50 dark:bg-gray-900">
+        <div className="flex flex-col min-h-screen bg-gray-50 dark:bg-gray-900">
             <Header
                 isSidebarOpen={isSidebarOpen}
                 setIsSidebarOpen={setIsSidebarOpen}
@@ -37,14 +36,14 @@ const AdminLayout = () => {
                 setIsDarkMode={setIsDarkMode}
             />
 
-            <div className="flex">
+            <div className="flex flex-1 flex-col sm:flex-row">
                 <Sidebar
                     isSidebarOpen={isSidebarOpen}
                     setIsSidebarOpen={setIsSidebarOpen}
                 />
 
-                <div className={`flex flex-col mt-4 transition-all duration-300 ease-in-out ${isSidebarOpen ? 'md:ml-64' : 'lg:ml-0'} w-full`}>
-                    <main className="flex-1 px-2 md:px-4 pt-16 pb-12 transition-all duration-300 ease-in-out w-full">
+                <div className={`flex flex-col flex-1 transition-all duration-300 ease-in-out ${isSidebarOpen ? 'md:ml-64' : 'lg:ml-0'}`}>
+                    <main className="flex-1 px-4 pt-20 pb-6 transition-all duration-300 ease-in-out">
                         <Outlet />
                     </main>
                     <Footer />

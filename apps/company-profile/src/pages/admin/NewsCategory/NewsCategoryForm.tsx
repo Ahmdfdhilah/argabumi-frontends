@@ -22,7 +22,7 @@ import newsService, {
     CreateCategoryData,
     UpdateCategoryData,
 } from "@/services/newsService";
-import { useParams } from "react-router-dom";
+import { useNavigate, useParams } from "react-router-dom";
 
 // Define form schema using zod
 const formSchema = z.object({
@@ -32,17 +32,13 @@ const formSchema = z.object({
 
 type FormValues = z.infer<typeof formSchema>;
 
-// Props interface for the component
-interface CategoryFormProps {
-    onSuccess?: (category: CategoryResponse) => void;
-}
 
-const NewsCategoryForm = ({ onSuccess }: CategoryFormProps) => {
+const NewsCategoryForm = () => {
     const { categoryId } = useParams<{ categoryId: string }>();
     const [isLoading, setIsLoading] = useState<boolean>(false);
     const [isSubmitting, setIsSubmitting] = useState<boolean>(false);
     const [error, setError] = useState<string | null>(null);
-
+    const navigate = useNavigate();
     // Initialize form
     const form = useForm<FormValues>({
         resolver: zodResolver(formSchema),
@@ -93,10 +89,7 @@ const NewsCategoryForm = ({ onSuccess }: CategoryFormProps) => {
                 result = await newsService.createCategory(values as CreateCategoryData);
             }
 
-            // Call success callback if provided
-            if (onSuccess) {
-                onSuccess(result);
-            }
+            navigate('/admin/news/categories');
         } catch (err: any) {
             setError(err.message || "Failed to save category. Please try again.");
             console.error("Error submitting form:", err);

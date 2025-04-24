@@ -30,7 +30,7 @@ const AdminNewsCategoryListPage = React.lazy(() => import('./pages/admin/NewsCat
 const AdminNewsCategoryFormPage = React.lazy(() => import('./pages/admin/NewsCategory/NewsCategoryForm'));
 const AdminNewsTagListPage = React.lazy(() => import('./pages/admin/NewsTags/NewsTagsList'));
 const AdminNewsTagFormPage = React.lazy(() => import('./pages/admin/NewsTags/NewsTagsForm'));
-
+const AdminDashboardPage = React.lazy(() => import('./pages/admin/Dashboard'));
 function App() {
   return (
     <HelmetProvider>
@@ -67,6 +67,7 @@ function App() {
                 {/* Admin routes */}
                 <Route element={<AuthGuard requireAdmin={true} />}>
                   <Route path="admin" element={<AdminLayout />}>
+                    <Route index element={<AdminDashboardPage />} />
                     <Route path="news">
                       <Route index element={<AdminNewsListPage />} />
                       <Route path="create" element={<AdminNewsFormPage />} />

@@ -54,6 +54,8 @@ export const Editor = ({
     const [linkText, setLinkText] = useState('');
     const [hasSelection, setHasSelection] = useState(false);
 
+
+
     // Clear content dialog state
     const [clearDialogOpen, setClearDialogOpen] = useState(false);
 
@@ -78,7 +80,7 @@ export const Editor = ({
             }),
             TextAlign.configure({
                 types: ['heading', 'paragraph'],
-                alignments: ['left', 'center', 'right'],
+                alignments: ['left', 'center', 'right', 'justify'],
             }),
             Placeholder.configure({
                 placeholder,
@@ -115,6 +117,48 @@ export const Editor = ({
             // Optional: Store selection on blur for potential recovery
         }
     });
+
+
+    useEffect(() => {
+        if (!editor || !value) return;
+
+        // Process the content to see if there are alignment styles
+        const tempDiv = document.createElement('div');
+        tempDiv.innerHTML = value;
+
+        // Find elements with text-align styles
+        const elementsWithAlign = tempDiv.querySelectorAll('[style*="text-align"]');
+
+        if (elementsWithAlign.length > 0) {
+            // Set editor content first
+            editor.commands.setContent(value);
+
+            // Small delay to ensure content is set before we try to select elements
+            setTimeout(() => {
+                // For debug purposes
+                console.log("Found elements with alignment:", elementsWithAlign.length);
+
+                // Force editor to recognize the alignments by checking DOM
+                editor.view.dom.querySelectorAll('[style*="text-align"]').forEach(node => {
+                    const alignValue = (node as HTMLElement).style.textAlign;
+                    if (alignValue) {
+                        // This forces editor to update its internal state
+                        const domPos = editor.view.posAtDOM(node, 0);
+                        if (domPos !== undefined) {
+                            editor.commands.setTextSelection(domPos);
+                            editor.commands.setTextAlign(alignValue);
+                        }
+                    }
+                });
+
+                // Restore cursor to beginning after processing
+                editor.commands.setTextSelection(0);
+            }, 50);
+        } else {
+            // No alignment found, just set content normally
+            editor.commands.setContent(value);
+        }
+    }, [editor, value]);
 
     // Handle external value changes (when editing existing content)
     useEffect(() => {
@@ -249,6 +293,17 @@ export const Editor = ({
         setLinkDialogOpen(false);
     };
 
+    const applyHeading = (level: any) => {
+        ensureFocus();
+        editor.chain().focus().toggleHeading({ level }).run();
+
+        // Ensure cursor remains visible after heading toggle
+        const pos = editor.state.selection.from;
+        setTimeout(() => {
+            editor.commands.setTextSelection(pos);
+        }, 10);
+    };
+
     // EditorButton component with tooltip for better UX
     const EditorButton = ({
         onClick,
@@ -310,7 +365,7 @@ export const Editor = ({
 
                 {/* Headings */}
                 <EditorButton
-                    onClick={() => applyFormat(() => editor.chain().toggleHeading({ level: 1 }).run())}
+                    onClick={() => applyHeading(1)}
                     isActive={editor.isActive('heading', { level: 1 })}
                     label="Heading 1"
                 >
@@ -318,7 +373,7 @@ export const Editor = ({
                 </EditorButton>
 
                 <EditorButton
-                    onClick={() => applyFormat(() => editor.chain().toggleHeading({ level: 2 }).run())}
+                    onClick={() => applyHeading(2)}
                     isActive={editor.isActive('heading', { level: 2 })}
                     label="Heading 2"
                 >
@@ -326,7 +381,7 @@ export const Editor = ({
                 </EditorButton>
 
                 <EditorButton
-                    onClick={() => applyFormat(() => editor.chain().toggleHeading({ level: 3 }).run())}
+                    onClick={() => applyHeading(3)}
                     isActive={editor.isActive('heading', { level: 3 })}
                     label="Heading 3"
                 >

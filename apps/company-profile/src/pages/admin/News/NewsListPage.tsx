@@ -18,6 +18,14 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@workspace/ui/components/dropdown-menu";
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from "@workspace/ui/components/table";
 import { format } from "date-fns";
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from "@workspace/ui/components/alert-dialog";
 import { useNavigate } from "react-router-dom";
@@ -332,37 +340,37 @@ const NewsList: React.FC = () => {
               </Button>
             </div>
           ) : newsData && newsData.items.length > 0 ? (
-            <div className="overflow-x-auto">
-              <table className="w-full">
-                <thead className="bg-accent/30 dark:bg-sidebar-accent/10 border-b border-border dark:border-sidebar-border">
-                  <tr>
-                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-700 dark:text-gray-300 uppercase tracking-wider">
+            <div className="w-full">
+              <Table>
+                <TableHeader>
+                  <TableRow>
+                    <TableHead className="text-md font-medium text-white  uppercase tracking-wider">
                       Title
-                    </th>
-                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-700 dark:text-gray-300 uppercase tracking-wider">
+                    </TableHead>
+                    <TableHead className="text-md font-medium text-white  uppercase tracking-wider">
                       Category
-                    </th>
-                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-700 dark:text-gray-300 uppercase tracking-wider">
+                    </TableHead>
+                    <TableHead className="text-md font-medium text-white uppercase tracking-wider">
                       Status
-                    </th>
-                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-700 dark:text-gray-300 uppercase tracking-wider">
+                    </TableHead>
+                    <TableHead className="text-md font-medium text-white uppercase tracking-wider">
                       Author
-                    </th>
-                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-700 dark:text-gray-300 uppercase tracking-wider">
+                    </TableHead>
+                    <TableHead className="text-md font-medium text-white uppercase tracking-wider">
                       Created
-                    </th>
-                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-700 dark:text-gray-300 uppercase tracking-wider">
+                    </TableHead>
+                    <TableHead className="text-md font-medium text-white uppercase tracking-wider">
                       Views
-                    </th>
-                    <th className="px-6 py-3 text-right text-xs font-medium text-gray-700 dark:text-gray-300 uppercase tracking-wider">
+                    </TableHead>
+                    <TableHead className="text-right text-md font-medium text-white uppercase tracking-wider">
                       Actions
-                    </th>
-                  </tr>
-                </thead>
-                <tbody className="bg-background divide-y divide-border dark:divide-sidebar-border">
+                    </TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
                   {newsData.items.map((news) => (
-                    <tr key={news.news_id} className="hover:bg-accent/10 dark:hover:bg-sidebar-accent/5">
-                      <td className="px-6 py-4 whitespace-nowrap">
+                    <TableRow key={news.news_id} className="hover:bg-accent/10 dark:hover:bg-sidebar-accent/5">
+                      <TableCell className="whitespace-nowrap">
                         <div className="flex items-center">
                           {news.news_image_url && (
                             <div className="flex-shrink-0 h-10 w-10 mr-3 cursor-pointer">
@@ -378,31 +386,31 @@ const NewsList: React.FC = () => {
                             {news.news_title}
                           </div>
                         </div>
-                      </td>
-                      <td className="px-6 py-4 whitespace-nowrap">
+                      </TableCell>
+                      <TableCell className="whitespace-nowrap">
                         <span className="text-sm text-gray-700 dark:text-gray-300">
                           {news.category.category_name}
                         </span>
-                      </td>
-                      <td className="px-6 py-4 whitespace-nowrap">
+                      </TableCell>
+                      <TableCell className="whitespace-nowrap">
                         {getStatusBadge(news.news_is_published, news.news_published_at)}
-                      </td>
-                      <td className="px-6 py-4 whitespace-nowrap">
+                      </TableCell>
+                      <TableCell className="whitespace-nowrap">
                         <span className="text-sm text-gray-700 dark:text-gray-300">
                           {news.author.user_first_name} {news.author.user_last_name}
                         </span>
-                      </td>
-                      <td className="px-6 py-4 whitespace-nowrap">
+                      </TableCell>
+                      <TableCell className="whitespace-nowrap">
                         <span className="text-sm text-gray-700 dark:text-gray-300">
                           {formatDate(news.created_at)}
                         </span>
-                      </td>
-                      <td className="px-6 py-4 whitespace-nowrap">
+                      </TableCell>
+                      <TableCell className="whitespace-nowrap">
                         <span className="text-sm text-gray-700 dark:text-gray-300">
                           {news.news_view_count.toLocaleString()}
                         </span>
-                      </td>
-                      <td className="px-6 py-4 whitespace-nowrap text-right">
+                      </TableCell>
+                      <TableCell className="whitespace-nowrap text-right">
                         <DropdownMenu>
                           <DropdownMenuTrigger asChild>
                             <Button 
@@ -466,11 +474,11 @@ const NewsList: React.FC = () => {
                             </AlertDialog>
                           </DropdownMenuContent>
                         </DropdownMenu>
-                      </td>
-                    </tr>
+                      </TableCell>
+                    </TableRow>
                   ))}
-                </tbody>
-              </table>
+                </TableBody>
+              </Table>
             </div>
           ) : (
             <div className="p-12 text-center">

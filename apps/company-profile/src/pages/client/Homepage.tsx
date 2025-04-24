@@ -9,6 +9,7 @@ import { newsItems, partnerLogos, serviceItems } from '../../mocks/homepageData'
 import Loader from '@workspace/ui/components/ui/loading';
 import { testimonialsData } from '../../mocks/aboutData';
 import { useAppSelector } from '@/redux/hooks';
+import { RootState } from '@/redux/store';
 // Prefetch komponen besar saat aplikasi dimuat
 const prefetchComponents = () => {
     import('@/components/client/HeroSection');
@@ -29,7 +30,7 @@ const StatsSection = React.lazy(() => import(/* webpackChunkName: "StatsSection"
 const TestimonialsSection = React.lazy(() => import(/* webpackChunkName: "TestimonialsSection" */ '@/components/client/TestimonialSection'));
 const ProcessWorkflow = React.lazy(() => import(/* webpackChunkName: "ProcessWorkflow" */ '@/components/client/ProcessWorkflow'));
 function HomePage() {
-    const { user } = useAppSelector((state) => state.auth);
+    const { user } = useAppSelector((state: RootState) => state.auth);
 
     console.log(user);
     

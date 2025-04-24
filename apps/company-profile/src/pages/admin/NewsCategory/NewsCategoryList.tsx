@@ -10,6 +10,14 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@workspace/ui/components/dropdown-menu";
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from "@workspace/ui/components/table";
 import { format } from "date-fns";
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from "@workspace/ui/components/alert-dialog";
 import { useNavigate } from "react-router-dom";
@@ -236,51 +244,51 @@ const NewsCategoryList: React.FC = () => {
               </Button>
             </div>
           ) : filteredCategories.length > 0 ? (
-            <div className="overflow-x-auto">
-              <table className="w-full">
-                <thead className="bg-accent/30 dark:bg-sidebar-accent/10 border-b border-border dark:border-sidebar-border">
-                  <tr>
-                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-700 dark:text-gray-300 uppercase tracking-wider">
+            <div className="w-full">
+              <Table>
+                <TableHeader>
+                  <TableRow>
+                    <TableHead className="text-md font-medium text-white uppercase tracking-wider">
                       Name
-                    </th>
-                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-700 dark:text-gray-300 uppercase tracking-wider">
+                    </TableHead>
+                    <TableHead className="text-md font-medium text-white uppercase tracking-wider">
                       Description
-                    </th>
-                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-700 dark:text-gray-300 uppercase tracking-wider">
+                    </TableHead>
+                    <TableHead className="text-md font-medium text-white uppercase tracking-wider">
                       Slug
-                    </th>
-                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-700 dark:text-gray-300 uppercase tracking-wider">
+                    </TableHead>
+                    <TableHead className="text-md font-medium text-white uppercase tracking-wider">
                       Created
-                    </th>
-                    <th className="px-6 py-3 text-right text-xs font-medium text-gray-700 dark:text-gray-300 uppercase tracking-wider">
+                    </TableHead>
+                    <TableHead className="text-right text-md font-medium text-white uppercase tracking-wider">
                       Actions
-                    </th>
-                  </tr>
-                </thead>
-                <tbody className="bg-background divide-y divide-border dark:divide-sidebar-border">
+                    </TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
                   {filteredCategories.map((category) => (
-                    <tr key={category.category_id} className="hover:bg-accent/10 dark:hover:bg-sidebar-accent/5">
-                      <td className="px-6 py-4 whitespace-nowrap">
+                    <TableRow key={category.category_id} className="hover:bg-accent/10 dark:hover:bg-sidebar-accent/5">
+                      <TableCell className="whitespace-nowrap">
                         <div className="text-sm font-medium text-gray-900 dark:text-gray-100">
                           {category.category_name}
                         </div>
-                      </td>
-                      <td className="px-6 py-4">
+                      </TableCell>
+                      <TableCell>
                         <div className="text-sm text-gray-700 dark:text-gray-300 line-clamp-2 max-w-xs">
                           {category.category_description || "No description"}
                         </div>
-                      </td>
-                      <td className="px-6 py-4 whitespace-nowrap">
+                      </TableCell>
+                      <TableCell className="whitespace-nowrap">
                         <div className="text-sm text-gray-700 dark:text-gray-300">
                           {category.category_slug}
                         </div>
-                      </td>
-                      <td className="px-6 py-4 whitespace-nowrap">
+                      </TableCell>
+                      <TableCell className="whitespace-nowrap">
                         <span className="text-sm text-gray-700 dark:text-gray-300">
                           {formatDate(category.created_at)}
                         </span>
-                      </td>
-                      <td className="px-6 py-4 whitespace-nowrap text-right">
+                      </TableCell>
+                      <TableCell className="whitespace-nowrap text-right">
                         <DropdownMenu>
                           <DropdownMenuTrigger asChild>
                             <Button 
@@ -337,11 +345,11 @@ const NewsCategoryList: React.FC = () => {
                             </AlertDialog>
                           </DropdownMenuContent>
                         </DropdownMenu>
-                      </td>
-                    </tr>
+                      </TableCell>
+                    </TableRow>
                   ))}
-                </tbody>
-              </table>
+                </TableBody>
+              </Table>
             </div>
           ) : (
             <div className="p-12 text-center">

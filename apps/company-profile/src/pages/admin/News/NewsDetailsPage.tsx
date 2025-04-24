@@ -37,6 +37,8 @@ const NewsDetails = () => {
         if (newsId) {
           // Fetch by ID if available
           newsData = await newsService.getNewsById(parseInt(newsId, 10), true);
+          console.log(newsData.news_content);
+
         } else if (slug) {
           // Otherwise fetch by slug
           newsData = await newsService.getNewsBySlug(slug, true);
@@ -178,7 +180,6 @@ const NewsDetails = () => {
             className="prose dark:prose-invert max-w-none"
             dangerouslySetInnerHTML={{ __html: news.news_content }}
           />
-
           {news.tags && news.tags.length > 0 && (
             <div className="mt-8 pt-4 border-t border-border dark:border-sidebar-border">
               <div className="flex flex-wrap gap-2 items-center">
