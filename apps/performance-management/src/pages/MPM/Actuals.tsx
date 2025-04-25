@@ -1,6 +1,5 @@
-
 import { useState, useMemo, useEffect } from 'react';
-import {  useParams, useSearchParams } from 'react-router-dom';
+import { useParams, useSearchParams } from 'react-router-dom';
 import { Card, CardContent, CardHeader, CardTitle } from '@workspace/ui/components/card';
 import {
   Select,
@@ -12,7 +11,7 @@ import {
 
 import { Button } from '@workspace/ui/components/button';
 import Sidebar from '@/components/Sidebar';
-import { Edit, Send, Users, CheckCircle, XCircle } from 'lucide-react';
+import { Edit, Send, Users, CheckCircle, XCircle, FileText, Upload, CheckSquare, RotateCcw } from 'lucide-react';
 import Header from '@/components/Header';
 import Breadcrumb from '@/components/Breadcrumb';
 import Pagination from '@/components/Pagination';
@@ -24,27 +23,42 @@ import { kpiPerspectiveService, KPIPerspective } from '@/services/kpiPerspective
 
 import { submissionService, SubmissionStatusUpdate } from '@/services/submissionService';
 import { approvalService, ApprovalStatusUpdate } from '@/services/approvalService';
-import { useAppSelector } from '@/redux/hooks';
 import { SubmitDialog } from '@/components/MPM/SubmitDialog';
 import { ApproveDialog } from '@/components/MPM/ApproveDialog';
 import { RejectDialog } from '@/components/MPM/RejectDialog';
 import { getMonthName } from '@/utils/month';
-import { useMPMActuals, KPIEntryWithActuals } from '@/hooks/useMPMActuals';
+import { useActuals, KPIEntryWithActuals } from '@/hooks/useActuals';
 import EditActualDialog from '@/components/MPM/EditActualDialog';
+import ViewEvidenceDialog from '@/components/MPM/ViewEvidence';
+import UploadEvidenceDialog from '@/components/MPM/UploadEvidence';
+import { ConfirmDialog } from '@/components/MPM/ConfirmDialog';
+import { ValidateDialog } from '@/components/MPM/ValidateDialog';
 
-const MPMActuals = () => {
+interface ActualsProps {
+  submissionTypePic?: string;
+}
+
+const Actuals = ({ submissionTypePic: submissionType }: ActualsProps) => {
   const { toast } = useToast();
   const { submissionId } = useParams<{ submissionId: string }>();
   const [searchParams] = useSearchParams();
   const month = searchParams.get('month');
-
-  // Get current user data from Redux store
-  const { user } = useAppSelector((state: any) => state.auth);
-  const currentUserOrgUnitId = user?.org_unit_data?.org_unit_id ?? null;
-  const currentEmployeeId = user?.employee_data?.employee_id ?? null;
+  console.log(submissionType);
 
   // Use our custom hook to fetch actuals data
-  const { loading, error, entriesWithActuals, submissionStatus, refreshData } = useMPMActuals();
+  const {
+    loading,
+    error,
+    entriesWithActuals,
+    submissionStatus,
+    submissionEvidence,
+    refreshData,
+    authStatus,
+  } = useActuals();
+
+  console.log(entriesWithActuals);
+  console.log(authStatus);
+
 
   // Layout states
   const [isSidebarOpen, setIsSidebarOpen] = useState(() => {
@@ -61,13 +75,16 @@ const MPMActuals = () => {
   const [isSubmitDialogOpen, setIsSubmitDialogOpen] = useState(false);
   const [isApproveDialogOpen, setIsApproveDialogOpen] = useState(false);
   const [isRejectDialogOpen, setIsRejectDialogOpen] = useState(false);
+  const [isSubmitEvidenceDialogOpen, setIsSubmitEvidenceDialogOpen] = useState(false);
+  const [isViewEvidenceDialogOpen, setIsViewEvidenceDialogOpen] = useState(false);
   const [submissionComments, setSubmissionComments] = useState<string>('');
   const [approvalNotes, setApprovalNotes] = useState<string>('');
-
-  // Authorization states
-  const [isAuthorized, setIsAuthorized] = useState<boolean>(false);
-  const [isApprover, setIsApprover] = useState<boolean>(false);
-  const [approvalId, setApprovalId] = useState<number | null>(null);
+  const [isValidateDialogOpen, setIsValidateDialogOpen] = useState(false);
+  const [isAdminRejectDialogOpen, setIsAdminRejectDialogOpen] = useState(false);
+  const [validationComments, setValidationComments] = useState('');
+  const [isValidating, setIsValidating] = useState(false);
+  const [isRevertToDraftDialogOpen, setIsRevertToDraftDialogOpen] = useState(false);
+  const [isReverting, setIsReverting] = useState(false);
 
   // UI states
   const [perspectives, setPerspectives] = useState<KPIPerspective[]>([]);
@@ -80,49 +97,6 @@ const MPMActuals = () => {
 
   // Filtering states
   const [selectedPerspective, setSelectedPerspective] = useState<string>('');
-  const [startDate, setStartDate] = useState<string>('');
-  const [endDate, setEndDate] = useState<string>('');
-  const [selectedPeriod, setSelectedPeriod] = useState<string>('');
-  const [selectedType, setSelectedType] = useState<string>('Monthly');
-
-  // Check if user is authorized to submit actuals or is an approver
-  useEffect(() => {
-    const checkAuthorization = async () => {
-      if (submissionId && currentUserOrgUnitId && currentEmployeeId) {
-        try {
-          // Fetch submission details
-          const submissionData = await submissionService.getSubmission(parseInt(submissionId));
-
-          // Check if submission org unit matches user's org unit
-          const isUserAuthorized = submissionData.org_unit_id === currentUserOrgUnitId;
-
-          setIsAuthorized(isUserAuthorized);
-
-          // Check if user is an approver for this submission
-          const approvalData = await approvalService.getApprovalsBySubmission(parseInt(submissionId));
-
-          // Find if current user is an approver with pending approval
-          const userApproval = approvalData.find(
-            approval => approval.approver_id === currentEmployeeId &&
-              approval.approval_status === 'Pending'
-          );
-
-          if (userApproval) {
-            setIsApprover(true);
-            setApprovalId(userApproval.approval_id);
-          } else {
-            setIsApprover(false);
-          }
-        } catch (error) {
-          console.error('Error checking authorization:', error);
-          setIsAuthorized(false);
-          setIsApprover(false);
-        }
-      }
-    };
-
-    checkAuthorization();
-  }, [submissionId, currentUserOrgUnitId, currentEmployeeId]);
 
   // Fetch perspectives on component mount
   useEffect(() => {
@@ -137,6 +111,7 @@ const MPMActuals = () => {
 
     fetchPerspectives();
   }, []);
+
 
   // Group entries by perspective
   const groupedEntries = useMemo(() => {
@@ -170,35 +145,8 @@ const MPMActuals = () => {
       });
     }
 
-    // Filter by date range
-    if (startDate || endDate) {
-      Object.keys(result).forEach(perspectiveId => {
-        result[perspectiveId] = result[perspectiveId].filter(entry => {
-          const entryMonth = entry.actual_month;
-          const entryDate = new Date(2024, entryMonth - 1, 1); // Using 2024 as base year for comparison
-
-          if (startDate) {
-            const filterStart = new Date(startDate);
-            if (entryDate < filterStart) return false;
-          }
-
-          if (endDate) {
-            const filterEnd = new Date(endDate);
-            if (entryDate > filterEnd) return false;
-          }
-
-          return true;
-        });
-
-        // Remove perspective if all entries filtered out
-        if (result[perspectiveId].length === 0) {
-          delete result[perspectiveId];
-        }
-      });
-    }
-
     return result;
-  }, [groupedEntries, selectedPerspective, startDate, endDate, perspectives]);
+  }, [groupedEntries, selectedPerspective, perspectives]);
 
   // Calculate pagination
   const totalItems = useMemo(() => {
@@ -228,9 +176,11 @@ const MPMActuals = () => {
     return result;
   }, [filteredEntries, currentPage, itemsPerPage]);
 
-  // Submit function - now simplified to just update submission status
+
+
+  // Submit actuals
   const handleSubmitActuals = async () => {
-    if (!submissionId || !isAuthorized) return;
+    if (!submissionId || !authStatus.canSubmit) return;
 
     setIsSubmitting(true);
     try {
@@ -263,16 +213,26 @@ const MPMActuals = () => {
 
   // Approve function
   const handleApprove = async () => {
-    if (!approvalId) return;
+    if (!authStatus.canApprove) return;
 
     setIsProcessingApproval(true);
     try {
+      // Get the approval ID from the submission
+      const approvalData = await approvalService.getApprovalsBySubmission(parseInt(submissionId!));
+      const userApproval = approvalData.find(
+        approval => approval.approval_status === 'Pending'
+      );
+
+      if (!userApproval) {
+        throw new Error('No pending approval found');
+      }
+
       const statusUpdate: ApprovalStatusUpdate = {
         approval_status: 'Approved',
         approval_notes: approvalNotes
       };
 
-      await approvalService.updateApprovalStatus(approvalId, statusUpdate);
+      await approvalService.updateApprovalStatus(userApproval.approval_id, statusUpdate);
 
       toast({
         title: "Success",
@@ -281,7 +241,6 @@ const MPMActuals = () => {
 
       setIsApproveDialogOpen(false);
       setApprovalNotes('');
-      setIsApprover(false);
 
       // Refresh data after approval
       refreshData();
@@ -299,16 +258,26 @@ const MPMActuals = () => {
 
   // Reject function
   const handleReject = async () => {
-    if (!approvalId) return;
+    if (!authStatus.canReject) return;
 
     setIsProcessingApproval(true);
     try {
+      // Get the approval ID from the submission
+      const approvalData = await approvalService.getApprovalsBySubmission(parseInt(submissionId!));
+      const userApproval = approvalData.find(
+        approval => approval.approval_status === 'Pending'
+      );
+
+      if (!userApproval) {
+        throw new Error('No pending approval found');
+      }
+
       const statusUpdate: ApprovalStatusUpdate = {
         approval_status: 'Rejected',
         approval_notes: approvalNotes
       };
 
-      await approvalService.updateApprovalStatus(approvalId, statusUpdate);
+      await approvalService.updateApprovalStatus(userApproval.approval_id, statusUpdate);
 
       toast({
         title: "Success",
@@ -317,7 +286,6 @@ const MPMActuals = () => {
 
       setIsRejectDialogOpen(false);
       setApprovalNotes('');
-      setIsApprover(false);
 
       // Refresh data after rejection
       refreshData();
@@ -330,6 +298,103 @@ const MPMActuals = () => {
       });
     } finally {
       setIsProcessingApproval(false);
+    }
+  };
+
+  // Validation handler
+  const handleValidate = async () => {
+    if (!submissionId || !authStatus.canValidate) return;
+
+    setIsValidating(true);
+    try {
+      await submissionService.validateSubmission(parseInt(submissionId), validationComments);
+
+      toast({
+        title: "Success",
+        description: "Actuals validated successfully",
+      });
+
+      setIsValidateDialogOpen(false);
+      setValidationComments('');
+
+      // Refresh data to get updated status
+      refreshData();
+    } catch (error) {
+      console.error('Error validating submission:', error);
+      toast({
+        title: "Error",
+        description: "Failed to validate actuals",
+        variant: "destructive",
+      });
+    } finally {
+      setIsValidating(false);
+    }
+  };
+
+  // Admin reject handler
+  const handleAdminReject = async () => {
+    if (!submissionId || !authStatus.canValidate) return;
+
+    setIsValidating(true);
+    try {
+      const rejectData = {
+        rejection_reason: validationComments
+      };
+
+      await submissionService.adminRejectSubmission(parseInt(submissionId), rejectData);
+
+      toast({
+        title: "Success",
+        description: "Actuals rejected successfully",
+      });
+
+      setIsAdminRejectDialogOpen(false);
+      setValidationComments('');
+
+      // Refresh data to get updated status
+      refreshData();
+    } catch (error) {
+      console.error('Error rejecting submission:', error);
+      toast({
+        title: "Error",
+        description: "Failed to reject actuals",
+        variant: "destructive",
+      });
+    } finally {
+      setIsValidating(false);
+    }
+  };
+
+  // Revert to draft handler
+  const handleRevertToDraft = async () => {
+    if (!submissionId || !authStatus.canRevertToDraft) return;
+
+    setIsReverting(true);
+    try {
+      const statusUpdate: SubmissionStatusUpdate = {
+        submission_status: 'Draft',
+        submission_comments: 'Reverted to draft status'
+      };
+
+      await submissionService.updateSubmissionStatus(Number(submissionId), statusUpdate);
+
+      toast({
+        title: "Success",
+        description: "Successfully reverted to draft status",
+      });
+
+      setIsRevertToDraftDialogOpen(false);
+      // Refresh data after status change
+      refreshData();
+    } catch (error) {
+      console.error('Error reverting to draft:', error);
+      toast({
+        title: "Error",
+        description: "Failed to revert to draft status",
+        variant: "destructive",
+      });
+    } finally {
+      setIsReverting(false);
     }
   };
 
@@ -349,33 +414,10 @@ const MPMActuals = () => {
     setCurrentPage(1);
   };
 
-  // Filter handlers
-  const handleStartDateChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    setStartDate(e.target.value);
-  };
-
-  const handleEndDateChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    setEndDate(e.target.value);
-  };
-
-  const handlePeriodChange = (value: string) => {
-    setSelectedPeriod(value);
-  };
-
-  const handleTypeChange = (value: string) => {
-    setSelectedType(value);
-  };
 
   const handlePerspectiveChange = (value: string) => {
     setSelectedPerspective(value);
   };
-
-  // Check if user can submit actuals
-  const canSubmitActuals = isAuthorized && submissionStatus === 'Draft';
-
-  // Check if submission can be approved
-  const canApproveOrReject = isApprover && submissionStatus === 'Submitted';
-
 
   if (loading) {
     return <div className="flex justify-center items-center h-screen">Loading...</div>;
@@ -385,7 +427,12 @@ const MPMActuals = () => {
     return <div className="flex justify-center items-center h-screen text-red-500">{error}</div>;
   }
 
+  if (!authStatus.canView) {
+    return <div className="flex justify-center items-center h-screen">You don't have permission to view this page.</div>;
+  }
+
   const currentMonth = month ? getMonthName(parseInt(month)) : 'Monthly';
+  const hasEvidence = submissionEvidence && submissionEvidence.length > 0;
 
   return (
     <div className="font-montserrat min-h-screen bg-white dark:bg-gray-900">
@@ -415,16 +462,66 @@ const MPMActuals = () => {
                 subtitle={`MPM Actuals Submission ID: ${submissionId} ${submissionStatus ? `(${submissionStatus})` : ''}`}
               />
 
+              {/* Evidence Status */}
+              <Card className="border-[#46B749] dark:border-[#1B6131] shadow-md">
+                <CardHeader className="bg-gradient-to-r from-[#f0f9f0] to-[#e6f3e6] dark:from-[#0a2e14] dark:to-[#0a3419] pb-4">
+                  <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between space-y-4 sm:space-y-0">
+                    <CardTitle className="font-semibold text-gray-700 dark:text-gray-200 flex items-center">
+                      <FileText className="mr-2 h-5 w-5" />
+                      Evidence Status
+                    </CardTitle>
+                    <div className="flex flex-col sm:flex-row space-y-2 sm:space-y-0 sm:space-x-4 w-full md:w-auto">
+                      {authStatus.canSubmitEvidence && (
+                        <Button
+                          variant="outline"
+                          className="w-full sm:w-auto border-[#1B6131] text-[#1B6131] hover:bg-[#E4EFCF] flex items-center justify-center dark:text-white"
+                          onClick={() => setIsSubmitEvidenceDialogOpen(true)}
+                        >
+                          <Upload className="mr-2 h-4 w-4" />
+                          Upload Evidence
+                        </Button>
+                      )}
+                      {hasEvidence && (
+                        <Button
+                          variant="outline"
+                          className="w-full sm:w-auto border-[#1B6131] text-[#1B6131] hover:bg-[#E4EFCF] flex items-center justify-center dark:text-white"
+                          onClick={() => setIsViewEvidenceDialogOpen(true)}
+                        >
+                          <FileText className="mr-2 h-4 w-4" />
+                          View Evidence
+                        </Button>
+                      )}
+                    </div>
+                  </div>
+                </CardHeader>
+                <CardContent className="p-4">
+                  <div className="p-4 bg-gray-50 dark:bg-gray-800 rounded-md">
+                    <p className="text-sm">
+                      {hasEvidence
+                        ? `${submissionEvidence.length} file(s) uploaded`
+                        : "No evidence uploaded yet"}
+                    </p>
+                    {hasEvidence && (
+                      <ul className="mt-2 space-y-1">
+                        {submissionEvidence.map((evidence, index) => (
+                          <li key={index} className="text-sm flex items-center">
+                            <FileText className="h-4 w-4 mr-2 text-gray-600 dark:text-gray-400" />
+                            {evidence.evidence_file_name || `Evidence ${index + 1}`}
+                          </li>
+                        ))}
+                      </ul>
+                    )}
+                    {!hasEvidence && submissionStatus === 'Draft' && (
+                      <p className="mt-2 text-sm text-amber-600 dark:text-amber-400">
+                        Evidence must be uploaded before submitting actual values.
+                      </p>
+                    )}
+                  </div>
+                </CardContent>
+              </Card>
+
               {/* Filter Section */}
               <Filtering
-                startDate={startDate}
-                endDate={endDate}
-                handleStartDateChange={handleStartDateChange}
-                handleEndDateChange={handleEndDateChange}
-                handlePeriodChange={handlePeriodChange}
-                selectedPeriod={selectedPeriod}
-                handleTypeChange={handleTypeChange}
-                selectedType={selectedType}
               >
                 {/* Custom filter for perspective */}
                 <div className="space-y-3">
@@ -462,8 +559,8 @@ const MPMActuals = () => {
                       KPI Actuals Table
                     </CardTitle>
                     <div className="flex flex-col sm:flex-row space-y-2 sm:space-y-0 sm:space-x-4 w-full md:w-auto">
-                      {/* Approval Buttons - Only show if user is an approver and submission is in submitted status */}
-                      {canApproveOrReject && (
+                      {/* Approval Buttons - Only show if user can approve/reject */}
+                      {authStatus.canApprove && submissionStatus === 'Submitted' && (
                         <>
                           <Button
                             variant="outline"
@@ -485,8 +582,30 @@ const MPMActuals = () => {
                         </>
                       )}
 
-                      {/* Submit Button - Only show if user is authorized and submission is in draft status */}
-                      {canSubmitActuals && (
+                      {authStatus.canValidate && submissionStatus === 'Approved' && (
+                        <>
+                          <Button
+                            variant="outline"
+                            className="w-full sm:w-auto border-red-600 text-red-600 hover:bg-red-50 flex items-center justify-center dark:hover:bg-red-900/20"
+                            onClick={() => setIsAdminRejectDialogOpen(true)}
+                          >
+                            <XCircle className="mr-2 h-4 w-4" />
+                            Reject
+                          </Button>
+
+                          <Button
+                            variant="outline"
+                            className="w-full sm:w-auto border-[#1B6131] text-[#1B6131] hover:bg-[#E4EFCF] flex items-center justify-center dark:text-white"
+                            onClick={() => setIsValidateDialogOpen(true)}
+                          >
+                            <CheckSquare className="mr-2 h-4 w-4" />
+                            Validate
+                          </Button>
+                        </>
+                      )}
+
+                      {/* Submit Button - Only show if user can submit actuals and evidence exists */}
+                      {authStatus.canSubmit && hasEvidence && (
                         <Button
                           variant="outline"
                           className="w-full sm:w-auto border-[#1B6131] text-[#1B6131] hover:bg-[#E4EFCF] flex items-center justify-center dark:text-white"
@@ -494,6 +613,16 @@ const MPMActuals = () => {
                         >
                           <Send className="mr-2 h-4 w-4" />
                           Submit Actuals
+                        </Button>
+                      )}
+                      {authStatus.canRevertToDraft && (
+                        <Button
+                          variant="outline"
+                          className="w-full sm:w-auto border-amber-600 text-amber-600 hover:bg-amber-50 flex items-center justify-center dark:hover:bg-amber-900/20"
+                          onClick={() => setIsRevertToDraftDialogOpen(true)}
+                        >
+                          <RotateCcw className="mr-2 h-4 w-4" />
+                          Revert to Draft
                         </Button>
                       )}
                     </div>
@@ -504,7 +633,7 @@ const MPMActuals = () => {
                     <table className="w-full border-collapse">
                       <thead className="bg-[#1B6131] text-white">
                         <tr>
-                          {isAuthorized && submissionStatus === 'Draft' && (
+                          {authStatus.canEdit && submissionStatus === 'Draft' && (
                             <th className="p-4 text-center whitespace-nowrap">Actions</th>
                           )}
                           <th className="p-4 text-center whitespace-nowrap">KPI</th>
@@ -523,7 +652,7 @@ const MPMActuals = () => {
                           Object.entries(paginatedData).map(([perspectiveId, entries]) => (
                             <React.Fragment key={perspectiveId}>
                               <tr className="bg-gray-50 dark:bg-gray-800">
-                                <td colSpan={10} className="p-3 font-semibold">
+                                <td colSpan={authStatus.canEdit && submissionStatus === 'Draft' && hasEvidence ? 10 : 9} className="p-3 font-semibold">
                                   {getPerspectiveName(perspectiveId)}
                                 </td>
                               </tr>
@@ -532,10 +661,9 @@ const MPMActuals = () => {
                                   key={`${entry.entry_id}-${entry.actual_month}`}
                                   className="hover:bg-gray-50 dark:hover:bg-gray-800/50"
                                 >
-                                  {isAuthorized && submissionStatus === 'Draft' && (
+                                  {authStatus.canEdit && submissionStatus === 'Draft' && (
                                     <td className="p-4 whitespace-nowrap">
                                       <div className="flex justify-center space-x-2">
-
                                         <Button
                                           variant="ghost"
                                           size="icon"
@@ -547,7 +675,6 @@ const MPMActuals = () => {
                                         >
                                           <Edit className="h-4 w-4" />
                                         </Button>
-
                                       </div>
                                     </td>
                                   )}
@@ -564,17 +691,20 @@ const MPMActuals = () => {
                                     {entry.month_name}
                                   </td>
                                   {/* Handle case when actuals array exists and has items */}
-                                  {entry.actuals && entry.actuals.length > 0 ? (
+                                  {entry.actuals ? (
                                     entry.actuals.map((actual) => (
                                       <React.Fragment key={actual.actual_id || `empty-${entry.entry_id}`}>
                                         <td className="p-4 whitespace-nowrap text-center">
-                                          {actual.target_value || 0}
+                                          {String(entry.actuals?.[0]?.target_value ||
+                                            entry.kpiDefinition?.kpi_target || 'N/A')}
                                         </td>
                                         <td className="p-4 whitespace-nowrap text-center">
-                                          {actual.actual_value || 0}
+                                          {actual.actual_value || 'Not set'}
                                         </td>
                                         <td className="p-4 whitespace-nowrap text-center">
-                                          {actual.achievement ? `${actual.achievement.toFixed(2)}%` : '0%'}
+                                          {actual.actual_value && entry.kpiDefinition?.kpi_target
+                                            ? `${(Number(actual.actual_value) / Number(entry.kpiDefinition.kpi_target) * 100).toFixed(2)}%`
+                                            : 'N/A'}
                                         </td>
                                         <td className="p-4 whitespace-normal max-w-xs text-center">
                                           {actual.problem_identification || 'N/A'}
@@ -585,14 +715,24 @@ const MPMActuals = () => {
                                       </React.Fragment>
                                     ))
                                   ) : (
-                                    // Fallback untuk kasus di mana actuals array kosong atau undefined
-                                    <React.Fragment>
-                                      <td className="p-4 whitespace-nowrap text-center">0</td>
-                                      <td className="p-4 whitespace-nowrap text-center">0</td>
-                                      <td className="p-4 whitespace-nowrap text-center">0%</td>
-                                      <td className="p-4 whitespace-normal max-w-xs text-center"></td>
-                                      <td className="p-4 whitespace-normal max-w-xs text-center"></td>
-                                    </React.Fragment>
+                                    // Handle case when no actuals exist
+                                    <>
+                                      <td className="p-4 whitespace-nowrap text-center">
+                                        {entry.target_value || 'N/A'}
+                                      </td>
+                                      <td className="p-4 whitespace-nowrap text-center">
+                                        Not set
+                                      </td>
+                                      <td className="p-4 whitespace-nowrap text-center">
+                                        N/A
+                                      </td>
+                                      <td className="p-4 whitespace-normal max-w-xs text-center">
+                                        N/A
+                                      </td>
+                                      <td className="p-4 whitespace-normal max-w-xs text-center">
+                                        N/A
+                                      </td>
+                                    </>
                                   )}
                                 </tr>
                               ))}
@@ -600,26 +740,26 @@ const MPMActuals = () => {
                           ))
                         ) : (
                           <tr>
-                            <td colSpan={10} className="p-4 text-center">
-                              No data found
+                            <td colSpan={authStatus.canEdit && submissionStatus === 'Draft' && hasEvidence ? 10 : 9} className="p-4 text-center">
+                              No records found.
                             </td>
                           </tr>
                         )}
                       </tbody>
                     </table>
                   </div>
-
-                  {/* Pagination */}
-                  <Pagination
-                    currentPage={currentPage}
-                    itemsPerPage={itemsPerPage}
-                    totalPages={totalPages}
-                    totalItems={totalItems}
-                    onPageChange={handlePageChange}
-                    onItemsPerPageChange={handleItemsPerPageChange}
-                  />
                 </CardContent>
               </Card>
+
+              {/* Pagination */}
+              <Pagination
+                currentPage={currentPage}
+                totalPages={totalPages}
+                onPageChange={handlePageChange}
+                itemsPerPage={itemsPerPage}
+                totalItems={totalItems}
+                onItemsPerPageChange={handleItemsPerPageChange}
+              />
             </div>
           </main>
           <Footer />
@@ -627,41 +767,101 @@ const MPMActuals = () => {
       </div>
 
       {/* Dialogs */}
-      <EditActualDialog
-        isOpen={isEditDialogOpen}
-        onClose={() => setIsEditDialogOpen(false)}
-        selectedActual={selectedActual}
-        setSelectedActual={setSelectedActual}
-        refreshData={refreshData}
-      />
-      <SubmitDialog
-        isOpen={isSubmitDialogOpen}
-        onClose={() => setIsSubmitDialogOpen(false)}
-        onSubmit={handleSubmitActuals}
-        comments={submissionComments}
-        setComments={setSubmissionComments}
-        isSubmitting={isSubmitting}
+      {isEditDialogOpen && selectedActual && (
+        <EditActualDialog
+          isOpen={isEditDialogOpen}
+          onClose={() => setIsEditDialogOpen(false)}
+          selectedActual={selectedActual}
+          setSelectedActual={setSelectedActual}
+          refreshData={refreshData}
+        />
+      )}
+
+      <ValidateDialog
+        isOpen={isValidateDialogOpen}
+        onClose={() => setIsValidateDialogOpen(false)}
+        comments={validationComments}
+        setComments={setValidationComments}
+        onValidate={handleValidate}
+        isProcessing={isValidating}
       />
 
-      <ApproveDialog
-        isOpen={isApproveDialogOpen}
-        onClose={() => setIsApproveDialogOpen(false)}
-        onApprove={handleApprove}
-        notes={approvalNotes}
-        setNotes={setApprovalNotes}
-        isProcessing={isProcessingApproval}
-      />
-
+      {/* Admin Reject Dialog - reusing the RejectDialog component with a different handler */}
       <RejectDialog
-        isOpen={isRejectDialogOpen}
-        onClose={() => setIsRejectDialogOpen(false)}
-        onReject={handleReject}
-        notes={approvalNotes}
-        setNotes={setApprovalNotes}
-        isProcessing={isProcessingApproval}
+        isOpen={isAdminRejectDialogOpen}
+        onClose={() => setIsAdminRejectDialogOpen(false)}
+        notes={validationComments}
+        setNotes={setValidationComments}
+        onReject={handleAdminReject}
+        isProcessing={isValidating}
+        title="Admin Rejection"
+        description="You are about to reject these previously approved targets as an admin. Please provide a reason."
+      />
+
+      {isSubmitDialogOpen && (
+        <SubmitDialog
+          isOpen={isSubmitDialogOpen}
+          onClose={() => setIsSubmitDialogOpen(false)}
+          comments={submissionComments}
+          setComments={setSubmissionComments}
+          onSubmit={handleSubmitActuals}
+          isSubmitting={isSubmitting}
+        // description="Are you sure you want to submit these actuals? Once submitted, you won't be able to make changes until it goes through the approval process."
+        />
+      )}
+
+      {isApproveDialogOpen && (
+        <ApproveDialog
+          isOpen={isApproveDialogOpen}
+          onClose={() => setIsApproveDialogOpen(false)}
+          isProcessing={isProcessingApproval}
+          onApprove={handleApprove}
+          setNotes={setApprovalNotes}
+          notes={approvalNotes}
+        // title="Approve Actuals"
+        // description="Are you sure you want to approve these actuals?"
+        />
+      )}
+
+      {isRejectDialogOpen && (
+        <RejectDialog
+          isOpen={isRejectDialogOpen}
+          onClose={() => setIsRejectDialogOpen(false)}
+          isProcessing={isProcessingApproval}
+          onReject={handleReject}
+          setNotes={setApprovalNotes}
+          notes={approvalNotes}
+        // title="Reject Actuals"
+        // description="Are you sure you want to reject these actuals? Please provide a reason for rejection."
+        />
+      )}
+
+      {isSubmitEvidenceDialogOpen && (
+        <UploadEvidenceDialog
+          submissionId={Number(submissionId)}
+          isOpen={isSubmitEvidenceDialogOpen}
+          onClose={() => setIsSubmitEvidenceDialogOpen(false)}
+        />
+      )}
+
+      {isViewEvidenceDialogOpen && submissionEvidence && (
+        <ViewEvidenceDialog
+          isOpen={isViewEvidenceDialogOpen}
+          onClose={() => setIsViewEvidenceDialogOpen(false)}
+          evidences={submissionEvidence}
+        />
+      )}
+      {/* Revert to Draft Dialog */}
+      <ConfirmDialog
+        isOpen={isRevertToDraftDialogOpen}
+        onClose={() => setIsRevertToDraftDialogOpen(false)}
+        onConfirm={handleRevertToDraft}
+        isProcessing={isReverting}
+        title="Revert to Draft"
+        description="Are you sure you want to revert this submission to draft status? This will allow you to make changes before submitting again."
       />
     </div>
   );
 };
 
-export default MPMActuals;
+export default Actuals;

@@ -48,11 +48,11 @@ const BSCDashboard = () => {
     const [kpiData, setKpiData] = useState<BSCEntry[]>([]);
     const [_, setPeriods] = useState<Period[]>([]);
     const [perspectives, setPerspectives] = useState<KPIPerspective[]>([]);
-    
+
     // Pagination state
     const [currentPage, setCurrentPage] = useState(1);
     const [itemsPerPage, setItemsPerPage] = useState(10);
-    
+
     // Search and filtering state
     const [searchTerm, setSearchTerm] = useState('');
     const [selectedPerspective, setSelectedPerspective] = useState<string>('All');
@@ -64,7 +64,7 @@ const BSCDashboard = () => {
             try {
                 const fetchedPeriods = await periodService.getPeriods();
                 setPeriods(fetchedPeriods);
-                
+
                 // Set default to active period if available
                 try {
                     const activePeriod = await periodService.getActivePeriod();
@@ -79,7 +79,7 @@ const BSCDashboard = () => {
                 console.error("Failed to fetch periods:", error);
             }
         };
-        
+
         fetchPeriods();
     }, []);
 
@@ -93,7 +93,7 @@ const BSCDashboard = () => {
                 console.error("Failed to fetch perspectives:", error);
             }
         };
-        
+
         fetchPerspectives();
     }, []);
 
@@ -101,11 +101,11 @@ const BSCDashboard = () => {
     useEffect(() => {
         const fetchKpiData = async () => {
             if (!selectedPeriodId) return;
-            
+
             setLoading(true);
             try {
                 const data = await kpiDefinitionService.getKPIsByType('BSC', selectedPeriodId);
-                
+
                 // Map perspective IDs to names for each KPI
                 const enhancedData = data.map(kpi => {
                     const perspectiveObj = perspectives.find(p => p.perspective_id === kpi.kpi_perspective_id);
@@ -114,14 +114,14 @@ const BSCDashboard = () => {
                         perspective_name: perspectiveObj?.perspective_name || 'Unknown'
                     };
                 });
-                
+
                 // Add owner_name and children_count to match BSCEntry type
                 const completeData = enhancedData.map(kpi => ({
                     ...kpi,
                     owner_name: '', // Add default value
                     children_count: 0 // Add default value
                 }));
-                
+
                 setKpiData(completeData);
             } catch (error) {
                 console.error("Failed to fetch KPI data:", error);
@@ -129,7 +129,7 @@ const BSCDashboard = () => {
                 setLoading(false);
             }
         };
-        
+
         // Only fetch data when both selectedPeriodId and perspectives are available
         if (selectedPeriodId && perspectives.length > 0) {
             fetchKpiData();
@@ -217,33 +217,33 @@ const BSCDashboard = () => {
     }, [itemsPerPage]);
 
     // Status indicator component
-    const StatusIndicator: React.FC<{ target?: Decimal | string | number | null, actual?: Decimal | string | number | null }> = 
+    const StatusIndicator: React.FC<{ target?: Decimal | string | number | null, actual?: Decimal | string | number | null }> =
         ({ target, actual }) => {
-        if (!target || !actual) return <Minus className="text-yellow-500" />;
-        
-        const targetNum = typeof target === 'object' ? target.toNumber() : Number(target);
-        const actualNum = typeof actual === 'object' ? actual.toNumber() : Number(actual);
-        
-        // Calculate achievement percentage (similar to what would be in your API)
-        const achievement = (actualNum / targetNum) * 100;
-        
-        if (achievement > 100) return <ChevronUp className="text-green-500" />;
-        if (achievement < 100) return <ChevronDown className="text-red-500" />;
-        return <Minus className="text-yellow-500" />;
-    };
+            if (!target || !actual) return <Minus className="text-yellow-500" />;
+
+            const targetNum = typeof target === 'object' ? target.toNumber() : Number(target);
+            const actualNum = typeof actual === 'object' ? actual.toNumber() : Number(actual);
+
+            // Calculate achievement percentage (similar to what would be in your API)
+            const achievement = (actualNum / targetNum) * 100;
+
+            if (achievement > 100) return <ChevronUp className="text-green-500" />;
+            if (achievement < 100) return <ChevronDown className="text-red-500" />;
+            return <Minus className="text-yellow-500" />;
+        };
 
     // Calculate totals
     const totals = useMemo(() => {
         return filteredData.reduce((acc, curr) => {
-            const weight = typeof curr.kpi_weight === 'object' 
-                ? curr.kpi_weight.toNumber() 
+            const weight = typeof curr.kpi_weight === 'object'
+                ? curr.kpi_weight.toNumber()
                 : Number(curr.kpi_weight);
-            
+
             // In a real app, you would get these from the API
             // For this example, I'm computing placeholders for score and endScore
             const score = weight; // Placeholder calculation
             const endScore = weight; // Placeholder calculation
-            
+
             return {
                 weight: acc.weight + weight,
                 score: acc.score + score,
@@ -322,15 +322,6 @@ const BSCDashboard = () => {
 
                             {/* Filter Section */}
                             <Filtering
-                                startDate={startDate}
-                                endDate={endDate}
-                                handleStartDateChange={handleStartDateChange}
-                                handleEndDateChange={handleEndDateChange}
-                                isEndDateDisabled={isEndDateDisabled}
-                                handlePeriodChange={(periodId) => handlePeriodChange(Number(periodId))}
-                                selectedPeriod={selectedPeriodId?.toString() || ''}
-                                // periodsData={periods.map(p => ({ id: p.period_id.toString(), name: p.period_name }))}
-                                selectedType={selectedType}
                             >
                                 {/* Custom Filter Options */}
                                 <div className="space-y-3 md:col-span-2">
@@ -420,7 +411,7 @@ const BSCDashboard = () => {
                                                         isExpanded: expandedRow === item.kpi_id
                                                     }));
 
-                                                   
+
 
                                                     return (
                                                         <React.Fragment key={perspectiveName}>
@@ -429,20 +420,20 @@ const BSCDashboard = () => {
                                                                 const isFirstInGroup = index === 0;
                                                                 const totalRowsInPerspective = items.length +
                                                                     itemsWithExpanded.filter(i => i.isExpanded).length + 1;
-                                                                    
+
                                                                 // Calculate achievement - normally this would come from the API
-                                                                const target = typeof item.kpi_target === 'object' 
-                                                                    ? item.kpi_target?.toNumber() 
+                                                                const target = typeof item.kpi_target === 'object'
+                                                                    ? item.kpi_target?.toNumber()
                                                                     : Number(item.kpi_target);
-                                                                    
+
                                                                 const actual = item.kpi_metadata?.actual
                                                                     ? Number(item.kpi_metadata.actual)
                                                                     : null;
-                                                                    
+
                                                                 const achievement = target && actual
                                                                     ? ((actual / target) * 100).toFixed(2)
                                                                     : '-';
-                                                                
+
                                                                 return (
                                                                     <React.Fragment key={item.kpi_id}>
                                                                         <TableRow
@@ -467,16 +458,16 @@ const BSCDashboard = () => {
                                                                             </TableCell>
                                                                             <TableCell>{item.kpi_name}</TableCell>
                                                                             <TableCell>
-                                                                                {typeof item.kpi_weight === 'object' 
-                                                                                    ? item.kpi_weight.toFixed(2) 
+                                                                                {typeof item.kpi_weight === 'object'
+                                                                                    ? item.kpi_weight.toFixed(2)
                                                                                     : Number(item.kpi_weight).toFixed(2)}%
                                                                             </TableCell>
                                                                             <TableCell>{item.kpi_uom}</TableCell>
                                                                             <TableCell>{item.kpi_category}</TableCell>
                                                                             <TableCell>
-                                                                                {item.kpi_target 
-                                                                                    ? (typeof item.kpi_target === 'object' 
-                                                                                        ? item.kpi_target.toString() 
+                                                                                {item.kpi_target
+                                                                                    ? (typeof item.kpi_target === 'object'
+                                                                                        ? item.kpi_target.toString()
                                                                                         : item.kpi_target)
                                                                                     : '-'}
                                                                             </TableCell>
@@ -485,19 +476,19 @@ const BSCDashboard = () => {
                                                                             </TableCell>
                                                                             <TableCell>{achievement}%</TableCell>
                                                                             <TableCell>
-                                                                                <StatusIndicator 
-                                                                                    target={item.kpi_target} 
-                                                                                    actual={item.kpi_metadata?.actual} 
+                                                                                <StatusIndicator
+                                                                                    target={item.kpi_target}
+                                                                                    actual={item.kpi_metadata?.actual}
                                                                                 />
                                                                             </TableCell>
                                                                             <TableCell>
-                                                                                {(typeof item.kpi_weight === 'object' 
-                                                                                    ? item.kpi_weight.toFixed(2) 
+                                                                                {(typeof item.kpi_weight === 'object'
+                                                                                    ? item.kpi_weight.toFixed(2)
                                                                                     : Number(item.kpi_weight).toFixed(2))}
                                                                             </TableCell>
                                                                             <TableCell>
-                                                                                {(typeof item.kpi_weight === 'object' 
-                                                                                    ? item.kpi_weight.toFixed(2) 
+                                                                                {(typeof item.kpi_weight === 'object'
+                                                                                    ? item.kpi_weight.toFixed(2)
                                                                                     : Number(item.kpi_weight).toFixed(2))}
                                                                             </TableCell>
                                                                         </TableRow>
@@ -513,7 +504,7 @@ const BSCDashboard = () => {
                                                             })}
 
                                                             {/* Render perspective subtotal row with weight, score, and score akhir */}
-                                                            <TableRow className="bg-[#E4EFCF]/50 dark:bg-[#1B6131]/30">                                                              
+                                                            <TableRow className="bg-[#E4EFCF]/50 dark:bg-[#1B6131]/30">
                                                             </TableRow>
                                                         </React.Fragment>
                                                     );
@@ -540,7 +531,7 @@ const BSCDashboard = () => {
                                             </TableBody>
                                         </Table>
                                     )}
-                                    
+
                                     {!loading && (
                                         <Pagination
                                             currentPage={currentPage}

@@ -30,9 +30,9 @@ import { ValidateDialog } from '@/components/MPM/ValidateDialog';
 import { ConfirmDialog } from '@/components/MPM/ConfirmDialog';
 
 interface TargetsProps {
-  submissionType: string;
+  submissionTypePic: string;
 }
-const Targets = ({ submissionType }: TargetsProps) => {
+const Targets = ({ submissionTypePic: submissionType }: TargetsProps) => {
   const { submissionId } = useParams<{ submissionId: string }>();
   const navigate = useNavigate();
   const { toast } = useToast();
@@ -67,10 +67,6 @@ const Targets = ({ submissionType }: TargetsProps) => {
 
   // Filtering states
   const [selectedPerspective, setSelectedPerspective] = useState<string>('');
-  const [startDate, setStartDate] = useState<string>('');
-  const [endDate, setEndDate] = useState<string>('');
-  const [selectedPeriod, setSelectedPeriod] = useState<string>('');
-  const [selectedType, setSelectedType] = useState<string>('Monthly');
 
   // Pagination states
   const [currentPage, setCurrentPage] = useState(1);
@@ -191,22 +187,6 @@ const Targets = ({ submissionType }: TargetsProps) => {
     }
   };
 
-  // Event handlers for filters
-  const handleStartDateChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    setStartDate(e.target.value);
-  };
-
-  const handleEndDateChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    setEndDate(e.target.value);
-  };
-
-  const handlePeriodChange = (value: string) => {
-    setSelectedPeriod(value);
-  };
-
-  const handleTypeChange = (value: string) => {
-    setSelectedType(value);
-  };
 
   const handlePerspectiveChange = (value: string) => {
     setSelectedPerspective(value);
@@ -528,14 +508,6 @@ const Targets = ({ submissionType }: TargetsProps) => {
 
               {/* Filter Section */}
               <Filtering
-                startDate={startDate}
-                endDate={endDate}
-                handleStartDateChange={handleStartDateChange}
-                handleEndDateChange={handleEndDateChange}
-                handlePeriodChange={handlePeriodChange}
-                selectedPeriod={selectedPeriod}
-                handleTypeChange={handleTypeChange}
-                selectedType={selectedType}
               >
                 {/* Filter for perspective from service data */}
                 <div className="space-y-3">
@@ -642,7 +614,7 @@ const Targets = ({ submissionType }: TargetsProps) => {
                     <table className="w-full border-collapse">
                       <thead className="bg-[#1B6131] text-white">
                         <tr>
-                          {submissionType === 'MPM' && authStatus.canEdit && (
+                          {submissionType === 'MPM' && (authStatus.canEdit || authStatus.canView) && (
                             <th className="p-4 text-center whitespace-nowrap">Action</th>
                           )}
                           <th className="p-4 text-center whitespace-nowrap">KPI</th>

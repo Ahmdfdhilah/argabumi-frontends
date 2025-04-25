@@ -5,7 +5,7 @@ import { Label } from '@workspace/ui/components/label';
 import { Input } from '@workspace/ui/components/input';
 import { useToast } from '@workspace/ui/components/sonner';
 import kpiActualService from '@/services/kpiActualsService';
-import { KPIEntryWithActuals } from '@/hooks/useMPMActuals';
+import { KPIEntryWithActuals } from '@/hooks/useActuals';
 
 interface EditActualDialogProps {
   isOpen: boolean;

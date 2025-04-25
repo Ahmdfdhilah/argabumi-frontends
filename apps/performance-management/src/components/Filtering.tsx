@@ -5,15 +5,6 @@ import { Card, CardHeader, CardContent, CardTitle } from "@workspace/ui/componen
 import { ReactNode } from "react";
 
 export interface FilteringParams {
-    startDate?: string;
-    endDate?: string;
-    handleStartDateChange?: (e: React.ChangeEvent<HTMLInputElement>) => void;
-    handleEndDateChange?: (e: React.ChangeEvent<HTMLInputElement>) => void;
-    isEndDateDisabled?: boolean;
-    handlePeriodChange?: (value: string) => void;
-    selectedPeriod?: string;
-    handleTypeChange?: (value: string) => void;
-    selectedType?: string;
     children?: ReactNode;
 }
 

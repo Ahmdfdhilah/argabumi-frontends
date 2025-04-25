@@ -5,7 +5,7 @@ import Targets from "./pages/MPM/Targets";
 import PerformanceManagementDashboard from "./pages/PerformanceManagementDashboard";
 import PerformanceManagementHome from "./pages/PerformanceManagementHome";
 import UserDetailPage from "./pages/UserDetail";
-import MPMActuals from "./pages/MPM/MPMActuals";
+import Actuals from "./pages/MPM/Actuals";
 import MPMActualList from "./pages/MPM/MPMActualList";
 import MPMTargetList from "./pages/MPM/MPMTargetsList";
 import MPMActualsActionPlans from "./pages/MPM/_";
@@ -83,12 +83,12 @@ function App() {
 
                   <Route path="target">
                     <Route index element={<AuthGuard><IPMTargetList /></AuthGuard>} />
-                    <Route path=":submissionId" element={<AuthGuard><Targets submissionType="IPM" /></AuthGuard>} />
+                    <Route path=":submissionId" element={<AuthGuard><Targets submissionTypePic="IPM" /></AuthGuard>} />
                   </Route>
 
                   <Route path="actual">
                     <Route index element={<AuthGuard><IPMActualList /></AuthGuard>} />
-                    <Route path=":submissionId" element={<AuthGuard><MPMActuals /></AuthGuard>} />
+                    <Route path=":submissionId" element={<AuthGuard><Actuals submissionTypePic="IPM" /></AuthGuard>} />
                   </Route>
                 </Route>
                 
@@ -96,7 +96,7 @@ function App() {
                 <Route path="mpm">
                   <Route path="target">
                     <Route index element={<AuthGuard><MPMTargetList /></AuthGuard>} />
-                    <Route path=":submissionId" element={<AuthGuard><Targets submissionType="MPM" /></AuthGuard>} />
+                    <Route path=":submissionId" element={<AuthGuard><Targets submissionTypePic="MPM" /></AuthGuard>} />
                     <Route path=":submissionId/kpi/:kpiId">
                       <Route path="action-plans" element={<AuthGuard><MPMTargetActionPlan /></AuthGuard>} />
                       {/* <Route path="teams/:teamId" element={<AuthGuard><MPMTargetsActionPlans /></AuthGuard>} /> */}
@@ -105,7 +105,7 @@ function App() {
 
                   <Route path="actual">
                     <Route index element={<AuthGuard><MPMActualList /></AuthGuard>} />
-                    <Route path=":submissionId" element={<AuthGuard><MPMActuals /></AuthGuard>} />
+                    <Route path=":submissionId" element={<AuthGuard><Actuals submissionTypePic="MPM" /></AuthGuard>} />
                     <Route path=":submissionId/kpi/:kpiId">
                       <Route path="action-plans" element={<AuthGuard><MPMActualsActionPlans /></AuthGuard>} />
                     </Route>

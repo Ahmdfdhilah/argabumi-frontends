@@ -62,7 +62,7 @@ const MPMTargetList: React.FC = () => {
 
   // Find a specific node in the org unit tree
   const findOrgUnitInTree = (
-    tree: OrganizationUnitTreeNode[], 
+    tree: OrganizationUnitTreeNode[],
     orgUnitId: number
   ): OrganizationUnitTreeNode | null => {
     for (const node of tree) {
@@ -86,10 +86,10 @@ const MPMTargetList: React.FC = () => {
         // Only fetch hierarchy if not admin and user has an org unit
         if (currentRole !== 'admin' && currentUserOrgUnitId) {
           const hierarchyResponse = await organizationUnitService.getOrganizationHierarchy();
-          
+
           // Find the user's org unit in the hierarchy
           const userOrgUnit = findOrgUnitInTree(hierarchyResponse.tree, currentUserOrgUnitId);
-          
+
           if (userOrgUnit) {
             // Collect user's org unit ID and all child org unit IDs
             const accessibleIds = collectChildOrgUnitIds(userOrgUnit);
@@ -140,7 +140,7 @@ const MPMTargetList: React.FC = () => {
           // For non-admin, fetch all departments but will filter them in the UI
           const departmentsData = await organizationUnitService.getOrganizationUnits(0, 100);
           // Filter to only show departments that the user has access to
-          const filteredDepartments = departmentsData.filter(dept => 
+          const filteredDepartments = departmentsData.filter(dept =>
             accessibleOrgUnits.includes(dept.org_unit_id)
           );
           setDepartments(filteredDepartments);
@@ -201,11 +201,11 @@ const MPMTargetList: React.FC = () => {
 
         const filteredUnitSubmissions = submissions.filter(submission => submission.org_unit_id !== null
         );
-        
+
         // If non-admin user viewing all of their accessible departments
         if (currentRole !== 'admin' && selectedDepartment === 'all' && accessibleOrgUnits.length > 0) {
           // Filter submissions client-side to include only those from accessible org units
-          const filteredSubmissions = filteredUnitSubmissions.filter(submission => 
+          const filteredSubmissions = filteredUnitSubmissions.filter(submission =>
             submission.org_unit_id && accessibleOrgUnits.includes(submission.org_unit_id)
           );
           setMpmTargets(filteredSubmissions);
@@ -265,10 +265,12 @@ const MPMTargetList: React.FC = () => {
         return 'bg-blue-200 text-blue-700 dark:bg-blue-900 dark:text-blue-200';
       case 'Draft':
         return 'bg-yellow-200 text-yellow-700 dark:bg-yellow-800 dark:text-yellow-200';
-      case 'Approved by Senior Manager':
+      case 'Approved':
         return 'bg-green-200 text-green-700 dark:bg-green-900 dark:text-green-200';
-      case 'Rejected by Senior Manager':
+      case 'Rejected':
         return 'bg-red-200 text-red-700 dark:bg-red-900 dark:text-red-200';
+      case 'Validated':
+        return 'bg-purple-200 text-purple-700 dark:bg-purple-900 dark:text-purple-200';
       default:
         return 'bg-gray-200 text-gray-700 dark:bg-gray-700 dark:text-gray-200';
     }
@@ -308,8 +310,6 @@ const MPMTargetList: React.FC = () => {
               />
 
               <Filtering
-                handlePeriodChange={(value) => setSelectedPeriod(value)}
-                selectedPeriod={selectedPeriod}
               >
                 {/* Status filter */}
                 <div className="space-y-3">

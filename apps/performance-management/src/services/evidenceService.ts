@@ -13,7 +13,7 @@ export interface KPIEvidence extends KPIEvidenceBase {
   evidence_file_path: string;
   evidence_upload_date: string;
   evidence_status: string;
-  
+
   // Additional context fields
   org_unit_name?: string;
   employee_name?: string;
@@ -21,7 +21,7 @@ export interface KPIEvidence extends KPIEvidenceBase {
   submission_month?: number;
   month_name?: string;
   file_url?: string;
-  
+
   created_at: string;
   updated_at: string;
   created_by?: number;
@@ -30,6 +30,7 @@ export interface KPIEvidence extends KPIEvidenceBase {
 
 export interface KPIEvidenceUpdate {
   evidence_description?: string;
+  evidence_status?: string;
 }
 
 export interface KPIEvidenceStatusUpdate {
@@ -56,11 +57,12 @@ export interface StatusMessage {
 
 const { toast } = useToast();
 
+
 export const evidenceService = {
   // Get evidences by submission ID
   getEvidencesBySubmission: async (submissionId: number): Promise<KPIEvidence[]> => {
     try {
-      const response = await pmApi.get(`/submissions/${submissionId}/evidence`);
+      const response = await pmApi.get(`/evidences/submissions/${submissionId}/evidence`);
       return response.data;
     } catch (error: any) {
       toast({
@@ -80,19 +82,19 @@ export const evidenceService = {
     status?: string
   ): Promise<KPIEvidenceListResponse> => {
     try {
-      let url = `/evidence`;
+      let url = `/evidences`;
       const params = new URLSearchParams();
-      
+
       if (periodId) params.append("period_id", periodId.toString());
       if (orgUnitId) params.append("org_unit_id", orgUnitId.toString());
       if (employeeId) params.append("employee_id", employeeId.toString());
       if (status) params.append("status", status);
-      
+
       const queryString = params.toString();
       if (queryString) {
         url += `?${queryString}`;
       }
-      
+
       const response = await pmApi.get(url);
       return response.data;
     } catch (error: any) {
@@ -108,7 +110,7 @@ export const evidenceService = {
   // Get evidence by ID
   getEvidence: async (evidenceId: number): Promise<KPIEvidence> => {
     try {
-      const response = await pmApi.get(`/evidence/${evidenceId}`);
+      const response = await pmApi.get(`/evidences/evidence/${evidenceId}`);
       return response.data;
     } catch (error: any) {
       toast({
@@ -133,12 +135,12 @@ export const evidenceService = {
       }
       formData.append("file", file);
 
-      const response = await pmApi.post(`/submissions/${submissionId}/evidence`, formData, {
+      const response = await pmApi.post(`/evidences/submissions/${submissionId}/evidence`, formData, {
         headers: {
           "Content-Type": "multipart/form-data"
         }
       });
-      
+
       toast({
         title: "Success",
         description: "Evidence uploaded successfully",
@@ -157,7 +159,7 @@ export const evidenceService = {
   // Update evidence metadata
   updateEvidence: async (evidenceId: number, evidenceData: KPIEvidenceUpdate): Promise<KPIEvidence> => {
     try {
-      const response = await pmApi.put(`/evidence/${evidenceId}`, evidenceData);
+      const response = await pmApi.put(`/evidences/evidence/${evidenceId}`, evidenceData);
       toast({
         title: "Success",
         description: "Evidence updated successfully",
@@ -176,7 +178,7 @@ export const evidenceService = {
   // Update evidence status (for managers/supervisors)
   updateEvidenceStatus: async (evidenceId: number, statusData: KPIEvidenceStatusUpdate): Promise<KPIEvidence> => {
     try {
-      const response = await pmApi.put(`/evidence/${evidenceId}/status`, statusData);
+      const response = await pmApi.put(`/evidences/evidence/${evidenceId}/status`, statusData);
       toast({
         title: "Success",
         description: "Evidence status updated successfully",
@@ -195,7 +197,7 @@ export const evidenceService = {
   // Delete evidence
   deleteEvidence: async (evidenceId: number): Promise<StatusMessage> => {
     try {
-      const response = await pmApi.delete(`/evidence/${evidenceId}`);
+      const response = await pmApi.delete(`/evidences/evidence/${evidenceId}`);
       toast({
         title: "Success",
         description: "Evidence deleted successfully",
@@ -214,7 +216,7 @@ export const evidenceService = {
   // Download evidence file and auto-update status
   downloadEvidence: async (evidenceId: number): Promise<Blob> => {
     try {
-      const response = await pmApi.get(`/evidence/${evidenceId}/download`, {
+      const response = await pmApi.get(`/evidences/evidence/${evidenceId}/download`, {
         responseType: 'blob'
       });
       return response.data;

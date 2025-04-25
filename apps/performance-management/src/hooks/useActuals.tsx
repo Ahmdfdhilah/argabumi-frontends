@@ -1,15 +1,35 @@
 import { useState, useEffect } from 'react';
-import { useParams } from 'react-router-dom';
-import { submissionService, SubmissionWithEntries, SubmissionEntry } from '../services/submissionService';
+import { useParams, useSearchParams } from 'react-router-dom';
+import { submissionService, SubmissionEntry, SubmissionWithEntries } from '../services/submissionService';
 import { kpiDefinitionService, KPIDefinitionResponse } from '../services/kpiDefinitionService';
-import { kpiTargetService, KPITargetResponse } from '../services/kpiTargetsService';
-import { Employee, employeeService } from '../services/employeeService';
+import kpiActualService from '../services/kpiActualsService';
+import { getMonthName } from '../utils/month';
 import { useAppSelector } from '@/redux/hooks';
+import { employeeService } from '../services/employeeService';
 import organizationUnitService from '@/services/organizationUnitService';
+import { evidenceService, KPIEvidence } from '../services/evidenceService';
 
-interface KPIEntryWithTargets extends SubmissionEntry {
+// Types
+export interface KPIEntryWithActuals extends SubmissionEntry {
+  target_value: string;
+  actual_value: string;
+  achievement_percentage: any;
+  problem_identification: string;
+  corrective_action: string;
   kpiDefinition?: KPIDefinitionResponse;
-  targets: KPITargetResponse[];
+  actual_month: number;
+  month_name: string;
+  actuals: {
+    actual_id: number;
+    entry_id: number;
+    actual_value: number;
+    actual_month: number;
+    target_value: number;
+    achievement: number;
+    score: number;
+    problem_identification: string;
+    corrective_action: string;
+  }[];
 }
 
 interface AuthorizationStatus {
@@ -17,26 +37,29 @@ interface AuthorizationStatus {
   isSupervisor: boolean;     // Whether current user is the supervisor who can edit/submit
   isOrgHead: boolean;        // Whether current user is the org head who can approve
   isOrgUnitManager: boolean; // Whether current user is manager of the org unit
-  canEdit: boolean;          // Whether current user can edit targets
-  canSubmit: boolean;        // Whether current user can submit targets
-  canApprove: boolean;       // Whether current user can approve targets
-  canReject: boolean;        // Whether current user can reject targets
+  canEdit: boolean;          // Whether current user can edit actuals
+  canSubmit: boolean;        // Whether current user can submit actuals
+  canSubmitEvidence: boolean; // Whether current user can submit evidence
+  canApprove: boolean;       // Whether current user can approve actuals
+  canReject: boolean;        // Whether current user can reject actuals
   canRevertToDraft: boolean; // Whether current user can revert to draft
-  canValidate: boolean;      // Whether current user can validate targets
-  canView: boolean;          // Whether current user can view targets
+  canValidate: boolean;      // Whether current user can validate actuals
+  canView: boolean;          // Whether current user can view actuals
 }
 
-interface UseTargetsReturn {
+interface UseActualsReturn {
   loading: boolean;
   error: string | null;
-  submission: SubmissionWithEntries | null;
-  entriesWithTargets: KPIEntryWithTargets[];
+  entriesWithActuals: KPIEntryWithActuals[];
+  submissionStatus: string;
+  submissionData: SubmissionWithEntries | null;
   refreshData: () => Promise<void>;
   authStatus: AuthorizationStatus;
   employeeData: any | null;
   supervisorData: any | null;
   orgHeadData: any | null;
   orgUnitData: any | null;
+  submissionEvidence: KPIEvidence[];  // Added this for submission evidence
 }
 
 // Safely fetch data with error handling
@@ -53,12 +76,17 @@ const safelyFetchData = async <T,>(
   }
 };
 
-export const useTargets = (): UseTargetsReturn => {
+export const useActuals = (): UseActualsReturn => {
   const { submissionId } = useParams<{ submissionId: string }>();
+  const [searchParams] = useSearchParams();
+  const month = searchParams.get('month');
+
   const [loading, setLoading] = useState<boolean>(true);
   const [error, setError] = useState<string | null>(null);
-  const [submission, setSubmission] = useState<SubmissionWithEntries | null>(null);
-  const [entriesWithTargets, setEntriesWithTargets] = useState<KPIEntryWithTargets[]>([]);
+  const [entriesWithActuals, setEntriesWithActuals] = useState<KPIEntryWithActuals[]>([]);
+  const [submissionStatus, setSubmissionStatus] = useState<string>('');
+  const [submissionData, setSubmissionData] = useState<SubmissionWithEntries | null>(null);
+  const [submissionEvidence, setSubmissionEvidence] = useState<KPIEvidence[]>([]);
 
   // Employee/Organization hierarchy data
   const [employeeData, setEmployeeData] = useState<any | null>(null);
@@ -74,6 +102,7 @@ export const useTargets = (): UseTargetsReturn => {
     isOrgUnitManager: false,
     canEdit: false,
     canSubmit: false,
+    canSubmitEvidence: false,
     canApprove: false,
     canReject: false,
     canValidate: false,
@@ -92,12 +121,18 @@ export const useTargets = (): UseTargetsReturn => {
     return currentUserRoles.some((role: any) => role.role_code === roleCode);
   };
 
-  const determineEmployeeAuthorizationStatus = async (submissionData: any) => {
+  const determineEmployeeAuthorizationStatus = async (
+    submissionData: any, 
+    evidenceData: KPIEvidence[]
+  ) => {
     if (!submissionData || !currentEmployeeId || !submissionData.employee_id) {
       return;
     }
 
     try {
+      // Use actual evidence data passed as parameter
+      const hasEvidence = evidenceData && evidenceData.length > 0;
+      
       // Get the employee associated with this submission
       const employee = await safelyFetchData(
         () => employeeService.getEmployeeById(submissionData.employee_id),
@@ -111,15 +146,15 @@ export const useTargets = (): UseTargetsReturn => {
       // Determine if current user is the employee (owner)
       const isOwner = currentEmployeeId === employee.employee_id;
 
-      // If user is the owner, we don't need to check supervisor/org head status
       if (isOwner) {
         setAuthStatus({
           isOwner: true,
           isSupervisor: false,
           isOrgHead: false,
           isOrgUnitManager: false,
-          canEdit: false, // Owners typically don't edit their own targets
-          canSubmit: false, // Owners typically don't submit their own targets
+          canEdit: false, // Owners typically don't edit their own actuals
+          canSubmit: false, // Owners typically don't submit their own actuals
+          canSubmitEvidence: submissionData.submission_status === 'Draft',
           canApprove: false,
           canReject: false,
           canValidate: false,
@@ -134,6 +169,8 @@ export const useTargets = (): UseTargetsReturn => {
 
       if (isSupervisor) {
         // If user is supervisor, set appropriate permissions based on submission status
+        console.log("masuk supervisor");
+        
         setSupervisorData({
           employee_id: currentEmployeeId
         });
@@ -144,7 +181,8 @@ export const useTargets = (): UseTargetsReturn => {
           isOrgHead: false,
           isOrgUnitManager: false,
           canEdit: submissionData.submission_status === 'Draft',
-          canSubmit: submissionData.submission_status === 'Draft',
+          canSubmit: submissionData.submission_status === 'Draft' && hasEvidence,
+          canSubmitEvidence: false, // Supervisors don't submit evidence
           canApprove: false, // Supervisors typically don't approve
           canReject: false, // Supervisors typically don't reject
           canValidate: false,
@@ -156,10 +194,10 @@ export const useTargets = (): UseTargetsReturn => {
 
       // If user is neither owner nor supervisor, check if they're an org head
       // Only fetch additional data if user has appropriate roles
-      if (userHasRole('director') || userHasRole('org_head')) {
+      if (userHasRole('director') || userHasRole('division_head') || userHasRole('department_head')) {
         // Get the supervisor first to navigate up the hierarchy
-        let supervisor: Employee | null = null;
-
+        let supervisor: any | null = null;
+  
         if (employee.employee_supervisor_id) {
           supervisor = await safelyFetchData(
             () => employeeService.getEmployeeById(employee.employee_supervisor_id!),
@@ -206,6 +244,7 @@ export const useTargets = (): UseTargetsReturn => {
                         isOrgUnitManager: false,
                         canEdit: false,
                         canSubmit: false,
+                        canSubmitEvidence: false,
                         canApprove: submissionData.submission_status === 'Submitted',
                         canReject: submissionData.submission_status === 'Submitted',
                         canValidate: false,
@@ -225,9 +264,6 @@ export const useTargets = (): UseTargetsReturn => {
       // Check for special roles
       const isDirector = userHasRole('director');
       const isAdmin = userHasRole('admin');
-      console.log(user);
-
-      console.log(isAdmin);
 
       if (isDirector || isAdmin) {
         setAuthStatus({
@@ -235,13 +271,14 @@ export const useTargets = (): UseTargetsReturn => {
           isSupervisor: false,
           isOrgHead: false,
           isOrgUnitManager: false,
-          canEdit: isDirector,
-          canSubmit: isDirector,
+          canEdit: isDirector && hasEvidence,
+          canSubmit: isDirector && hasEvidence,
+          canSubmitEvidence: isDirector && submissionData.submission_status === 'Draft',
           canApprove: isDirector,
           canReject: isDirector,
           canValidate: isAdmin,
           canView: true,
-          canRevertToDraft: false
+          canRevertToDraft: isDirector
         });
         return;
       }
@@ -254,6 +291,7 @@ export const useTargets = (): UseTargetsReturn => {
         isOrgUnitManager: false,
         canEdit: false,
         canSubmit: false,
+        canSubmitEvidence: false,
         canApprove: false,
         canReject: false,
         canValidate: false,
@@ -266,18 +304,26 @@ export const useTargets = (): UseTargetsReturn => {
     }
   };
 
-  const determineOrgUnitAuthorizationStatus = async (submissionData: any) => {
+  const determineOrgUnitAuthorizationStatus = async (
+    submissionData: any,
+    evidenceData: KPIEvidence[]
+  ) => {
     if (!submissionData || !currentEmployeeId || !submissionData.org_unit_id) {
       return;
     }
 
     try {
+      // Use actual evidence data passed as parameter
+      const hasEvidence = evidenceData && evidenceData.length > 0;
+      console.log("Evidence check in org unit auth:", evidenceData, "Has evidence:", hasEvidence);
+      
       // Get the org unit associated with this submission
       const orgUnit = await safelyFetchData(
         () => organizationUnitService.getOrganizationUnitById(submissionData.org_unit_id),
         null,
         `Error fetching org unit for ID: ${submissionData.org_unit_id}`
       );
+
       // Check for special roles
       const isDirector = userHasRole('director');
       const isAdmin = userHasRole('admin');
@@ -290,13 +336,15 @@ export const useTargets = (): UseTargetsReturn => {
       const isOrgUnitManager = orgUnit.org_unit_head_id === currentEmployeeId;
 
       if (isOrgUnitManager) {
+        console.log("masuk org unit manager", hasEvidence);
         setAuthStatus({
-          isOwner: false,
+          isOwner: true,
           isSupervisor: false,
-          isOrgHead: false,
+          isOrgHead: true,
           isOrgUnitManager: true,
           canEdit: submissionData.submission_status === 'Draft',
-          canSubmit: submissionData.submission_status === 'Draft',
+          canSubmit: submissionData.submission_status === 'Draft' && hasEvidence,
+          canSubmitEvidence: submissionData.submission_status === 'Draft',
           canApprove: false,
           canReject: false,
           canValidate: isAdmin,
@@ -305,7 +353,6 @@ export const useTargets = (): UseTargetsReturn => {
         });
         return;
       }
-      console.log(user);
 
       // Only check for org head if user might be one (based on roles)
       if (userHasRole('admin') || !isOrgUnitManager) {
@@ -325,6 +372,8 @@ export const useTargets = (): UseTargetsReturn => {
             );
 
             if (orgHead) {
+              console.log("masuk sini", orgHead);
+              
               setOrgHeadData(orgHead);
 
               // Check if user is the org head
@@ -338,10 +387,11 @@ export const useTargets = (): UseTargetsReturn => {
                   isOrgUnitManager: false,
                   canEdit: false,
                   canSubmit: false,
+                  canSubmitEvidence: false,
                   canApprove: submissionData.submission_status === 'Submitted',
                   canReject: submissionData.submission_status === 'Submitted',
                   canValidate: isAdmin,
-                  canView: isAdmin,
+                  canView: isAdmin || true,
                   canRevertToDraft: false
                 });
                 return;
@@ -351,21 +401,21 @@ export const useTargets = (): UseTargetsReturn => {
         }
       }
 
-
-
       if (isDirector || isAdmin) {
+        console.log("masuk sini 2");
         setAuthStatus({
           isOwner: false,
           isSupervisor: false,
           isOrgHead: false,
           isOrgUnitManager: false,
-          canEdit: isDirector,
-          canSubmit: isDirector,
-          canApprove: isDirector,
-          canReject: isDirector,
+          canEdit: isDirector && hasEvidence && submissionData.submission_status === 'Draft',
+          canSubmit: isDirector && hasEvidence && submissionData.submission_status === 'Draft',
+          canSubmitEvidence: isDirector && submissionData.submission_status === 'Draft',
+          canApprove: isDirector && submissionData.submission_status === 'Submitted',
+          canReject: isDirector && submissionData.submission_status === 'Submitted',
           canValidate: isAdmin,
           canView: true,
-          canRevertToDraft: false
+          canRevertToDraft: isDirector && submissionData.submission_status === 'Rejected' || submissionData.submission_status === 'Admin_Rejected'
         });
         return;
       }
@@ -378,6 +428,7 @@ export const useTargets = (): UseTargetsReturn => {
         isOrgUnitManager: false,
         canEdit: false,
         canSubmit: false,
+        canSubmitEvidence: false,
         canApprove: false,
         canReject: false,
         canValidate: isAdmin,
@@ -391,78 +442,121 @@ export const useTargets = (): UseTargetsReturn => {
   };
 
   const fetchData = async () => {
-    if (!submissionId) {
-      setError("Submission ID not provided");
+    if (!submissionId || !month) {
+      setError("Submission ID or month not provided");
       setLoading(false);
       return;
     }
 
+    console.log("masuk fetch data");
+    
+    setLoading(true);
+    setError(null);
+
     try {
-      setLoading(true);
-      setError(null);
-
-      // Get submission details and entries
-      const submissionData = await safelyFetchData(
-        () => submissionService.getSubmission(parseInt(submissionId)),
-        null,
-        `Error fetching submission data for ID: ${submissionId}`
-      );
-
-      if (!submissionData) {
-        throw new Error(`Failed to load submission with ID: ${submissionId}`);
+      // First, fetch all necessary data before processing
+      // This avoids state update timing issues
+      
+      // Fetch submission data
+      const submissionDataResult = await submissionService.getSubmission(parseInt(submissionId));
+      
+      // Fetch evidence data - store in local variable first
+      let evidenceData: KPIEvidence[] = [];
+      try {
+        evidenceData = await evidenceService.getEvidencesBySubmission(parseInt(submissionId));
+        console.log("evidenceData di fetch", evidenceData);
+      } catch (err) {
+        console.error(`Error fetching evidence for submission ${submissionId}:`, err);
+        evidenceData = []; // Ensure it's an empty array on error
       }
-      console.log(submissionData);
+      
+      // Fetch submission entries
+      const entries = await submissionService.getSubmissionEntries(parseInt(submissionId));
 
-      const submissionEntries = await safelyFetchData(
-        () => submissionService.getSubmissionEntries(parseInt(submissionId)),
-        [],
-        `Error fetching submission entries for ID: ${submissionId}`
-      );
-
-      const submissionWithEntries = {
-        ...submissionData,
-        entries: submissionEntries
-      };
-
-      setSubmission(submissionWithEntries);
-
-      // Determine authorization status based on submission type
-      if (submissionData.employee_id) {
-        // This is an employee-level submission
-        await determineEmployeeAuthorizationStatus(submissionData);
-      } else if (submissionData.org_unit_id) {
-        // This is an organization-level submission
-        await determineOrgUnitAuthorizationStatus(submissionData);
-      }
-
-      // For each entry, get KPI definition and targets
+      // For each entry, fetch KPI definition and actual data for the corresponding month
       const entriesWithData = await Promise.all(
-        submissionEntries.map(async (entry) => {
-          // Fetch KPI definition
-          const kpiDefinition = await safelyFetchData(
-            () => kpiDefinitionService.getKPIDefinition(entry.kpi_id),
-            undefined,
-            `Error fetching KPI definition for ID: ${entry.kpi_id}`
-          );
+        entries.map(async (entry) => {
+          let kpiDefinition = {};
+          let actuals = [];
 
-          // Fetch targets for this entry
-          const targets = await safelyFetchData(
-            () => kpiTargetService.getTargetsByEntry(entry.entry_id, parseInt(submissionId)),
-            [],
-            `Error fetching targets for entry ID: ${entry.entry_id}`
-          );
+          try {
+            // Fetch KPI definition
+            kpiDefinition = await kpiDefinitionService.getKPIDefinition(entry.kpi_id);
+          } catch (err) {
+            console.error(`Error fetching KPI definition for entry ${entry.entry_id}:`, err);
+            // Use empty object if KPI definition fetch fails
+            kpiDefinition = {};
+          }
+
+          try {
+            // Fetch actuals for this KPI and month
+            const actualsData = await kpiActualService.getActualsByKpiAndMonth(entry.kpi_id, parseInt(month));
+            console.log("actualsData", actualsData);
+            
+            // Map actuals to our expected format
+            actuals = actualsData.map(actual => ({
+              actual_id: actual.actual_id,
+              entry_id: entry.entry_id,
+              actual_value: typeof actual.actual_value === 'string' ?
+                parseFloat(actual.actual_value) : (actual.actual_value as number),
+              actual_month: actual.actual_month,
+              target_value: typeof actual.target_value === 'string' ?
+                parseFloat(actual.target_value as string) : (actual.target_value as number) || 0,
+              achievement: typeof actual.actual_achievement_percentage === 'string' ?
+                parseFloat(actual.actual_achievement_percentage as string) :
+                (actual.actual_achievement_percentage as number) || 0,
+              score: 0, // Need to calculate or fetch
+              problem_identification: actual.actual_problem_identification || '',
+              corrective_action: actual.actual_corrective_action || ''
+            }));
+            console.log("actuals", actuals);
+          } catch (err) {
+            console.error(`Error fetching actuals for entry ${entry.entry_id}:`, err);
+            // Create a default empty actual object if actuals fetch fails
+            actuals = [{
+              actual_id: 0,
+              entry_id: entry.entry_id,
+              actual_value: 0,
+              actual_month: parseInt(month),
+              target_value: 0,
+              achievement: 0,
+              score: 0,
+              problem_identification: '',
+              corrective_action: ''
+            }];
+          }
 
           return {
             ...entry,
             kpiDefinition,
-            targets
+            actual_month: parseInt(month),
+            month_name: getMonthName(parseInt(month)),
+            actuals: actuals
           };
         })
       );
 
-      setEntriesWithTargets(entriesWithData);
+      // Update all states with fetched data
+      setSubmissionStatus(submissionDataResult.submission_status);
+      setSubmissionData(submissionDataResult as SubmissionWithEntries);
+      setSubmissionEvidence(evidenceData);
+      setEntriesWithActuals(entriesWithData as KPIEntryWithActuals[]);
+
+      // Determine authorization status based on submission type using local variables
+      // Pass evidenceData directly to avoid state timing issues
+      if (submissionDataResult.employee_id) {
+        // This is an employee-level submission
+        console.log("Employee-level submission");
+        await determineEmployeeAuthorizationStatus(submissionDataResult, evidenceData);
+      } else if (submissionDataResult.org_unit_id) {
+        // This is an organization-level submission
+        console.log("Organization-level submission");
+        await determineOrgUnitAuthorizationStatus(submissionDataResult, evidenceData);
+      }
+
     } catch (err: any) {
-      setError(err.message || "Failed to load MPM targets data");
+      console.error('Error fetching data:', err);
+      setError(err.message || "Failed to load MPM actuals data");
     } finally {
       setLoading(false);
     }
@@ -485,18 +579,20 @@ export const useTargets = (): UseTargetsReturn => {
 
   useEffect(() => {
     fetchData();
-  }, [submissionId, currentEmployeeId, currentUserOrgUnitId]);
+  }, [submissionId, month, currentEmployeeId, currentUserOrgUnitId]);
 
   return {
     loading,
     error,
-    submission,
-    entriesWithTargets,
+    entriesWithActuals,
+    submissionStatus,
+    submissionData,
     refreshData: fetchData,
     authStatus,
     employeeData,
     supervisorData,
     orgHeadData,
-    orgUnitData
+    orgUnitData,
+    submissionEvidence
   };
 };

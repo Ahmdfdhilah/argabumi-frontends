@@ -87,7 +87,7 @@ const IPMTargetList: React.FC = () => {
           const employeeWithSubs = await employeeService.getEmployeeWithSubordinates(currentUserId);
           employeesList = employeeWithSubs.subordinates || [];
           accessibleIds = employeesList.map(emp => emp.employee_id);
-          
+
           // Also add the supervisor themselves
           employeesList.push({
             employee_id: currentUserId,
@@ -105,7 +105,7 @@ const IPMTargetList: React.FC = () => {
 
         setEmployees(employeesList);
         setAccessibleEmployees(accessibleIds);
-        
+
         // Default to current user if not admin/manager
         if (currentRole !== 'admin' && currentRole !== 'manager' && currentUserId) {
           setSelectedEmployee(currentUserId.toString());
@@ -149,18 +149,18 @@ const IPMTargetList: React.FC = () => {
         const submissions = await submissionService.getSubmissions(params);
 
         // Filter to only include submissions with an employee_id
-        const filteredSubmissions = submissions.filter(submission => 
+        const filteredSubmissions = submissions.filter(submission =>
           submission.employee_id !== undefined && submission.employee_id !== null
         );
         console.log(filteredSubmissions);
-        
-        
+
+
         // If not admin/manager and viewing all accessible employees
-        if ((currentRole === 'supervisor' || currentRole === 'employee') && 
-            selectedEmployee === 'all' && 
-            accessibleEmployees.length > 0) {
+        if ((currentRole === 'supervisor' || currentRole === 'employee') &&
+          selectedEmployee === 'all' &&
+          accessibleEmployees.length > 0) {
           // Filter submissions client-side to include only those from accessible employees
-          const filteredEmployeeSubmissions = filteredSubmissions.filter(submission => 
+          const filteredEmployeeSubmissions = filteredSubmissions.filter(submission =>
             submission.employee_id && accessibleEmployees.includes(submission.employee_id)
           );
           setIpmTargets(filteredEmployeeSubmissions);
@@ -220,10 +220,12 @@ const IPMTargetList: React.FC = () => {
         return 'bg-blue-200 text-blue-700 dark:bg-blue-900 dark:text-blue-200';
       case 'Draft':
         return 'bg-yellow-200 text-yellow-700 dark:bg-yellow-800 dark:text-yellow-200';
-      case 'Approved by Supervisor':
+      case 'Approved':
         return 'bg-green-200 text-green-700 dark:bg-green-900 dark:text-green-200';
-      case 'Rejected by Supervisor':
+      case 'Rejected':
         return 'bg-red-200 text-red-700 dark:bg-red-900 dark:text-red-200';
+      case 'Validated':
+        return 'bg-purple-200 text-purple-700 dark:bg-purple-900 dark:text-purple-200';
       default:
         return 'bg-gray-200 text-gray-700 dark:bg-gray-700 dark:text-gray-200';
     }
@@ -260,8 +262,6 @@ const IPMTargetList: React.FC = () => {
               />
 
               <Filtering
-                handlePeriodChange={(value) => setSelectedPeriod(value)}
-                selectedPeriod={selectedPeriod}
               >
                 {/* Status filter */}
                 <div className="space-y-3">

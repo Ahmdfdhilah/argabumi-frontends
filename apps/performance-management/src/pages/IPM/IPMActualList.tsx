@@ -367,6 +367,8 @@ const IPMActualList: React.FC = () => {
                 return 'bg-green-200 text-green-700 dark:bg-green-900 dark:text-green-200';
             case 'Rejected':
                 return 'bg-red-200 text-red-700 dark:bg-red-900 dark:text-red-200';
+            case 'Validated':
+                return 'bg-purple-200 text-purple-700 dark:bg-purple-900 dark:text-purple-200';
             default:
                 return 'bg-gray-200 text-gray-700 dark:bg-gray-700 dark:text-gray-200';
         }
@@ -404,8 +406,6 @@ const IPMActualList: React.FC = () => {
 
                             {/* Enhanced Filter Section */}
                             <Filtering
-                                handlePeriodChange={(value) => setSelectedPeriod(value)}
-                                selectedPeriod={selectedPeriod}
                             >
                                 {/* Month filter */}
                                 <div className="space-y-3">
