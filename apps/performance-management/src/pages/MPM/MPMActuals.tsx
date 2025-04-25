@@ -1,6 +1,6 @@
 
 import { useState, useMemo, useEffect } from 'react';
-import { useNavigate, useParams, useSearchParams } from 'react-router-dom';
+import {  useParams, useSearchParams } from 'react-router-dom';
 import { Card, CardContent, CardHeader, CardTitle } from '@workspace/ui/components/card';
 import {
   Select,
@@ -12,7 +12,7 @@ import {
 
 import { Button } from '@workspace/ui/components/button';
 import Sidebar from '@/components/Sidebar';
-import { Edit, Send, Eye, Users, CheckCircle, XCircle } from 'lucide-react';
+import { Edit, Send, Users, CheckCircle, XCircle } from 'lucide-react';
 import Header from '@/components/Header';
 import Breadcrumb from '@/components/Breadcrumb';
 import Pagination from '@/components/Pagination';
@@ -35,7 +35,6 @@ import EditActualDialog from '@/components/MPM/EditActualDialog';
 const MPMActuals = () => {
   const { toast } = useToast();
   const { submissionId } = useParams<{ submissionId: string }>();
-  const navigate = useNavigate();
   const [searchParams] = useSearchParams();
   const month = searchParams.get('month');
 
@@ -371,11 +370,6 @@ const MPMActuals = () => {
     setSelectedPerspective(value);
   };
 
-  // Handle row click to navigate to team view
-  const handleRowClick = (entry: KPIEntryWithActuals) => {
-    navigate(`/performance-management/mpm/actual/${submissionId}/kpi/${entry.kpi_id}/teams?month=${entry.actual_month}`);
-  };
-
   // Check if user can submit actuals
   const canSubmitActuals = isAuthorized && submissionStatus === 'Draft';
 
@@ -510,7 +504,9 @@ const MPMActuals = () => {
                     <table className="w-full border-collapse">
                       <thead className="bg-[#1B6131] text-white">
                         <tr>
-                          <th className="p-4 text-center whitespace-nowrap">Actions</th>
+                          {isAuthorized && submissionStatus === 'Draft' && (
+                            <th className="p-4 text-center whitespace-nowrap">Actions</th>
+                          )}
                           <th className="p-4 text-center whitespace-nowrap">KPI</th>
                           <th className="p-4 text-center whitespace-nowrap">KPI Definition</th>
                           <th className="p-4 text-center whitespace-nowrap">Perspective</th>
@@ -534,11 +530,12 @@ const MPMActuals = () => {
                               {entries.map((entry) => (
                                 <tr
                                   key={`${entry.entry_id}-${entry.actual_month}`}
-                                  className="hover:bg-gray-50 dark:hover:bg-gray-800/50 cursor-pointer"
+                                  className="hover:bg-gray-50 dark:hover:bg-gray-800/50"
                                 >
-                                  <td className="p-4 whitespace-nowrap">
-                                    <div className="flex justify-center space-x-2">
-                                      {isAuthorized && submissionStatus === 'Draft' && (
+                                  {isAuthorized && submissionStatus === 'Draft' && (
+                                    <td className="p-4 whitespace-nowrap">
+                                      <div className="flex justify-center space-x-2">
+
                                         <Button
                                           variant="ghost"
                                           size="icon"
@@ -550,20 +547,10 @@ const MPMActuals = () => {
                                         >
                                           <Edit className="h-4 w-4" />
                                         </Button>
-                                      )}
-                                      <Button
-                                        variant="ghost"
-                                        size="icon"
-                                        className="h-8 w-8 text-[#46B749] hover:bg-[#E4EFCF] dark:hover:bg-[#1B6131]"
-                                        onClick={(e) => {
-                                          e.stopPropagation();
-                                          handleRowClick(entry);
-                                        }}
-                                      >
-                                        <Eye className="h-4 w-4" />
-                                      </Button>
-                                    </div>
-                                  </td>
+
+                                      </div>
+                                    </td>
+                                  )}
                                   <td className="p-4 whitespace-nowrap text-center">
                                     {entry.kpi_name}
                                   </td>

@@ -2,6 +2,7 @@ import { useRef, useState, useEffect } from 'react';
 import {
     Card,
     CardContent,
+    CardDescription,
     CardHeader,
     CardTitle,
 } from "@workspace/ui/components/card";
@@ -17,7 +18,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import Filtering from '@/components/Filtering';
 import Footer from '@/components/Footer';
 import { useToast } from "@workspace/ui/components/sonner";
-
+import { useNavigate } from 'react-router-dom';
 // Import services
 import kpiDefinitionService, { KPIDefinitionResponse } from '@/services/kpiDefinitionService';
 import { kpiPerspectiveService, KPIPerspective } from '@/services/kpiPerspectiveService';
@@ -26,6 +27,7 @@ import organizationUnitService, { OrganizationUnitResponse } from '@/services/or
 import { useAppSelector } from '@/redux/hooks';
 
 const BSCEntryPage = () => {
+    const navigate = useNavigate();
     const { toast } = useToast();
     const [isSidebarOpen, setIsSidebarOpen] = useState(() => {
         if (typeof window !== 'undefined') {
@@ -34,16 +36,19 @@ const BSCEntryPage = () => {
         return true;
     });
     const [isDarkMode, setIsDarkMode] = useState(false);
-   
+
     const [allEntries, setAllEntries] = useState<KPIDefinitionResponse[]>([]);
     const [filteredEntries, setFilteredEntries] = useState<KPIDefinitionResponse[]>([]);
     const [displayedEntries, setDisplayedEntries] = useState<KPIDefinitionResponse[]>([]);
     const { user } = useAppSelector((state) => state.auth);
+    const [isAdmin, setIsAdmin] = useState(false);
+    const [adminOrgUnit, setAdminOrgUnit] = useState<OrganizationUnitResponse | null>(null);
 
     // States for dropdown options
     const [perspectives, setPerspectives] = useState<KPIPerspective[]>([]);
-    const [_, setPeriods] = useState<Period[]>([]); //nanti filter by period
+    const [_, setPeriods] = useState<Period[]>([]); 
     const [organizationUnits, setOrganizationUnits] = useState<OrganizationUnitResponse[]>([]);
+    const [childOrgUnits, setChildOrgUnits] = useState<OrganizationUnitResponse[]>([]);
     const [activePeriod, setActivePeriod] = useState<Period | null>(null);
 
     // Pagination state
@@ -63,22 +68,44 @@ const BSCEntryPage = () => {
 
     const fileInputRef = useRef<HTMLInputElement>(null);
 
+    // Check if user is admin
+    useEffect(() => {
+        if (user) {
+            const userRoles = user?.roles?.map((role: { role_code: any; }) => role.role_code) || [];
+            const admin = userRoles.includes('admin');
+            setIsAdmin(admin);
+
+            // Redirect non-admin users
+            if (!admin) {
+                toast({
+                    title: "Access Denied",
+                    description: "Only administrators can access this page",
+                    variant: "destructive",
+                });
+                navigate('/');
+            }
+        }
+    }, [user, navigate]);
+
     // Fetch initial data on component mount
     useEffect(() => {
-        loadInitialData();
-    }, []);
+        if (isAdmin) {
+            loadInitialData();
+        }
+    }, [isAdmin]);
 
     const loadInitialData = async () => {
         try {
             // Get active period
             const activeP = await periodService.getActivePeriod();
             setActivePeriod(activeP);
-            
+
+            await loadOrganizationUnits();
+
             // Load data based on active period
             if (activeP) {
                 loadBSCEntries(activeP.period_id);
                 loadPerspectives();
-                loadOrganizationUnits();
                 loadPeriods();
             }
         } catch (error) {
@@ -129,9 +156,21 @@ const BSCEntryPage = () => {
 
     const loadOrganizationUnits = async () => {
         try {
+            // Get all organization units
             const orgUnits = await organizationUnitService.getOrganizationUnits();
-            const topLevelOrgUnits = orgUnits.filter(ou => !ou.org_unit_parent_id);
-            setOrganizationUnits(topLevelOrgUnits);
+            setOrganizationUnits(orgUnits);
+
+            // Find admin's org unit
+            if (user && user.employee_data?.employee_org_unit_id) {
+                const adminUnit = orgUnits.find(ou => ou.org_unit_id === user.employee_data?.employee_org_unit_id);
+                if (adminUnit) {
+                    setAdminOrgUnit(adminUnit);
+
+                    // Find direct children of admin's org unit (one level down)
+                    const directChildren = orgUnits.filter(ou => ou.org_unit_parent_id === adminUnit.org_unit_id);
+                    setChildOrgUnits(directChildren);
+                }
+            }
         } catch (error) {
             console.error("Error loading organization units:", error);
         }
@@ -153,7 +192,6 @@ const BSCEntryPage = () => {
     // Update displayed entries based on pagination
     useEffect(() => {
         updateDisplayedEntries();
-        console.log(user);
     }, [currentPage, filteredEntries]);
 
     // Apply filters whenever search term or filter selections change
@@ -211,9 +249,9 @@ const BSCEntryPage = () => {
             kpi_category: '',
             kpi_calculation: '',
             kpi_target: 0,
-            kpi_org_unit_id: undefined,
+            kpi_org_unit_id: adminOrgUnit?.org_unit_id, // Default to admin's org unit
             kpi_perspective_id: 0,
-            kpi_owner_id: user?.user_employee_id || 0 
+            kpi_owner_id: user?.user_employee_id || 0
         });
         setDialogMode('create');
         setIsDialogOpen(true);
@@ -227,8 +265,6 @@ const BSCEntryPage = () => {
 
     const handleSaveKPI = async (kpi: KPIDefinitionResponse) => {
         try {
-         
-            
             if (dialogMode === 'create') {
                 // Create new BSC entry
                 const createData = {
@@ -251,7 +287,7 @@ const BSCEntryPage = () => {
                     kpi_employee_id: null,
                     kpi_parent_id: null,
                 };
-                
+
                 await kpiDefinitionService.createKPIDefinition(createData);
                 // Refresh the list
                 if (activePeriod) {
@@ -262,7 +298,7 @@ const BSCEntryPage = () => {
                 if (!kpi.kpi_id) {
                     throw new Error("KPI ID is required for update");
                 }
-                
+
                 const updateData = {
                     kpi_code: kpi.kpi_code,
                     kpi_name: kpi.kpi_name,
@@ -278,15 +314,19 @@ const BSCEntryPage = () => {
                     kpi_employee_id: null,
                     kpi_parent_id: null,
                 };
-                
+
                 await kpiDefinitionService.updateKPIDefinition(kpi.kpi_id, updateData);
                 // Refresh the list
                 if (activePeriod) {
                     loadBSCEntries(activePeriod.period_id);
                 }
             }
-            
+
             setIsDialogOpen(false);
+            toast({
+                title: "Success",
+                description: `KPI ${dialogMode === 'create' ? 'created' : 'updated'} successfully`,
+            });
         } catch (error) {
             console.error("Error saving KPI:", error);
             toast({
@@ -304,6 +344,10 @@ const BSCEntryPage = () => {
             if (activePeriod) {
                 loadBSCEntries(activePeriod.period_id);
             }
+            toast({
+                title: "Success",
+                description: "KPI deleted successfully",
+            });
         } catch (error) {
             console.error("Error deleting KPI:", error);
             toast({
@@ -337,6 +381,11 @@ const BSCEntryPage = () => {
         return orgUnit ? orgUnit.org_unit_name : '';
     };
 
+    // If not admin, show nothing (redirect should happen)
+    if (!isAdmin) {
+        return null;
+    }
+
     return (
         <div className="font-montserrat min-h-screen bg-white dark:bg-gray-900">
             <Header
@@ -360,6 +409,20 @@ const BSCEntryPage = () => {
                                 currentPage="BSC Input Data"
                                 showHomeIcon={true}
                             />
+
+                            {/* Admin Organization Unit Section */}
+                            <Card className="border-[#46B749] dark:border-[#1B6131] shadow-md">
+                                <CardContent className="p-0 mt-6">
+                                    <CardHeader>
+                                        <CardTitle className='text-2xl font-bold text-primary dark:text-primary-500'>
+                                            Admin Organization Unit
+                                        </CardTitle>
+                                        <CardDescription className='text-sm text-gray-500 dark:text-gray-400'>
+                                            You can manage BSC entries for this organization unit and its direct subordinates.
+                                        </CardDescription>
+                                    </CardHeader>
+                                </CardContent>
+                            </Card>
 
                             {/* Filter Section */}
                             <Filtering>
@@ -531,7 +594,7 @@ const BSCEntryPage = () => {
                                 initialData={currentEditingEntry || {}}
                                 mode={dialogMode}
                                 perspectives={perspectives}
-                                organizationUnits={organizationUnits}
+                                organizationUnits={[...(adminOrgUnit ? [adminOrgUnit] : []), ...childOrgUnits]} // Admin's org unit + direct children only
                             />
                         </div>
                     </main>

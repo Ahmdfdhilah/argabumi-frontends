@@ -2,7 +2,7 @@ import { useState, useMemo, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { Card, CardContent, CardHeader, CardTitle } from '@workspace/ui/components/card';
 import { Button } from '@workspace/ui/components/button';
-import { Edit, Eye, Send, CheckCircle, XCircle } from 'lucide-react';
+import { Edit, Eye, Send, CheckCircle, XCircle, CheckSquare, RotateCcw } from 'lucide-react';
 
 import Header from '@/components/Header';
 import Sidebar from '@/components/Sidebar';
@@ -10,7 +10,7 @@ import Breadcrumb from '@/components/Breadcrumb';
 import Pagination from '@/components/Pagination';
 import Filtering from '@/components/Filtering';
 import Footer from '@/components/Footer';
-import { useMPMTargets } from '@/hooks/useMPMTargets';
+import { useTargets } from '@/hooks/useTargets';
 import React from 'react';
 import Decimal from 'decimal.js';
 import EditMonthlyTargetDialog from '@/components/MPM/EditMonthlyTargetDialog';
@@ -26,8 +26,13 @@ import { useAppSelector } from '@/redux/hooks';
 import { SubmitDialog } from '@/components/MPM/SubmitDialog';
 import { ApproveDialog } from '@/components/MPM/ApproveDialog';
 import { RejectDialog } from '@/components/MPM/RejectDialog';
+import { ValidateDialog } from '@/components/MPM/ValidateDialog';
+import { ConfirmDialog } from '@/components/MPM/ConfirmDialog';
 
-const MPMTargets = () => {
+interface TargetsProps {
+  submissionType: string;
+}
+const Targets = ({ submissionType }: TargetsProps) => {
   const { submissionId } = useParams<{ submissionId: string }>();
   const navigate = useNavigate();
   const { toast } = useToast();
@@ -49,10 +54,16 @@ const MPMTargets = () => {
   const [isSubmitDialogOpen, setIsSubmitDialogOpen] = useState(false);
   const [isApproveDialogOpen, setIsApproveDialogOpen] = useState(false);
   const [isRejectDialogOpen, setIsRejectDialogOpen] = useState(false);
+  const [isValidateDialogOpen, setIsValidateDialogOpen] = useState(false);
+  const [isAdminRejectDialogOpen, setIsAdminRejectDialogOpen] = useState(false);
+  const [isRevertToDraftDialogOpen, setIsRevertToDraftDialogOpen] = useState(false);
+  const [validationComments, setValidationComments] = useState<string>('');
+  const [isValidating, setIsValidating] = useState(false);
   const [_, setSelectedEntryId] = useState<number | null>(null);
   const [submissionComments, setSubmissionComments] = useState<string>('');
   const [approvalNotes, setApprovalNotes] = useState<string>('');
   const [selectedEntry, setSelectedEntry] = useState<any | null>(null);
+  const [isReverting, setIsReverting] = useState(false);
 
   // Filtering states
   const [selectedPerspective, setSelectedPerspective] = useState<string>('');
@@ -78,7 +89,50 @@ const MPMTargets = () => {
     entriesWithTargets,
     refreshData,
     authStatus,
-  } = useMPMTargets();
+  } = useTargets();
+
+  const handleRevertToDraft = async () => {
+    if (!submissionId || !authStatus.canRevertToDraft) {
+      console.log("Cannot revert - missing submissionId or permissions:", {
+        submissionId,
+        canRevertToDraft: authStatus.canRevertToDraft
+      });
+      return;
+    }
+
+    console.log("Starting revert to draft process...");
+    setIsReverting(true);
+
+    try {
+      const statusUpdate: SubmissionStatusUpdate = {
+        submission_status: 'Draft',
+        submission_comments: 'Reverted to draft for editing after rejection'
+      };
+
+      await submissionService.updateSubmissionStatus(Number(submissionId), statusUpdate);
+
+      toast({
+        title: "Success",
+        description: "Submission reverted to draft status successfully",
+      });
+
+      // Close the dialog AFTER successful operation
+      setIsRevertToDraftDialogOpen(false);
+
+      // Refresh data to get updated submission status
+      await refreshData();
+
+    } catch (error) {
+      console.error('Error reverting to draft:', error);
+      toast({
+        title: "Error",
+        description: "Failed to revert to draft status",
+        variant: "destructive",
+      });
+    } finally {
+      setIsReverting(false);
+    }
+  };
 
   // Fetch perspectives on component mount
   useEffect(() => {
@@ -247,7 +301,7 @@ const MPMTargets = () => {
       const approvalData = await approvalService.getApprovalsBySubmission(parseInt(submissionId));
       console.log("approvalData", approvalData);
       console.log("user", user);
-      
+
       const userApproval = approvalData.find(
         approval => approval.approver_id === user?.employee_data?.employee_id &&
           approval.approval_status === 'Pending'
@@ -286,6 +340,70 @@ const MPMTargets = () => {
       setIsProcessingApproval(false);
     }
   };
+
+  const handleValidate = async () => {
+    if (!submissionId || !authStatus.canValidate) return;
+
+    setIsValidating(true);
+    try {
+      await submissionService.validateSubmission(parseInt(submissionId), validationComments);
+
+      toast({
+        title: "Success",
+        description: "Targets validated successfully",
+      });
+
+      setIsValidateDialogOpen(false);
+      setValidationComments('');
+
+      // Refresh data to get updated status
+      refreshData();
+    } catch (error) {
+      console.error('Error validating submission:', error);
+      toast({
+        title: "Error",
+        description: "Failed to validate targets",
+        variant: "destructive",
+      });
+    } finally {
+      setIsValidating(false);
+    }
+  };
+
+  // Add the admin reject handler function
+  const handleAdminReject = async () => {
+    if (!submissionId || !authStatus.canValidate) return;
+
+    setIsValidating(true);
+    try {
+      const rejectData = {
+        rejection_reason: validationComments
+      };
+
+      await submissionService.adminRejectSubmission(parseInt(submissionId), rejectData);
+
+      toast({
+        title: "Success",
+        description: "Targets rejected successfully",
+      });
+
+      setIsAdminRejectDialogOpen(false);
+      setValidationComments('');
+
+      // Refresh data to get updated status
+      refreshData();
+    } catch (error) {
+      console.error('Error rejecting submission:', error);
+      toast({
+        title: "Error",
+        description: "Failed to reject targets",
+        variant: "destructive",
+      });
+    } finally {
+      setIsValidating(false);
+    }
+  };
+
 
   // Group entries by perspective
   const groupedEntries = useMemo(() => {
@@ -400,12 +518,12 @@ const MPMTargets = () => {
               {/* Header Section */}
               <Breadcrumb
                 items={[{
-                  label: 'MPM Target List',
-                  path: '/performance-management/mpm/target'
+                  label: `${submissionType} Target List`,
+                  path: `/performance-management/${submissionType.toLowerCase()}/target`
                 }]}
-                currentPage="MPM Targets"
+                currentPage={`${submissionType} Targets`}
                 showHomeIcon={true}
-                subtitle={`MPM Targets ID : ${submissionId} ${submission ? `(${submission.submission_status})` : ''}`}
+                subtitle={`${submissionType} Targets ID : ${submissionId} ${submission ? `(${submission.submission_status})` : ''}`}
               />
 
               {/* Filter Section */}
@@ -447,6 +565,41 @@ const MPMTargets = () => {
                       KPI Targets Table
                     </CardTitle>
                     <div className="flex flex-col sm:flex-row space-y-2 sm:space-y-0 sm:space-x-4 w-full md:w-auto">
+                      {/* Revert to Draft Button - Only show for user who can submit and when status is Rejected */}
+                      {authStatus.canRevertToDraft && (
+                        <Button
+                          variant="outline"
+                          className="w-full sm:w-auto border-amber-600 text-amber-600 hover:bg-amber-50 flex items-center justify-center dark:hover:bg-amber-900/20"
+                          onClick={() => setIsRevertToDraftDialogOpen(true)}
+                        >
+                          <RotateCcw className="mr-2 h-4 w-4" />
+                          Revert to Draft
+                        </Button>
+                      )}
+
+                      {/* Validation Buttons - Only show for admin if submission is Approved */}
+                      {authStatus.canValidate && submission?.submission_status === 'Approved' && (
+                        <>
+                          <Button
+                            variant="outline"
+                            className="w-full sm:w-auto border-red-600 text-red-600 hover:bg-red-50 flex items-center justify-center dark:hover:bg-red-900/20"
+                            onClick={() => setIsAdminRejectDialogOpen(true)}
+                          >
+                            <XCircle className="mr-2 h-4 w-4" />
+                            Reject
+                          </Button>
+
+                          <Button
+                            variant="outline"
+                            className="w-full sm:w-auto border-[#1B6131] text-[#1B6131] hover:bg-[#E4EFCF] flex items-center justify-center dark:text-white"
+                            onClick={() => setIsValidateDialogOpen(true)}
+                          >
+                            <CheckSquare className="mr-2 h-4 w-4" />
+                            Validate
+                          </Button>
+                        </>
+                      )}
+
                       {/* Approval Buttons - Only show if user can approve/reject */}
                       {authStatus.canApprove && (
                         <>
@@ -470,8 +623,8 @@ const MPMTargets = () => {
                         </>
                       )}
 
-                      {/* Submit Button - Only show if user can submit */}
-                      {authStatus.canSubmit && (
+                      {/* Submit Button - Only show if user can submit and status is Draft */}
+                      {authStatus.canSubmit && submission?.submission_status === 'Draft' && (
                         <Button
                           variant="outline"
                           className="w-full sm:w-auto border-[#1B6131] text-[#1B6131] hover:bg-[#E4EFCF] flex items-center justify-center dark:text-white"
@@ -489,7 +642,9 @@ const MPMTargets = () => {
                     <table className="w-full border-collapse">
                       <thead className="bg-[#1B6131] text-white">
                         <tr>
-                          <th className="p-4 text-center whitespace-nowrap">Action</th>
+                          {submissionType === 'MPM' && authStatus.canEdit && (
+                            <th className="p-4 text-center whitespace-nowrap">Action</th>
+                          )}
                           <th className="p-4 text-center whitespace-nowrap">KPI</th>
                           <th className="p-4 text-center whitespace-nowrap">KPI Definition</th>
                           <th className="p-4 text-center whitespace-nowrap">Weight</th>
@@ -521,28 +676,34 @@ const MPMTargets = () => {
 
                               return (
                                 <tr key={entry.entry_id} className="hover:bg-[#E4EFCF]/50 dark:hover:bg-[#1B6131]/20">
-                                  <td className="p-4 text-center flex gap-2 justify-center">
-                                    {/* View button */}
-                                    <Button
-                                      variant="ghost"
-                                      size="icon"
-                                      className="hover:text-[#1B6131]"
-                                      onClick={() => navigate(`/performance-management/mpm/target/${submissionId}/kpi/${entry.kpi_id}/action-plans`)}
-                                    >
-                                      <Eye className="h-4 w-4" />
-                                    </Button>
-                                    {/* Edit button - only show if user can edit */}
-                                    {authStatus.canEdit && (
+                                  {submissionType === 'MPM' && (
+                                    <td className="p-4 text-center flex gap-2 justify-center">
+                                      {/* View button */}
                                       <Button
                                         variant="ghost"
                                         size="icon"
                                         className="hover:text-[#1B6131]"
-                                        onClick={() => handleEditMonthlyTarget(entry.entry_id)}
+                                        onClick={() =>
+                                          navigate(`/performance-management/mpm/target/${submissionId}/kpi/${entry.kpi_id}/action-plans`)
+                                        }
                                       >
-                                        <Edit className="h-4 w-4" />
+                                        <Eye className="h-4 w-4" />
                                       </Button>
-                                    )}
-                                  </td>
+
+                                      {/* Edit button */}
+                                      {authStatus.canEdit && (
+                                        <Button
+                                          variant="ghost"
+                                          size="icon"
+                                          className="hover:text-[#1B6131]"
+                                          onClick={() => handleEditMonthlyTarget(entry.entry_id)}
+                                        >
+                                          <Edit className="h-4 w-4" />
+                                        </Button>
+                                      )}
+                                    </td>
+                                  )}
+
                                   <td className="p-4">{entry.kpi_name}</td>
                                   <td className="p-4">{entry.kpiDefinition?.kpi_definition || '-'}</td>
                                   <td className="p-4 text-center">{entry.kpiDefinition?.kpi_weight?.toString() || '-'}%</td>
@@ -606,6 +767,27 @@ const MPMTargets = () => {
         isProcessing={isProcessingApproval}
       />
 
+      <ValidateDialog
+        isOpen={isValidateDialogOpen}
+        onClose={() => setIsValidateDialogOpen(false)}
+        comments={validationComments}
+        setComments={setValidationComments}
+        onValidate={handleValidate}
+        isProcessing={isValidating}
+      />
+
+      {/* Admin Reject Dialog - reusing the RejectDialog component with a different handler */}
+      <RejectDialog
+        isOpen={isAdminRejectDialogOpen}
+        onClose={() => setIsAdminRejectDialogOpen(false)}
+        notes={validationComments}
+        setNotes={setValidationComments}
+        onReject={handleAdminReject}
+        isProcessing={isValidating}
+        title="Admin Rejection"
+        description="You are about to reject these previously approved targets as an admin. Please provide a reason."
+      />
+
       <RejectDialog
         isOpen={isRejectDialogOpen}
         onClose={() => setIsRejectDialogOpen(false)}
@@ -613,9 +795,22 @@ const MPMTargets = () => {
         setNotes={setApprovalNotes}
         onReject={handleReject}
         isProcessing={isProcessingApproval}
+        title="Reject Targets"
+        description="You are about to reject these targets. Please provide a reason below."
       />
+
+      {/* Revert to Draft Dialog */}
+      <ConfirmDialog
+        isOpen={isRevertToDraftDialogOpen}
+        onClose={() => setIsRevertToDraftDialogOpen(false)}
+        onConfirm={handleRevertToDraft}
+        isProcessing={isReverting}
+        title="Revert to Draft"
+        description="Are you sure you want to revert this submission to draft status? This will allow you to make changes before submitting again."
+      />
+
     </div>
   );
 };
 
-export default MPMTargets;
+export default Targets;

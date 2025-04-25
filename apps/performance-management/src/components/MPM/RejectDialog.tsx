@@ -19,6 +19,8 @@ interface RejectDialogProps {
     setNotes: (notes: string) => void;
     onReject: () => void;
     isProcessing: boolean;
+    title?: string;
+    description?: string;
 }
 
 // Reject Dialog Component
@@ -28,14 +30,16 @@ export const RejectDialog = React.memo(({
     notes,
     setNotes,
     onReject,
-    isProcessing
+    isProcessing,
+    title = 'Reject Targets',
+    description = 'You are about to reject these targets. Please provide a reason below.'
 }: RejectDialogProps) => (
     <Dialog open={isOpen} onOpenChange={onClose}>
         <DialogContent>
             <DialogHeader>
-                <DialogTitle>Reject Targets</DialogTitle>
+                <DialogTitle>{title}</DialogTitle>
                 <DialogDescription>
-                    You are about to reject these targets. Please provide a reason below.
+                    {description}
                 </DialogDescription>
             </DialogHeader>
 

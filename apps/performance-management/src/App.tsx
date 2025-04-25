@@ -1,17 +1,14 @@
 import { BrowserRouter, Route, Routes } from "react-router-dom";
 import BSCDashboard from "./pages/BSC/BSCDashboard";
 import BSCEntryPage from "./pages/BSC/BSCEntry";
-import IPMPage from "./pages/IPM/IPM";
-import MPMTargets from "./pages/MPM/MPMTargets";
+import Targets from "./pages/MPM/Targets";
 import PerformanceManagementDashboard from "./pages/PerformanceManagementDashboard";
 import PerformanceManagementHome from "./pages/PerformanceManagementHome";
 import UserDetailPage from "./pages/UserDetail";
-import EmployeeIPMDetailsPage from "./pages/IPM/EmployeeIPMDetails";
-
 import MPMActuals from "./pages/MPM/MPMActuals";
 import MPMActualList from "./pages/MPM/MPMActualList";
 import MPMTargetList from "./pages/MPM/MPMTargetsList";
-import MPMActualsActionPlans from "./pages/MPM/MPMActualsActionPlans";
+import MPMActualsActionPlans from "./pages/MPM/_";
 import MPMDashboard from "./pages/MPM/MPMDashboard";
 import { Toaster } from "@workspace/ui/components/sonner";
 import { PersistGate } from "redux-persist/integration/react";
@@ -32,6 +29,8 @@ import PeriodMasterPage from "./pages/Periods/PeriodMasterPage";
 import PeriodFormPage from "./pages/Periods/PeriodFormPage";
 import MPMTargetActionPlan from "./pages/MPM/MPMTargetActionPlan";
 import RoleManagementPage from "./pages/Roles/RoleManagement";
+import IPMTargetList from "./pages/IPM/IPMTargetList";
+import IPMActualList from "./pages/IPM/IPMActualList";
 
 function App() {
   return (
@@ -81,15 +80,23 @@ function App() {
 
                 {/* IPM Routes */}
                 <Route path="ipm">
-                  <Route index element={<AuthGuard><IPMPage /></AuthGuard>} />
-                  <Route path=":employeeId/details" element={<AuthGuard><EmployeeIPMDetailsPage /></AuthGuard>} />
-                </Route>
 
+                  <Route path="target">
+                    <Route index element={<AuthGuard><IPMTargetList /></AuthGuard>} />
+                    <Route path=":submissionId" element={<AuthGuard><Targets submissionType="IPM" /></AuthGuard>} />
+                  </Route>
+
+                  <Route path="actual">
+                    <Route index element={<AuthGuard><IPMActualList /></AuthGuard>} />
+                    <Route path=":submissionId" element={<AuthGuard><MPMActuals /></AuthGuard>} />
+                  </Route>
+                </Route>
+                
                 {/* MPM Routes */}
                 <Route path="mpm">
                   <Route path="target">
                     <Route index element={<AuthGuard><MPMTargetList /></AuthGuard>} />
-                    <Route path=":submissionId" element={<AuthGuard><MPMTargets /></AuthGuard>} />
+                    <Route path=":submissionId" element={<AuthGuard><Targets submissionType="MPM" /></AuthGuard>} />
                     <Route path=":submissionId/kpi/:kpiId">
                       <Route path="action-plans" element={<AuthGuard><MPMTargetActionPlan /></AuthGuard>} />
                       {/* <Route path="teams/:teamId" element={<AuthGuard><MPMTargetsActionPlans /></AuthGuard>} /> */}

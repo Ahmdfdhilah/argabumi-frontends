@@ -50,17 +50,7 @@ const performanceMenus: MenuItem[] = [
                 title: 'Employees Management',
                 path: '/performance-management/employees',
                 roles: ['admin'],
-            },
-            {
-                title: 'Roles Management',
-                path: '/performance-management/roles',
-                roles: ['admin'],
-            },
-            // {
-            //     title: 'Organization Hierarchy',
-            //     path: '/performance-management/organization-units/hierarchy',
-            //     roles: ['admin'],
-            // },
+            }
         ],
     },
     // {
@@ -95,7 +85,7 @@ const performanceMenus: MenuItem[] = [
             {
                 title: 'BSC KPI Input',
                 path: '/performance-management/bsc/input',
-                roles: ['admin', 'director'],
+                roles: ['admin'],
             },
         ],
     },
@@ -104,6 +94,17 @@ const performanceMenus: MenuItem[] = [
         path: '/performance-management/ipm',
         icon: LineChart,
         roles: ['admin', 'director', 'division_head', 'department_head', 'employee'],
+        subMenus: [
+            {
+                title: 'IPM Actual',
+                path: '/performance-management/ipm/actual',
+                roles: ['admin', 'director', 'division_head', 'department_head', 'employee'],
+            }, {
+                title: 'IPM Target',
+                path: '/performance-management/ipm/target',
+                roles: ['admin', 'director', 'division_head', 'department_head', 'employee'],
+            }
+        ]
     },
     {
         title: 'Monthly Management Performance',
@@ -234,7 +235,7 @@ const Sidebar: React.FC<SidebarProps> = ({ isSidebarOpen, setIsSidebarOpen }) =>
                     </div>
                 )}
 
-                <div className="relative h-full p-2 sm:p-4 flex flex-col">                   
+                <div className="relative h-full p-2 sm:p-4 flex flex-col">
 
                     {/* Navigation Menu */}
                     <nav className="space-y-1 flex-grow overflow-y-auto">

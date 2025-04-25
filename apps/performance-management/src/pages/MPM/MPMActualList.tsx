@@ -7,10 +7,6 @@ import Sidebar from '@/components/Sidebar';
 import Filtering from '@/components/Filtering';
 import { Card, CardContent, CardHeader, CardTitle } from '@workspace/ui/components/card';
 import { Button } from '@workspace/ui/components/button';
-import { Dialog, DialogContent, DialogDescription, DialogTitle } from '@workspace/ui/components/dialog';
-import { DialogFooter, DialogHeader } from '@workspace/ui/components/dialog';
-import { Input } from '@workspace/ui/components/input';
-import { Label } from '@workspace/ui/components/label';
 import Breadcrumb from '@/components/Breadcrumb';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@workspace/ui/components/select';
 import { BarChart2Icon } from 'lucide-react';
@@ -50,12 +46,6 @@ const MPMActualList: React.FC = () => {
   const [selectedDepartment, setSelectedDepartment] = useState('all');
   const [selectedMonth, setSelectedMonth] = useState('all');
 
-  // Modal States
-  const [selectedMpmActual, setSelectedMpmActual] = useState<Submission | null>(null);
-  const [isSubmitModalOpen, setIsSubmitModalOpen] = useState(false);
-  const [isReviewModalOpen, setIsReviewModalOpen] = useState(false);
-  const [reviewComment, setReviewComment] = useState('');
-
   // Pagination
   const [currentPage, setCurrentPage] = useState(1);
   const [itemsPerPage, setItemsPerPage] = useState(10);
@@ -74,7 +64,7 @@ const MPMActualList: React.FC = () => {
 
   // Find a specific node in the org unit tree
   const findOrgUnitInTree = (
-    tree: OrganizationUnitTreeNode[], 
+    tree: OrganizationUnitTreeNode[],
     orgUnitId: number
   ): OrganizationUnitTreeNode | null => {
     for (const node of tree) {
@@ -98,10 +88,10 @@ const MPMActualList: React.FC = () => {
         // Only fetch hierarchy if not admin and user has an org unit
         if (currentRole !== 'admin' && currentUserOrgUnitId) {
           const hierarchyResponse = await organizationUnitService.getOrganizationHierarchy();
-          
+
           // Find the user's org unit in the hierarchy
           const userOrgUnit = findOrgUnitInTree(hierarchyResponse.tree, currentUserOrgUnitId);
-          
+
           if (userOrgUnit) {
             // Collect user's org unit ID and all child org unit IDs
             const accessibleIds = collectChildOrgUnitIds(userOrgUnit);
@@ -152,7 +142,7 @@ const MPMActualList: React.FC = () => {
           // For non-admin, fetch all departments but will filter them in the UI
           const departmentsData = await organizationUnitService.getOrganizationUnits(0, 100);
           // Filter to only show departments that the user has access to
-          const filteredDepartments = departmentsData.filter(dept => 
+          const filteredDepartments = departmentsData.filter(dept =>
             accessibleOrgUnits.includes(dept.org_unit_id)
           );
           setDepartments(filteredDepartments);
@@ -209,11 +199,11 @@ const MPMActualList: React.FC = () => {
 
         // Fetch submissions based on filters
         const submissions = await submissionService.getSubmissions(params);
-        
+
         // If non-admin user viewing all of their accessible departments
         if (currentRole !== 'admin' && selectedDepartment === 'all' && accessibleOrgUnits.length > 0) {
           // Filter submissions client-side to include only those from accessible org units
-          const filteredSubmissions = submissions.filter(submission => 
+          const filteredSubmissions = submissions.filter(submission =>
             submission.org_unit_id && accessibleOrgUnits.includes(submission.org_unit_id)
           );
           setMpmActuals(filteredSubmissions);
@@ -243,48 +233,6 @@ const MPMActualList: React.FC = () => {
     accessibleOrgUnits
   ]);
 
-  // Handle submission status update
-  const handleSubmitMpmActual = async () => {
-    if (selectedMpmActual) {
-      try {
-        await submissionService.updateSubmissionStatus(
-          selectedMpmActual.submission_id, 
-          { 
-            submission_status: 'SUBMITTED',
-            submission_comments: 'Submitted for review'
-          }
-        );
-        
-        // Refresh the data after submission
-        setIsSubmitModalOpen(false);
-        fetchMPMActuals();
-      } catch (error) {
-        console.error('Error submitting actual:', error);
-      }
-    }
-  };
-
-  // Handle review action
-  const handleReviewMpmActual = async (action: 'APPROVED' | 'REJECTED') => {
-    if (selectedMpmActual) {
-      try {
-        await submissionService.updateSubmissionStatus(
-          selectedMpmActual.submission_id, 
-          { 
-            submission_status: action,
-            submission_comments: reviewComment
-          }
-        );
-        
-        // Refresh the data after review
-        setIsReviewModalOpen(false);
-        setReviewComment('');
-        fetchMPMActuals();
-      } catch (error) {
-        console.error('Error reviewing actual:', error);
-      }
-    }
-  };
 
   // Mapping submission status to display status
   const mapSubmissionStatus = (status: string) => {
@@ -298,24 +246,15 @@ const MPMActualList: React.FC = () => {
     }
   };
 
-  // Helper to fetch actuals (called on different events)
-  const fetchMPMActuals = () => {
-    // Reset to first page when filtering
-    setCurrentPage(1);
-    
-   
-    setSelectedStatus(prev => prev + ''); // Force re-render
-  };
-
   // Get month name from submission_month (1-12)
   const getMonthName = (monthNum?: number) => {
     if (!monthNum) return 'N/A';
-    
+
     const months = [
       'January', 'February', 'March', 'April', 'May', 'June',
       'July', 'August', 'September', 'October', 'November', 'December'
     ];
-    
+
     return months[monthNum - 1] || 'N/A';
   };
 
@@ -494,28 +433,6 @@ const MPMActualList: React.FC = () => {
                                 className="p-4 space-x-2 whitespace-nowrap"
                                 onClick={(e) => e.stopPropagation()} // Prevent row click when clicking action buttons
                               >
-                                {currentRole === 'manager' && actual.submission_status === 'DRAFT' && (
-                                  <Button
-                                    size="sm"
-                                    onClick={() => {
-                                      setSelectedMpmActual(actual);
-                                      setIsSubmitModalOpen(true);
-                                    }}
-                                  >
-                                    Submit
-                                  </Button>
-                                )}
-                                {currentRole === 'sm_dept' && actual.submission_status === 'SUBMITTED' && (
-                                  <Button
-                                    size="sm"
-                                    onClick={() => {
-                                      setSelectedMpmActual(actual);
-                                      setIsReviewModalOpen(true);
-                                    }}
-                                  >
-                                    Review
-                                  </Button>
-                                )}
                                 <Button
                                   variant="outline"
                                   size="sm"
@@ -555,66 +472,6 @@ const MPMActualList: React.FC = () => {
           <Footer />
         </div>
       </div>
-
-      {/* Submit Modal */}
-      <Dialog open={isSubmitModalOpen} onOpenChange={setIsSubmitModalOpen}>
-        <DialogContent className="max-w-md w-[95%] lg:max-w-lg rounded-lg overflow-y-scroll max-h-[85vh]">
-          <DialogHeader>
-            <DialogTitle>Submit MPM Actual</DialogTitle>
-            <DialogDescription>
-              Submit your monthly performance management actuals for review
-            </DialogDescription>
-          </DialogHeader>
-
-          <DialogFooter className='space-y-4'>
-            <div className="flex flex-col lg:flex-row gap-4">
-              <Button variant="outline" onClick={() => setIsSubmitModalOpen(false)}>
-                Cancel
-              </Button>
-              <Button onClick={handleSubmitMpmActual}>
-                Confirm Submission
-              </Button>
-            </div>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
-
-      {/* Review Modal */}
-      <Dialog open={isReviewModalOpen} onOpenChange={setIsReviewModalOpen}>
-        <DialogContent className="max-w-md w-[95%] lg:max-w-lg rounded-lg overflow-y-scroll max-h-[85vh]">
-          <DialogHeader>
-            <DialogTitle>Review MPM Actual</DialogTitle>
-            <DialogDescription>
-              Review and take action on the submitted performance management actuals
-            </DialogDescription>
-          </DialogHeader>
-          <div className="space-y-4">
-            <div className="space-y-2">
-              <Label htmlFor="review-comments">Review Comments</Label>
-              <Input
-                id="review-comments"
-                placeholder="Enter your review comments"
-                value={reviewComment}
-                onChange={(e) => setReviewComment(e.target.value)}
-              />
-            </div>
-          </div>
-
-          <DialogFooter className='space-y-4'>
-            <div className="flex flex-col lg:flex-row gap-4">
-              <Button
-                variant="destructive"
-                onClick={() => handleReviewMpmActual('REJECTED')}
-              >
-                Reject
-              </Button>
-              <Button onClick={() => handleReviewMpmActual('APPROVED')}>
-                Approve
-              </Button>
-            </div>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
     </div>
   );
 };

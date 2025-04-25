@@ -19,6 +19,8 @@ export interface Submission extends SubmissionBase {
   employee_name?: string;
   period_name?: string;
   final_approver_name?: string;
+  evidence_submitted: boolean;   // New field
+  evidence_count?: number;       // New field
   created_at: string;
   updated_at: string;
   created_by?: number;
@@ -43,15 +45,24 @@ export interface SubmissionWithEntries extends Submission {
   entries: SubmissionEntry[];
 }
 
+export interface SubmissionWithEvidence extends Submission {
+  evidences: Array<any>; // Type as needed for evidence files
+}
+
 export interface SubmissionCreate extends SubmissionBase {}
 
 export interface SubmissionUpdate {
   submission_comments?: string;
+  evidence_submitted?: boolean;  // New field
 }
 
 export interface SubmissionStatusUpdate {
   submission_status: string;
   submission_comments?: string;
+}
+
+export interface SubmissionAdminRejectRequest {
+  rejection_reason: string;
 }
 
 export interface SubmissionEntryCreate {
@@ -150,6 +161,21 @@ export const submissionService = {
     }
   },
 
+  // Get submission with evidence
+  getSubmissionWithEvidence: async (id: number): Promise<SubmissionWithEvidence> => {
+    try {
+      const response = await pmApi.get(`/submissions/${id}/with-evidence`);
+      return response.data;
+    } catch (error: any) {
+      toast({
+        title: "Error",
+        description: error.response?.data?.detail || "Failed to fetch submission with evidence",
+        variant: "destructive",
+      });
+      throw error;
+    }
+  },
+
   // Update submission
   updateSubmission: async (id: number, submissionData: SubmissionUpdate): Promise<Submission> => {
     try {
@@ -188,6 +214,48 @@ export const submissionService = {
     }
   },
 
+  // Validate submission (admin only)
+  validateSubmission: async (id: number, comments?: string): Promise<Submission> => {
+    try {
+      const statusData: SubmissionStatusUpdate = {
+        submission_status: "Validated",
+        submission_comments: comments
+      };
+      const response = await pmApi.patch(`/submissions/${id}/validate`, statusData);
+      toast({
+        title: "Success",
+        description: "Submission validated successfully",
+      });
+      return response.data;
+    } catch (error: any) {
+      toast({
+        title: "Error",
+        description: error.response?.data?.detail || "Failed to validate submission",
+        variant: "destructive",
+      });
+      throw error;
+    }
+  },
+
+  // Admin reject submission
+  adminRejectSubmission: async (id: number, rejectData: SubmissionAdminRejectRequest): Promise<Submission> => {
+    try {
+      const response = await pmApi.patch(`/submissions/${id}/admin-reject`, rejectData);
+      toast({
+        title: "Success",
+        description: "Submission rejected successfully",
+      });
+      return response.data;
+    } catch (error: any) {
+      toast({
+        title: "Error",
+        description: error.response?.data?.detail || "Failed to reject submission",
+        variant: "destructive",
+      });
+      throw error;
+    }
+  },
+
   // Delete submission
   deleteSubmission: async (id: number): Promise<StatusMessage> => {
     try {
@@ -211,6 +279,7 @@ export const submissionService = {
   getSubmissionEntries: async (submissionId: number): Promise<SubmissionEntry[]> => {
     try {
       const response = await pmApi.get(`/submissions/entries/${submissionId}`);
+
       return response.data;
     } catch (error: any) {
       toast({
