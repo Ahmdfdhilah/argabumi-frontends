@@ -42,7 +42,7 @@ const Actuals = ({ submissionTypePic: submissionType }: ActualsProps) => {
   const [searchParams] = useSearchParams();
   const { user } = useAppSelector((state: any) => state.auth);
   console.log(user);
-  
+
   const month = searchParams.get('month');
 
   console.log(submissionType);
@@ -57,6 +57,7 @@ const Actuals = ({ submissionTypePic: submissionType }: ActualsProps) => {
     refreshData,
     authStatus,
   } = useActuals();
+
 
   // Layout states
   const [isSidebarOpen, setIsSidebarOpen] = useState(() => {
@@ -330,19 +331,19 @@ const Actuals = ({ submissionTypePic: submissionType }: ActualsProps) => {
                         <>
                           <Button
                             variant="outline"
-                            className="w-full sm:w-auto border-red-600 text-red-600 hover:bg-red-50 flex items-center justify-center dark:hover:bg-red-900/20"
-                            onClick={() => setIsRejectDialogOpen(true)}
-                          >
-                            <XCircle className="mr-2 h-4 w-4" />
-                            Reject
-                          </Button>
-                          <Button
-                            variant="outline"
                             className="w-full sm:w-auto border-green-600 text-green-600 hover:bg-green-50 flex items-center justify-center dark:hover:bg-green-900/20"
                             onClick={() => setIsApproveDialogOpen(true)}
                           >
                             <CheckCircle className="mr-2 h-4 w-4" />
                             Approve
+                          </Button>
+                          <Button
+                            variant="outline"
+                            className="w-full sm:w-auto border-red-600 text-red-600 hover:bg-red-50 flex items-center justify-center dark:hover:bg-red-900/20"
+                            onClick={() => setIsRejectDialogOpen(true)}
+                          >
+                            <XCircle className="mr-2 h-4 w-4" />
+                            Reject
                           </Button>
                         </>
                       )}
@@ -364,13 +365,13 @@ const Actuals = ({ submissionTypePic: submissionType }: ActualsProps) => {
                             onClick={() => setIsAdminRejectDialogOpen(true)}
                           >
                             <XCircle className="mr-2 h-4 w-4" />
-                            Admin Reject
+                            Reject
                           </Button>
                         </>
                       )}
 
                       {/* Revert to Draft Button - Only show if user can revert */}
-                      {authStatus.canRevertToDraft && submissionStatus === 'Rejected' && (
+                      {authStatus.canRevertToDraft && (submissionStatus === 'Rejected' || submissionStatus == 'Admin_Rejected') && (
                         <Button
                           variant="outline"
                           className="w-full sm:w-auto border-amber-600 text-amber-600 hover:bg-amber-50 flex items-center justify-center dark:hover:bg-amber-900/20"

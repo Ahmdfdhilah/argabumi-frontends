@@ -406,20 +406,19 @@ const Targets = ({ submissionTypePic: submissionType }: TargetsProps) => {
                         <>
                           <Button
                             variant="outline"
-                            className="w-full sm:w-auto border-red-600 text-red-600 hover:bg-red-50 flex items-center justify-center dark:hover:bg-red-900/20"
-                            onClick={() => setIsAdminRejectDialogOpen(true)}
-                          >
-                            <XCircle className="mr-2 h-4 w-4" />
-                            Reject
-                          </Button>
-
-                          <Button
-                            variant="outline"
                             className="w-full sm:w-auto border-[#1B6131] text-[#1B6131] hover:bg-[#E4EFCF] flex items-center justify-center dark:text-white"
                             onClick={() => setIsValidateDialogOpen(true)}
                           >
                             <CheckSquare className="mr-2 h-4 w-4" />
                             Validate
+                          </Button>
+                          <Button
+                            variant="outline"
+                            className="w-full sm:w-auto border-red-600 text-red-600 hover:bg-red-50 flex items-center justify-center dark:hover:bg-red-900/20"
+                            onClick={() => setIsAdminRejectDialogOpen(true)}
+                          >
+                            <XCircle className="mr-2 h-4 w-4" />
+                            Reject
                           </Button>
                         </>
                       )}
@@ -429,20 +428,19 @@ const Targets = ({ submissionTypePic: submissionType }: TargetsProps) => {
                         <>
                           <Button
                             variant="outline"
-                            className="w-full sm:w-auto border-red-600 text-red-600 hover:bg-red-50 flex items-center justify-center dark:hover:bg-red-900/20"
-                            onClick={() => setIsRejectDialogOpen(true)}
-                          >
-                            <XCircle className="mr-2 h-4 w-4" />
-                            Reject
-                          </Button>
-
-                          <Button
-                            variant="outline"
                             className="w-full sm:w-auto border-[#1B6131] text-[#1B6131] hover:bg-[#E4EFCF] flex items-center justify-center dark:text-white"
                             onClick={() => setIsApproveDialogOpen(true)}
                           >
                             <CheckCircle className="mr-2 h-4 w-4" />
                             Approve
+                          </Button>
+                          <Button
+                            variant="outline"
+                            className="w-full sm:w-auto border-red-600 text-red-600 hover:bg-red-50 flex items-center justify-center dark:hover:bg-red-900/20"
+                            onClick={() => setIsRejectDialogOpen(true)}
+                          >
+                            <XCircle className="mr-2 h-4 w-4" />
+                            Reject
                           </Button>
                         </>
                       )}

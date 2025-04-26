@@ -32,7 +32,7 @@ const PerformanceManagementHome = () => {
         return true;
     });
     const [isDarkMode, setIsDarkMode] = useState(false);
-   
+
     const { user } = useAppSelector((state) => state.auth);
 
     useEffect(() => {
@@ -48,9 +48,9 @@ const PerformanceManagementHome = () => {
                 setIsSidebarOpen={setIsSidebarOpen}
                 isDarkMode={isDarkMode}
                 setIsDarkMode={setIsDarkMode}
-                
-                
-                
+
+
+
             />
 
             <div className="flex">
@@ -494,7 +494,7 @@ const PerformanceManagementHome = () => {
 
                     </main>
                     <Footer
-                        
+
                     />
                 </div>
             </div>
