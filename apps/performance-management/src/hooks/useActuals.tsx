@@ -334,7 +334,8 @@ export const useActuals = (): UseActualsReturn => {
 
       // Check if user is the org unit manager
       const isOrgUnitManager = orgUnit.org_unit_head_id === currentEmployeeId;
-
+      console.log("masuk bib", isOrgUnitManager);
+      
       if (isOrgUnitManager) {
         console.log("masuk org unit manager", hasEvidence);
         setAuthStatus({

@@ -127,7 +127,7 @@ const ViewEvidenceDialog: React.FC<ViewEvidenceDialogProps> = ({
                       </div>
                       <div className="flex flex-col">
                         <p className="text-sm font-medium text-gray-900 dark:text-gray-100 break-all sm:break-normal sm:truncate" title={evidence.evidence_file_name}>
-                          {evidence.evidence_file_name.length > 40 ? evidence.evidence_file_name.slice(0, 40) + '...' : evidence.evidence_file_name}
+                          {evidence.evidence_file_name.length > 25 ? evidence.evidence_file_name.slice(0, 25) + '...' : evidence.evidence_file_name}
                         </p>
                         <p className="text-xs text-gray-500 dark:text-gray-400 hidden sm:block">
                           Uploaded on {formatDate(evidence.evidence_upload_date)}

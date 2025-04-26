@@ -120,7 +120,6 @@ const IPMTargetList: React.FC = () => {
 
           else if (currentEmpId && (user?.roles.some((role: any) => role.role_code === 'director') || user?.roles.some((role: any) => role.role_code === 'department_head') || user?.roles.some((role: any) => role.role_code === 'division_head'))) {
             // Get all subordinates recursively for supervisors
-            console.log("masuk ke recursive", currentEmpId);
 
             employeesList = await fetchAllSubordinatesRecursively(currentEmpId);
 
