@@ -17,7 +17,7 @@ export interface OrganizationUnitBase {
 export interface OrganizationUnitResponse extends OrganizationUnitBase {
   org_unit_id: number;
   org_unit_path: string;
-  created_at: string;
+  created_at?: string;
   created_by?: number | null;
   updated_at?: string | null;
   updated_by?: number | null;

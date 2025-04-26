@@ -15,7 +15,7 @@ interface EditActualDialogProps {
   refreshData: () => void;
 }
 
-const EditActualDialog: React.FC<EditActualDialogProps> = ({
+export const EditActualDialog: React.FC<EditActualDialogProps> = ({
   isOpen,
   onClose,
   selectedActual,

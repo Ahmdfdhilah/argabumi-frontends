@@ -19,9 +19,8 @@ const IPMTargetList: React.FC = () => {
   const navigate = useNavigate();
   const { user } = useAppSelector((state: any) => state.auth);
 
-  const currentRole = user?.roles?.[0]?.role_code ?? '';
   const currentUserOrgUnitId = user?.org_unit_data?.org_unit_id ?? null;
-  const currentUserId = user?.employee_id ?? null;
+  const currentEmpId = user?.employee_data?.employee_id ?? null;
 
   // State Management
   const [isSidebarOpen, setIsSidebarOpen] = useState(() => {
@@ -50,6 +49,39 @@ const IPMTargetList: React.FC = () => {
   const [itemsPerPage, setItemsPerPage] = useState(10);
   const [totalItems, setTotalItems] = useState(0);
 
+  // Helper function to recursively fetch all subordinates
+  const fetchAllSubordinatesRecursively = async (empId: number): Promise<Employee[]> => {
+    try {
+      const response = await employeeService.getEmployeeWithSubordinates(empId);
+      let allSubordinates: Employee[] = response.subordinates || [];
+
+      // For each direct subordinate, get their subordinates recursively
+      for (const subordinate of response.subordinates || []) {
+        if (subordinate.employee_id !== empId) { 
+          console.log("masuk ke subordinate", subordinate.employee_id);
+          // Prevent infinite loops
+          const subSubordinates = await fetchAllSubordinatesRecursively(subordinate.employee_id);
+          allSubordinates = [...allSubordinates, ...subSubordinates];
+        }
+      }
+
+      // Remove duplicates (in case of organizational structure quirks)
+      return Array.from(new Map(allSubordinates.map(sub =>
+        [sub.employee_id, sub])).values());
+    } catch (error) {
+      console.error(`Error fetching subordinates for employee ${empId}:`, error);
+      return [];
+    }
+  };
+
+  // Check if user should have access to employee filtering
+  const shouldShowEmployeeFilter = useMemo(() => {
+    // Check if any of the user's roles allow access to employee filtering
+    return user.roles.some((role: any) =>
+      ['admin', 'division_head', 'director', 'department_head'].includes(role.role_code)
+    );
+  }, [user?.roles]);
+
   // Fetch periods
   useEffect(() => {
     const fetchPeriods = async () => {
@@ -62,6 +94,7 @@ const IPMTargetList: React.FC = () => {
         }
       } catch (error) {
         console.error('Error fetching periods:', error);
+        setError('Failed to load active period. Please try again later.');
       }
     };
     fetchPeriods();
@@ -71,52 +104,69 @@ const IPMTargetList: React.FC = () => {
   useEffect(() => {
     const fetchAccessibleEmployees = async () => {
       try {
+        setIsLoading(true);
         let employeesList: Employee[] = [];
         let accessibleIds: number[] = [];
 
-        if (currentRole === 'admin') {
-          // Admin can see all employees
-          employeesList = await employeeService.getEmployees(0, 100);
-          accessibleIds = employeesList.map(emp => emp.employee_id);
-        } else if (currentRole === 'manager' && currentUserOrgUnitId) {
-          // Managers can see employees in their organization unit
-          employeesList = await employeeService.getEmployeesByOrganizationUnit(currentUserOrgUnitId, 0, 100);
-          accessibleIds = employeesList.map(emp => emp.employee_id);
-        } else if (currentRole === 'supervisor' && currentUserId) {
-          // Supervisors can see their subordinates
-          const employeeWithSubs = await employeeService.getEmployeeWithSubordinates(currentUserId);
-          employeesList = employeeWithSubs.subordinates || [];
-          accessibleIds = employeesList.map(emp => emp.employee_id);
+        // Only fetch employees if the user should have access to the employee filter
+        if (shouldShowEmployeeFilter) {
+          console.log("masuk ke shouldShowEmployeeFilter", shouldShowEmployeeFilter);
 
-          // Also add the supervisor themselves
-          employeesList.push({
-            employee_id: currentUserId,
+          if (user?.roles.some((role: any) => role.role_code === 'admin')) {
+            // Admin can see all employees
+            employeesList = await employeeService.getEmployees(0, 100);
+            accessibleIds = employeesList.map(emp => emp.employee_id);
+          }
+
+          else if (currentEmpId && (user?.roles.some((role: any) => role.role_code === 'director') || user?.roles.some((role: any) => role.role_code === 'department_head') || user?.roles.some((role: any) => role.role_code === 'division_head'))) {
+            // Get all subordinates recursively for supervisors
+            console.log("masuk ke recursive", currentEmpId);
+
+            employeesList = await fetchAllSubordinatesRecursively(currentEmpId);
+
+            // Add the supervisor themselves
+            const currentEmployee = {
+              employee_id: currentEmpId,
+              employee_number: user?.employee_number || '',
+              employee_name: user?.employee_name || '',
+              is_active: true
+            };
+
+            employeesList.push(currentEmployee);
+            accessibleIds = employeesList.map(emp => emp.employee_id);
+          }
+        } else if (currentEmpId) {
+          // Regular employees can only see themselves - no need to fetch others
+          const currentEmployee = {
+            employee_id: currentEmpId,
             employee_number: user?.employee_number || '',
             employee_name: user?.employee_name || '',
             is_active: true
-          });
-          accessibleIds.push(currentUserId);
-        } else if (currentUserId) {
-          // Regular employees can only see themselves
-          const employee = await employeeService.getEmployeeById(currentUserId);
-          employeesList = [employee];
-          accessibleIds = [currentUserId];
+          };
+          employeesList = [currentEmployee];
+          accessibleIds = [currentEmpId];
         }
+
+        console.log("currentUserId", currentEmpId);
+
 
         setEmployees(employeesList);
         setAccessibleEmployees(accessibleIds);
 
         // Default to current user if not admin/manager
-        if (currentRole !== 'admin' && currentRole !== 'manager' && currentUserId) {
-          setSelectedEmployee(currentUserId.toString());
+        if (user?.roles.some((role: any) => role.role_code !== 'admin' && role.role_code !== 'director' && role.role_code !== 'department_head' && role.role_code !== 'division_head') && currentEmpId) {
+          setSelectedEmployee(currentEmpId.toString());
         }
       } catch (error) {
         console.error('Error fetching accessible employees:', error);
+        setError('Failed to load employee data. Please try again later.');
+      } finally {
+        setIsLoading(false);
       }
     };
 
     fetchAccessibleEmployees();
-  }, [currentRole, currentUserOrgUnitId, currentUserId]);
+  }, [currentUserOrgUnitId, currentEmpId, shouldShowEmployeeFilter, user]);
 
   // Fetch IPM targets
   useEffect(() => {
@@ -137,39 +187,38 @@ const IPMTargetList: React.FC = () => {
           period_id: selectedPeriod ? parseInt(selectedPeriod) : undefined
         };
 
-        // Handle employee filtering based on role and selection
-        if (selectedEmployee !== 'all') {
+        // Handle employee filtering based on role
+        if (shouldShowEmployeeFilter && selectedEmployee !== 'all') {
+          // If specific employee is selected
           params.employee_id = parseInt(selectedEmployee);
-        } else if (currentRole === 'employee' && currentUserId) {
-          // Employee can only see their own targets
-          params.employee_id = currentUserId;
+        } else if (!shouldShowEmployeeFilter && currentEmpId) {
+          // If regular employee, only show their own targets
+          params.employee_id = currentEmpId;
+        } else if (shouldShowEmployeeFilter && selectedEmployee === 'all' && accessibleEmployees.length > 0) {
+          // For supervisors/managers viewing all accessible employees
+          // We can potentially optimize this by adding a new API endpoint that accepts multiple employee IDs
+          // For now, we'll handle filtering client-side
         }
 
         // Fetch submissions based on filters
         const submissions = await submissionService.getSubmissions(params);
 
-        // Filter to only include submissions with an employee_id
-        const filteredSubmissions = submissions.filter(submission =>
+        // Filter to only include submissions for accessible employees
+        let filteredSubmissions = submissions.filter(submission =>
           submission.employee_id !== undefined && submission.employee_id !== null
         );
-        console.log(filteredSubmissions);
 
-
-        // If not admin/manager and viewing all accessible employees
-        if ((currentRole === 'supervisor' || currentRole === 'employee') &&
-          selectedEmployee === 'all' &&
-          accessibleEmployees.length > 0) {
-          // Filter submissions client-side to include only those from accessible employees
-          const filteredEmployeeSubmissions = filteredSubmissions.filter(submission =>
+        // If accessing all employees but only certain ones are accessible
+        if (shouldShowEmployeeFilter && selectedEmployee === 'all' && accessibleEmployees.length > 0) {
+          filteredSubmissions = filteredSubmissions.filter(submission =>
             submission.employee_id && accessibleEmployees.includes(submission.employee_id)
           );
-          setIpmTargets(filteredEmployeeSubmissions);
-        } else {
-          setIpmTargets(filteredSubmissions);
         }
 
-        // For now, let's assume the API doesn't return total count, so we'll just use current page
-        setTotalItems(filteredSubmissions.length > 0 ? (currentPage * itemsPerPage) + 1 : 0);
+        setIpmTargets(filteredSubmissions);
+
+        // For now, approximate total count for pagination
+        setTotalItems(filteredSubmissions.length > 0 ? Math.max(filteredSubmissions.length, currentPage * itemsPerPage) : 0);
       } catch (error) {
         console.error('Error fetching IPM targets:', error);
         setError('Failed to fetch targets. Please try again later.');
@@ -178,16 +227,19 @@ const IPMTargetList: React.FC = () => {
       }
     };
 
-    fetchIPMTargets();
+    // Only fetch if we have necessary data
+    if (selectedPeriod) {
+      fetchIPMTargets();
+    }
   }, [
     currentPage,
     itemsPerPage,
     selectedPeriod,
     selectedStatus,
     selectedEmployee,
-    currentRole,
-    currentUserId,
-    accessibleEmployees
+    currentEmpId,
+    accessibleEmployees,
+    shouldShowEmployeeFilter
   ]);
 
   // Mapping submission status to display status
@@ -261,8 +313,7 @@ const IPMTargetList: React.FC = () => {
                 subtitle="Individual Performance Management Targets"
               />
 
-              <Filtering
-              >
+              <Filtering>
                 {/* Status filter */}
                 <div className="space-y-3">
                   <label className="flex items-center space-x-2 text-sm font-medium text-gray-700 dark:text-gray-200">
@@ -283,8 +334,8 @@ const IPMTargetList: React.FC = () => {
                   </Select>
                 </div>
 
-                {/* Employee filter - show based on role */}
-                {(currentRole === 'admin' || currentRole === 'manager' || currentRole === 'supervisor') && (
+                {/* Employee filter - only show for admin, manager, supervisor roles */}
+                {shouldShowEmployeeFilter && (
                   <div className="space-y-3">
                     <label className="flex items-center space-x-2 text-sm font-medium text-gray-700 dark:text-gray-200">
                       <UserIcon className="h-4 w-4 text-[#46B749] dark:text-[#1B6131]" />
@@ -292,10 +343,10 @@ const IPMTargetList: React.FC = () => {
                     </label>
                     <Select onValueChange={setSelectedEmployee} value={selectedEmployee}>
                       <SelectTrigger className="w-full bg-white dark:bg-gray-800 border-[#46B749] dark:border-[#1B6131] h-10">
-                        <SelectValue placeholder="All Employees" />
+                        <SelectValue placeholder="All Accessible Employees" />
                       </SelectTrigger>
                       <SelectContent>
-                        {currentRole !== 'employee' && <SelectItem value="all">All Employees</SelectItem>}
+                        <SelectItem value="all">All Accessible Employees</SelectItem>
                         {employees.map(emp => (
                           <SelectItem key={emp.employee_id} value={emp.employee_id.toString()}>
                             {emp.employee_name}

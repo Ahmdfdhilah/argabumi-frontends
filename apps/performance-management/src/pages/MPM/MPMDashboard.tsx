@@ -10,7 +10,8 @@ import { mpmDataMock } from '@/lib/mpmMocks';
 import Filtering from '@/components/Filtering';
 import Pagination from '@/components/Pagination';
 import Footer from '@/components/Footer';
-import { ExpandedContent } from '@/components/MPM/ExpandedContent';
+import { ExpandedContent } from '@/components/KPI/ExpandedContent';
+
 
 // Types
 type UOMType = 'Number' | '%' | 'Days' | 'Kriteria' | 'Number (Ton)';
@@ -44,7 +45,7 @@ const MPMDashboard: React.FC = () => {
     });
     const [isDarkMode, setIsDarkMode] = useState(false);
     const [currentRole] = useState('admin');
-    const [selectedYear, setSelectedYear] = useState('2025');
+    const [selectedYear] = useState('2025');
     const [expandedRow, setExpandedRow] = useState<number | null>(null);
 
     // Search functionality
@@ -162,17 +163,17 @@ const MPMDashboard: React.FC = () => {
                 setIsSidebarOpen={setIsSidebarOpen}
                 isDarkMode={isDarkMode}
                 setIsDarkMode={setIsDarkMode}
-                
-                
-                
+
+
+
             />
 
             <div className="flex flex-col md:flex-row">
                 <Sidebar
                     isSidebarOpen={isSidebarOpen}
                     setIsSidebarOpen={setIsSidebarOpen}
-                    
-                    
+
+
                 />
 
                 <div className={`flex flex-col mt-4 transition-all duration-300 ease-in-out ${isSidebarOpen ? 'md:ml-64' : 'lg:ml-0'} w-full`}>
@@ -187,8 +188,6 @@ const MPMDashboard: React.FC = () => {
 
                             {/* Enhanced Filtering with Search and Categories */}
                             <Filtering
-                                handlePeriodChange={setSelectedYear}
-                                selectedPeriod={selectedYear}
                             >
                                 {/* Search Filter */}
                                 <div className="space-y-3 md:col-span-1">
@@ -284,7 +283,7 @@ const MPMDashboard: React.FC = () => {
                                                         {itemsWithExpanded.map((item, index) => {
                                                             const isFirstInGroup = index === 0;
                                                             const totalRowsInPerspective = items.length +
-                                                                itemsWithExpanded.filter(i => i.isExpanded).length + 1; 
+                                                                itemsWithExpanded.filter(i => i.isExpanded).length + 1;
 
                                                             return (
                                                                 <React.Fragment key={item.id}>

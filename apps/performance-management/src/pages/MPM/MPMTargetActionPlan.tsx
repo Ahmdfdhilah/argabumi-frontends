@@ -19,7 +19,7 @@ import KPIDetailsCard from '@/components/KPIDetails';
 import { useToast } from '@workspace/ui/components/sonner';
 import { useAppSelector } from '@/redux/hooks';
 import { kpiDefinitionService } from '@/services/kpiDefinitionService';
-import ActionPlanEditDialog from '@/components/MPM/ActionPlanEditDialog';
+import ActionPlanEditDialog from '@/components/KPI/ActionPlanEditDialog';
 
 
 // Types based on imported services
@@ -135,28 +135,16 @@ const MPMTargetActionPlan: React.FC = () => {
     // Get unique assignees for filter dropdown
     const assigneeTypes = ["All", "Unit", "Employee"];
 
-    // Handlers for action plans
     const handleAddActionPlan = async (newActionPlan: any) => {
         try {
-            const actionPlanData = {
-                kpi_parent_id: parseInt(kpiId!),
-                kpi_name: newActionPlan.kpi_name,
-                kpi_definition: newActionPlan.kpi_definition || null,
-                kpi_weight: newActionPlan.kpi_weight,
-                kpi_target: newActionPlan.kpi_target,
-                kpi_is_ipm: newActionPlan.assignType === 'Employee' ? true : false,
-                kpi_is_action_plan: true,
-                kpi_org_unit_id: newActionPlan.assignType === 'Unit' ? newActionPlan.assigneeId : null,
-                kpi_employee_id: newActionPlan.assignType === 'Employee' ? newActionPlan.assigneeId : null,
-                kpi_metadata: newActionPlan.kpi_metadata || null
-            };
-            console.log(actionPlanData);
-            await kpiDefinitionService.createActionPlan(actionPlanData);
-
+            // The actionPlanData is already prepared by the ActionPlanEditDialog
+            console.log(newActionPlan);
+            await kpiDefinitionService.createActionPlan(newActionPlan);
+    
             // Refresh the action plans list
             const updatedPlans = await kpiDefinitionService.getKPIActionPlans(parseInt(kpiId!));
             setActionPlans(updatedPlans);
-
+    
             setIsAddActionPlanDialogOpen(false);
             toast({
                 title: "Success",
@@ -170,7 +158,7 @@ const MPMTargetActionPlan: React.FC = () => {
             });
         }
     };
-
+    
     const handleEditActionPlan = async (updatedActionPlan: any) => {
         try {
             if (!updatedActionPlan.kpi_id) {
@@ -348,7 +336,7 @@ const MPMTargetActionPlan: React.FC = () => {
                                             <thead className="bg-[#1B6131] text-white">
                                                 <tr>
                                                     {isAuthorized && <th className="p-4 text-center">Actions</th>}
-                                                    <th className="p-4 text-center">Action Plan</th>
+                                                    <th className="p-4 text-center">KPI</th>
                                                     <th className="p-4 text-center">Target</th>
                                                     <th className="p-4 text-center">Weight</th>
                                                     <th className="p-4 text-center">Assignee Type</th>

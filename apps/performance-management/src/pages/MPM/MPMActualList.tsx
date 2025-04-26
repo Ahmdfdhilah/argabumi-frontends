@@ -200,15 +200,18 @@ const MPMActualList: React.FC = () => {
         // Fetch submissions based on filters
         const submissions = await submissionService.getSubmissions(params);
 
+        const filteredUnitSubmissions = submissions.filter(submission => submission.org_unit_id !== null
+        );
+
         // If non-admin user viewing all of their accessible departments
         if (currentRole !== 'admin' && selectedDepartment === 'all' && accessibleOrgUnits.length > 0) {
           // Filter submissions client-side to include only those from accessible org units
-          const filteredSubmissions = submissions.filter(submission =>
+          const filteredSubmissions = filteredUnitSubmissions.filter(submission =>
             submission.org_unit_id && accessibleOrgUnits.includes(submission.org_unit_id)
           );
           setMpmActuals(filteredSubmissions);
         } else {
-          setMpmActuals(submissions);
+          setMpmActuals(filteredUnitSubmissions);
         }
 
         // For now, let's assume the API doesn't return total count, so we'll just use current page

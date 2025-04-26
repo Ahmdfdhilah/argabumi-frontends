@@ -96,7 +96,7 @@ export const useTargets = (): UseTargetsReturn => {
     if (!submissionData || !currentEmployeeId || !submissionData.employee_id) {
       return;
     }
-
+    console.log("masuk ke determineEmployeeAuthorizationStatus");
     try {
       // Get the employee associated with this submission
       const employee = await safelyFetchData(
@@ -133,6 +133,7 @@ export const useTargets = (): UseTargetsReturn => {
       const isSupervisor = employee.employee_supervisor_id === currentEmployeeId;
 
       if (isSupervisor) {
+        console.log("masuk ke isSupervisor");
         // If user is supervisor, set appropriate permissions based on submission status
         setSupervisorData({
           employee_id: currentEmployeeId
@@ -223,23 +224,22 @@ export const useTargets = (): UseTargetsReturn => {
       }
 
       // Check for special roles
-      const isDirector = userHasRole('director');
       const isAdmin = userHasRole('admin');
       console.log(user);
 
       console.log(isAdmin);
 
-      if (isDirector || isAdmin) {
+      if (isAdmin) {
         setAuthStatus({
           isOwner: false,
           isSupervisor: false,
           isOrgHead: false,
           isOrgUnitManager: false,
-          canEdit: isDirector,
-          canSubmit: isDirector,
-          canApprove: isDirector,
-          canReject: isDirector,
-          canValidate: isAdmin,
+          canEdit: false,
+          canSubmit: false,
+          canApprove: false,
+          canReject: false,
+          canValidate: true,
           canView: true,
           canRevertToDraft: false
         });
@@ -279,15 +279,16 @@ export const useTargets = (): UseTargetsReturn => {
         `Error fetching org unit for ID: ${submissionData.org_unit_id}`
       );
       // Check for special roles
-      const isDirector = userHasRole('director');
       const isAdmin = userHasRole('admin');
+      const isDirector = userHasRole('director');
 
       if (!orgUnit) return;
 
       setOrgUnitData(orgUnit);
-
-      // Check if user is the org unit manager
+ 
+      // Check if user is the org unit manager  
       const isOrgUnitManager = orgUnit.org_unit_head_id === currentEmployeeId;
+      console.log("isorgh", isOrgUnitManager);
 
       if (isOrgUnitManager) {
         setAuthStatus({
@@ -341,7 +342,7 @@ export const useTargets = (): UseTargetsReturn => {
                   canApprove: submissionData.submission_status === 'Submitted',
                   canReject: submissionData.submission_status === 'Submitted',
                   canValidate: isAdmin,
-                  canView: isAdmin,
+                  canView: true,
                   canRevertToDraft: false
                 });
                 return;
@@ -351,18 +352,17 @@ export const useTargets = (): UseTargetsReturn => {
         }
       }
 
+      if (isAdmin || isDirector) {
 
-
-      if (isDirector || isAdmin) {
         setAuthStatus({
           isOwner: false,
           isSupervisor: false,
           isOrgHead: false,
           isOrgUnitManager: false,
-          canEdit: isDirector,
-          canSubmit: isDirector,
-          canApprove: isDirector,
-          canReject: isDirector,
+          canEdit: false,
+          canSubmit: false,
+          canApprove: false,
+          canReject: false,
           canValidate: isAdmin,
           canView: true,
           canRevertToDraft: false

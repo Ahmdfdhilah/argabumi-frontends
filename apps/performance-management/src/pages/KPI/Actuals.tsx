@@ -18,31 +18,33 @@ import Pagination from '@/components/Pagination';
 import Filtering from '@/components/Filtering';
 import React from 'react';
 import Footer from '@/components/Footer';
-import { useToast } from '@workspace/ui/components/sonner';
 import { kpiPerspectiveService, KPIPerspective } from '@/services/kpiPerspectiveService';
-
-import { submissionService, SubmissionStatusUpdate } from '@/services/submissionService';
-import { approvalService, ApprovalStatusUpdate } from '@/services/approvalService';
-import { SubmitDialog } from '@/components/MPM/SubmitDialog';
-import { ApproveDialog } from '@/components/MPM/ApproveDialog';
-import { RejectDialog } from '@/components/MPM/RejectDialog';
 import { getMonthName } from '@/utils/month';
 import { useActuals, KPIEntryWithActuals } from '@/hooks/useActuals';
-import EditActualDialog from '@/components/MPM/EditActualDialog';
-import ViewEvidenceDialog from '@/components/MPM/ViewEvidence';
-import UploadEvidenceDialog from '@/components/MPM/UploadEvidence';
-import { ConfirmDialog } from '@/components/MPM/ConfirmDialog';
-import { ValidateDialog } from '@/components/MPM/ValidateDialog';
+import { UploadEvidenceDialogContainer } from '@/components/KPI/UploadEvidenceDialogContainer';
+import { RevertToDraftDialogContainer } from '@/components/KPI/RevertToDraftDialogContainer';
+import { ValidateDialogContainer } from '@/components/KPI/ValidateDialogContainer';
+import { RejectDialogContainer } from '@/components/KPI/RejectDialogContainer';
+import { ApproveDialogContainer } from '@/components/KPI/ApproveDialogContainer';
+import { SubmitDialogContainer } from '@/components/KPI/SubmitDialogContainer';
+import { EditActualDialogContainer } from '@/components/KPI/EditActualDialogContainer';
+import ViewEvidenceDialog from '@/components/KPI/ViewEvidence';
+import { useAppSelector } from '@/redux/hooks';
+
+// Import dialog containers
 
 interface ActualsProps {
   submissionTypePic?: string;
 }
 
 const Actuals = ({ submissionTypePic: submissionType }: ActualsProps) => {
-  const { toast } = useToast();
   const { submissionId } = useParams<{ submissionId: string }>();
   const [searchParams] = useSearchParams();
+  const { user } = useAppSelector((state: any) => state.auth);
+  console.log(user);
+  
   const month = searchParams.get('month');
+
   console.log(submissionType);
 
   // Use our custom hook to fetch actuals data
@@ -56,10 +58,6 @@ const Actuals = ({ submissionTypePic: submissionType }: ActualsProps) => {
     authStatus,
   } = useActuals();
 
-  console.log(entriesWithActuals);
-  console.log(authStatus);
-
-
   // Layout states
   const [isSidebarOpen, setIsSidebarOpen] = useState(() => {
     if (typeof window !== 'undefined') {
@@ -69,27 +67,20 @@ const Actuals = ({ submissionTypePic: submissionType }: ActualsProps) => {
   });
   const [isDarkMode, setIsDarkMode] = useState(false);
 
-  // Dialog states
+  // Dialog visibility states
   const [isEditDialogOpen, setIsEditDialogOpen] = useState(false);
-  const [selectedActual, setSelectedActual] = useState<KPIEntryWithActuals | null>(null);
   const [isSubmitDialogOpen, setIsSubmitDialogOpen] = useState(false);
   const [isApproveDialogOpen, setIsApproveDialogOpen] = useState(false);
   const [isRejectDialogOpen, setIsRejectDialogOpen] = useState(false);
-  const [isSubmitEvidenceDialogOpen, setIsSubmitEvidenceDialogOpen] = useState(false);
-  const [isViewEvidenceDialogOpen, setIsViewEvidenceDialogOpen] = useState(false);
-  const [submissionComments, setSubmissionComments] = useState<string>('');
-  const [approvalNotes, setApprovalNotes] = useState<string>('');
   const [isValidateDialogOpen, setIsValidateDialogOpen] = useState(false);
   const [isAdminRejectDialogOpen, setIsAdminRejectDialogOpen] = useState(false);
-  const [validationComments, setValidationComments] = useState('');
-  const [isValidating, setIsValidating] = useState(false);
   const [isRevertToDraftDialogOpen, setIsRevertToDraftDialogOpen] = useState(false);
-  const [isReverting, setIsReverting] = useState(false);
+  const [isSubmitEvidenceDialogOpen, setIsSubmitEvidenceDialogOpen] = useState(false);
+  const [isViewEvidenceDialogOpen, setIsViewEvidenceDialogOpen] = useState(false);
+  const [selectedActual, setSelectedActual] = useState<KPIEntryWithActuals | null>(null);
 
   // UI states
   const [perspectives, setPerspectives] = useState<KPIPerspective[]>([]);
-  const [isSubmitting, setIsSubmitting] = useState(false);
-  const [isProcessingApproval, setIsProcessingApproval] = useState(false);
 
   // Pagination states
   const [currentPage, setCurrentPage] = useState(1);
@@ -111,7 +102,6 @@ const Actuals = ({ submissionTypePic: submissionType }: ActualsProps) => {
 
     fetchPerspectives();
   }, []);
-
 
   // Group entries by perspective
   const groupedEntries = useMemo(() => {
@@ -176,228 +166,6 @@ const Actuals = ({ submissionTypePic: submissionType }: ActualsProps) => {
     return result;
   }, [filteredEntries, currentPage, itemsPerPage]);
 
-
-
-  // Submit actuals
-  const handleSubmitActuals = async () => {
-    if (!submissionId || !authStatus.canSubmit) return;
-
-    setIsSubmitting(true);
-    try {
-      const statusUpdate: SubmissionStatusUpdate = {
-        submission_status: 'Submitted',
-        submission_comments: submissionComments
-      };
-
-      await submissionService.updateSubmissionStatus(Number(submissionId), statusUpdate);
-
-      toast({
-        title: "Success",
-        description: "Actuals submitted successfully",
-      });
-
-      setIsSubmitDialogOpen(false);
-      // Refresh data after submission
-      refreshData();
-    } catch (error) {
-      console.error('Error submitting actuals:', error);
-      toast({
-        title: "Error",
-        description: "Failed to submit actuals",
-        variant: "destructive",
-      });
-    } finally {
-      setIsSubmitting(false);
-    }
-  };
-
-  // Approve function
-  const handleApprove = async () => {
-    if (!authStatus.canApprove) return;
-
-    setIsProcessingApproval(true);
-    try {
-      // Get the approval ID from the submission
-      const approvalData = await approvalService.getApprovalsBySubmission(parseInt(submissionId!));
-      const userApproval = approvalData.find(
-        approval => approval.approval_status === 'Pending'
-      );
-
-      if (!userApproval) {
-        throw new Error('No pending approval found');
-      }
-
-      const statusUpdate: ApprovalStatusUpdate = {
-        approval_status: 'Approved',
-        approval_notes: approvalNotes
-      };
-
-      await approvalService.updateApprovalStatus(userApproval.approval_id, statusUpdate);
-
-      toast({
-        title: "Success",
-        description: "Actuals approved successfully",
-      });
-
-      setIsApproveDialogOpen(false);
-      setApprovalNotes('');
-
-      // Refresh data after approval
-      refreshData();
-    } catch (error) {
-      console.error('Error approving submission:', error);
-      toast({
-        title: "Error",
-        description: "Failed to approve actuals",
-        variant: "destructive",
-      });
-    } finally {
-      setIsProcessingApproval(false);
-    }
-  };
-
-  // Reject function
-  const handleReject = async () => {
-    if (!authStatus.canReject) return;
-
-    setIsProcessingApproval(true);
-    try {
-      // Get the approval ID from the submission
-      const approvalData = await approvalService.getApprovalsBySubmission(parseInt(submissionId!));
-      const userApproval = approvalData.find(
-        approval => approval.approval_status === 'Pending'
-      );
-
-      if (!userApproval) {
-        throw new Error('No pending approval found');
-      }
-
-      const statusUpdate: ApprovalStatusUpdate = {
-        approval_status: 'Rejected',
-        approval_notes: approvalNotes
-      };
-
-      await approvalService.updateApprovalStatus(userApproval.approval_id, statusUpdate);
-
-      toast({
-        title: "Success",
-        description: "Actuals rejected successfully",
-      });
-
-      setIsRejectDialogOpen(false);
-      setApprovalNotes('');
-
-      // Refresh data after rejection
-      refreshData();
-    } catch (error) {
-      console.error('Error rejecting submission:', error);
-      toast({
-        title: "Error",
-        description: "Failed to reject actuals",
-        variant: "destructive",
-      });
-    } finally {
-      setIsProcessingApproval(false);
-    }
-  };
-
-  // Validation handler
-  const handleValidate = async () => {
-    if (!submissionId || !authStatus.canValidate) return;
-
-    setIsValidating(true);
-    try {
-      await submissionService.validateSubmission(parseInt(submissionId), validationComments);
-
-      toast({
-        title: "Success",
-        description: "Actuals validated successfully",
-      });
-
-      setIsValidateDialogOpen(false);
-      setValidationComments('');
-
-      // Refresh data to get updated status
-      refreshData();
-    } catch (error) {
-      console.error('Error validating submission:', error);
-      toast({
-        title: "Error",
-        description: "Failed to validate actuals",
-        variant: "destructive",
-      });
-    } finally {
-      setIsValidating(false);
-    }
-  };
-
-  // Admin reject handler
-  const handleAdminReject = async () => {
-    if (!submissionId || !authStatus.canValidate) return;
-
-    setIsValidating(true);
-    try {
-      const rejectData = {
-        rejection_reason: validationComments
-      };
-
-      await submissionService.adminRejectSubmission(parseInt(submissionId), rejectData);
-
-      toast({
-        title: "Success",
-        description: "Actuals rejected successfully",
-      });
-
-      setIsAdminRejectDialogOpen(false);
-      setValidationComments('');
-
-      // Refresh data to get updated status
-      refreshData();
-    } catch (error) {
-      console.error('Error rejecting submission:', error);
-      toast({
-        title: "Error",
-        description: "Failed to reject actuals",
-        variant: "destructive",
-      });
-    } finally {
-      setIsValidating(false);
-    }
-  };
-
-  // Revert to draft handler
-  const handleRevertToDraft = async () => {
-    if (!submissionId || !authStatus.canRevertToDraft) return;
-
-    setIsReverting(true);
-    try {
-      const statusUpdate: SubmissionStatusUpdate = {
-        submission_status: 'Draft',
-        submission_comments: 'Reverted to draft status'
-      };
-
-      await submissionService.updateSubmissionStatus(Number(submissionId), statusUpdate);
-
-      toast({
-        title: "Success",
-        description: "Successfully reverted to draft status",
-      });
-
-      setIsRevertToDraftDialogOpen(false);
-      // Refresh data after status change
-      refreshData();
-    } catch (error) {
-      console.error('Error reverting to draft:', error);
-      toast({
-        title: "Error",
-        description: "Failed to revert to draft status",
-        variant: "destructive",
-      });
-    } finally {
-      setIsReverting(false);
-    }
-  };
-
   // Handle edit actual
   const handleEditClick = (entry: KPIEntryWithActuals) => {
     setSelectedActual(entry);
@@ -413,7 +181,6 @@ const Actuals = ({ submissionTypePic: submissionType }: ActualsProps) => {
     setItemsPerPage(Number(value));
     setCurrentPage(1);
   };
-
 
   const handlePerspectiveChange = (value: string) => {
     setSelectedPerspective(value);
@@ -521,8 +288,7 @@ const Actuals = ({ submissionTypePic: submissionType }: ActualsProps) => {
               </Card>
 
               {/* Filter Section */}
-              <Filtering
-              >
+              <Filtering>
                 {/* Custom filter for perspective */}
                 <div className="space-y-3">
                   <label className="flex items-center space-x-2 text-sm font-medium text-gray-700 dark:text-gray-200">
@@ -570,10 +336,9 @@ const Actuals = ({ submissionTypePic: submissionType }: ActualsProps) => {
                             <XCircle className="mr-2 h-4 w-4" />
                             Reject
                           </Button>
-
                           <Button
                             variant="outline"
-                            className="w-full sm:w-auto border-[#1B6131] text-[#1B6131] hover:bg-[#E4EFCF] flex items-center justify-center dark:text-white"
+                            className="w-full sm:w-auto border-green-600 text-green-600 hover:bg-green-50 flex items-center justify-center dark:hover:bg-green-900/20"
                             onClick={() => setIsApproveDialogOpen(true)}
                           >
                             <CheckCircle className="mr-2 h-4 w-4" />
@@ -582,40 +347,30 @@ const Actuals = ({ submissionTypePic: submissionType }: ActualsProps) => {
                         </>
                       )}
 
+                      {/* Validate Button - Only show if user can validate */}
                       {authStatus.canValidate && submissionStatus === 'Approved' && (
                         <>
+                          <Button
+                            variant="outline"
+                            className="w-full sm:w-auto border-blue-600 text-blue-600 hover:bg-blue-50 flex items-center justify-center dark:hover:bg-blue-900/20"
+                            onClick={() => setIsValidateDialogOpen(true)}
+                          >
+                            <CheckSquare className="mr-2 h-4 w-4" />
+                            Validate
+                          </Button>
                           <Button
                             variant="outline"
                             className="w-full sm:w-auto border-red-600 text-red-600 hover:bg-red-50 flex items-center justify-center dark:hover:bg-red-900/20"
                             onClick={() => setIsAdminRejectDialogOpen(true)}
                           >
                             <XCircle className="mr-2 h-4 w-4" />
-                            Reject
-                          </Button>
-
-                          <Button
-                            variant="outline"
-                            className="w-full sm:w-auto border-[#1B6131] text-[#1B6131] hover:bg-[#E4EFCF] flex items-center justify-center dark:text-white"
-                            onClick={() => setIsValidateDialogOpen(true)}
-                          >
-                            <CheckSquare className="mr-2 h-4 w-4" />
-                            Validate
+                            Admin Reject
                           </Button>
                         </>
                       )}
 
-                      {/* Submit Button - Only show if user can submit actuals and evidence exists */}
-                      {authStatus.canSubmit && hasEvidence && (
-                        <Button
-                          variant="outline"
-                          className="w-full sm:w-auto border-[#1B6131] text-[#1B6131] hover:bg-[#E4EFCF] flex items-center justify-center dark:text-white"
-                          onClick={() => setIsSubmitDialogOpen(true)}
-                        >
-                          <Send className="mr-2 h-4 w-4" />
-                          Submit Actuals
-                        </Button>
-                      )}
-                      {authStatus.canRevertToDraft && (
+                      {/* Revert to Draft Button - Only show if user can revert */}
+                      {authStatus.canRevertToDraft && submissionStatus === 'Rejected' && (
                         <Button
                           variant="outline"
                           className="w-full sm:w-auto border-amber-600 text-amber-600 hover:bg-amber-50 flex items-center justify-center dark:hover:bg-amber-900/20"
@@ -625,9 +380,23 @@ const Actuals = ({ submissionTypePic: submissionType }: ActualsProps) => {
                           Revert to Draft
                         </Button>
                       )}
+
+                      {/* Submit Button - Only show if user can submit and status is Draft */}
+                      {authStatus.canSubmit && submissionStatus === 'Draft' && (
+                        <Button
+                          variant="outline"
+                          className="w-full sm:w-auto border-blue-600 text-blue-600 hover:bg-blue-50 flex items-center justify-center dark:hover:bg-blue-900/20"
+                          onClick={() => setIsSubmitDialogOpen(true)}
+                          disabled={!hasEvidence}
+                        >
+                          <Send className="mr-2 h-4 w-4" />
+                          Submit
+                        </Button>
+                      )}
                     </div>
                   </div>
                 </CardHeader>
+
                 <CardContent className='m-0 p-0 pb-8'>
                   <div className="overflow-x-auto">
                     <table className="w-full border-collapse">
@@ -755,110 +524,85 @@ const Actuals = ({ submissionTypePic: submissionType }: ActualsProps) => {
               <Pagination
                 currentPage={currentPage}
                 totalPages={totalPages}
+                totalItems={totalItems}
                 onPageChange={handlePageChange}
                 itemsPerPage={itemsPerPage}
-                totalItems={totalItems}
                 onItemsPerPageChange={handleItemsPerPageChange}
               />
             </div>
           </main>
+
           <Footer />
         </div>
       </div>
 
-      {/* Dialogs */}
-      {isEditDialogOpen && selectedActual && (
-        <EditActualDialog
+      {/* Dialog Components */}
+      {selectedActual && (
+        <EditActualDialogContainer
           isOpen={isEditDialogOpen}
           onClose={() => setIsEditDialogOpen(false)}
           selectedActual={selectedActual}
-          setSelectedActual={setSelectedActual}
           refreshData={refreshData}
         />
       )}
 
-      <ValidateDialog
-        isOpen={isValidateDialogOpen}
-        onClose={() => setIsValidateDialogOpen(false)}
-        comments={validationComments}
-        setComments={setValidationComments}
-        onValidate={handleValidate}
-        isProcessing={isValidating}
+      <SubmitDialogContainer
+        isOpen={isSubmitDialogOpen}
+        onClose={() => setIsSubmitDialogOpen(false)}
+        submissionId={Number(submissionId)}
+        refreshData={refreshData}
       />
 
-      {/* Admin Reject Dialog - reusing the RejectDialog component with a different handler */}
-      <RejectDialog
+      <ApproveDialogContainer
+        isOpen={isApproveDialogOpen}
+        onClose={() => setIsApproveDialogOpen(false)}
+        submissionId={Number(submissionId)}
+        employeeId={user?.employee_data?.employee_id}
+        refreshData={refreshData}
+      />
+
+      <RejectDialogContainer
+        isOpen={isRejectDialogOpen}
+        onClose={() => setIsRejectDialogOpen(false)}
+        submissionId={Number(submissionId)}
+        employeeId={user?.employee_data?.employee_id}
+        refreshData={refreshData}
+        isAdminReject={false}
+      />
+
+      <RejectDialogContainer
         isOpen={isAdminRejectDialogOpen}
         onClose={() => setIsAdminRejectDialogOpen(false)}
-        notes={validationComments}
-        setNotes={setValidationComments}
-        onReject={handleAdminReject}
-        isProcessing={isValidating}
-        title="Admin Rejection"
-        description="You are about to reject these previously approved targets as an admin. Please provide a reason."
+        submissionId={Number(submissionId)}
+        refreshData={refreshData}
+        isAdminReject={true}
       />
 
-      {isSubmitDialogOpen && (
-        <SubmitDialog
-          isOpen={isSubmitDialogOpen}
-          onClose={() => setIsSubmitDialogOpen(false)}
-          comments={submissionComments}
-          setComments={setSubmissionComments}
-          onSubmit={handleSubmitActuals}
-          isSubmitting={isSubmitting}
-        // description="Are you sure you want to submit these actuals? Once submitted, you won't be able to make changes until it goes through the approval process."
-        />
-      )}
+      <ValidateDialogContainer
+        isOpen={isValidateDialogOpen}
+        onClose={() => setIsValidateDialogOpen(false)}
+        submissionId={Number(submissionId)}
+        refreshData={refreshData}
+      />
 
-      {isApproveDialogOpen && (
-        <ApproveDialog
-          isOpen={isApproveDialogOpen}
-          onClose={() => setIsApproveDialogOpen(false)}
-          isProcessing={isProcessingApproval}
-          onApprove={handleApprove}
-          setNotes={setApprovalNotes}
-          notes={approvalNotes}
-        // title="Approve Actuals"
-        // description="Are you sure you want to approve these actuals?"
-        />
-      )}
-
-      {isRejectDialogOpen && (
-        <RejectDialog
-          isOpen={isRejectDialogOpen}
-          onClose={() => setIsRejectDialogOpen(false)}
-          isProcessing={isProcessingApproval}
-          onReject={handleReject}
-          setNotes={setApprovalNotes}
-          notes={approvalNotes}
-        // title="Reject Actuals"
-        // description="Are you sure you want to reject these actuals? Please provide a reason for rejection."
-        />
-      )}
-
-      {isSubmitEvidenceDialogOpen && (
-        <UploadEvidenceDialog
-          submissionId={Number(submissionId)}
-          isOpen={isSubmitEvidenceDialogOpen}
-          onClose={() => setIsSubmitEvidenceDialogOpen(false)}
-        />
-      )}
-
-      {isViewEvidenceDialogOpen && submissionEvidence && (
-        <ViewEvidenceDialog
-          isOpen={isViewEvidenceDialogOpen}
-          onClose={() => setIsViewEvidenceDialogOpen(false)}
-          evidences={submissionEvidence}
-        />
-      )}
-      {/* Revert to Draft Dialog */}
-      <ConfirmDialog
+      <RevertToDraftDialogContainer
         isOpen={isRevertToDraftDialogOpen}
         onClose={() => setIsRevertToDraftDialogOpen(false)}
-        onConfirm={handleRevertToDraft}
-        isProcessing={isReverting}
-        title="Revert to Draft"
-        description="Are you sure you want to revert this submission to draft status? This will allow you to make changes before submitting again."
+        submissionId={Number(submissionId)}
+        refreshData={refreshData}
+      />
+
+      <UploadEvidenceDialogContainer
+        isOpen={isSubmitEvidenceDialogOpen}
+        onClose={() => setIsSubmitEvidenceDialogOpen(false)}
+        submissionId={Number(submissionId)}
+        refreshData={refreshData}
+      />
+
+      <ViewEvidenceDialog
+        isOpen={isViewEvidenceDialogOpen}
+        onClose={() => setIsViewEvidenceDialogOpen(false)}
+        evidences={submissionEvidence || []}
       />
     </div>
   );

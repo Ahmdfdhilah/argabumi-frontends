@@ -551,7 +551,7 @@ const IPMActualList: React.FC = () => {
                                         <table className="w-full border-collapse min-w-[800px]">
                                             <thead className="bg-[#1B6131] text-white">
                                                 <tr>
-                                                    {['Month', 'Period', 'Employee', 'Department', 'Submitted At', 'Status', 'Actions'].map(header => (
+                                                    {['Month', 'Period', 'Employee', 'Submitted At', 'Status', 'Actions'].map(header => (
                                                         <th key={header} className="p-4 text-left">{header}</th>
                                                     ))}
                                                 </tr>
@@ -567,7 +567,6 @@ const IPMActualList: React.FC = () => {
                                                             <td className="p-4">{getMonthName(actual.submission_month)}</td>
                                                             <td className="p-4">{actual.period_name}</td>
                                                             <td className="p-4">{actual.employee_name || 'N/A'}</td>
-                                                            <td className="p-4">{actual.org_unit_name}</td>
                                                             <td className="p-4">
                                                                 {new Date(actual.created_at).toLocaleDateString('en-US', {
                                                                     year: 'numeric',

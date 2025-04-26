@@ -1,8 +1,9 @@
+// Main Targets Component - With Custom KPI Creation
 import { useState, useMemo, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { Card, CardContent, CardHeader, CardTitle } from '@workspace/ui/components/card';
 import { Button } from '@workspace/ui/components/button';
-import { Edit, Eye, Send, CheckCircle, XCircle, CheckSquare, RotateCcw } from 'lucide-react';
+import { Edit, Eye, Send, CheckCircle, XCircle, CheckSquare, RotateCcw, Plus } from 'lucide-react';
 
 import Header from '@/components/Header';
 import Sidebar from '@/components/Sidebar';
@@ -12,26 +13,26 @@ import Filtering from '@/components/Filtering';
 import Footer from '@/components/Footer';
 import { useTargets } from '@/hooks/useTargets';
 import React from 'react';
-import Decimal from 'decimal.js';
-import EditMonthlyTargetDialog from '@/components/MPM/EditMonthlyTargetDialog';
 
 // Import services
-import { kpiTargetService } from '@/services/kpiTargetsService';
 import { kpiPerspectiveService, KPIPerspective } from '@/services/kpiPerspectiveService';
-import { submissionService, SubmissionStatusUpdate } from '@/services/submissionService';
-import { approvalService, ApprovalStatusUpdate } from '@/services/approvalService';
-import { useToast } from '@workspace/ui/components/sonner';
+import organizationUnitService, { OrganizationUnitResponse } from '@/services/organizationUnitService';
+import { kpiDefinitionService, KPIDefinitionResponse } from '@/services/kpiDefinitionService';
 import { allMonths, getMonthName } from '@/utils/month';
 import { useAppSelector } from '@/redux/hooks';
-import { SubmitDialog } from '@/components/MPM/SubmitDialog';
-import { ApproveDialog } from '@/components/MPM/ApproveDialog';
-import { RejectDialog } from '@/components/MPM/RejectDialog';
-import { ValidateDialog } from '@/components/MPM/ValidateDialog';
-import { ConfirmDialog } from '@/components/MPM/ConfirmDialog';
+import { SubmitDialogContainer } from '@/components/KPI/SubmitDialogContainer';
+import { ApproveDialogContainer } from '@/components/KPI/ApproveDialogContainer';
+import { ValidateDialogContainer } from '@/components/KPI/ValidateDialogContainer';
+import { RejectDialogContainer } from '@/components/KPI/RejectDialogContainer';
+import { RevertToDraftDialogContainer } from '@/components/KPI/RevertToDraftDialogContainer';
+import { EditTargetDialogContainer } from '@/components/KPI/EditMonthlyTargetDialogContainer';
+import KPIFormDialog from '@/components/BSC/KPIFormDialog';
+import { useToast } from '@workspace/ui/components/sonner';
 
 interface TargetsProps {
   submissionTypePic: string;
 }
+
 const Targets = ({ submissionTypePic: submissionType }: TargetsProps) => {
   const { submissionId } = useParams<{ submissionId: string }>();
   const navigate = useNavigate();
@@ -49,7 +50,7 @@ const Targets = ({ submissionTypePic: submissionType }: TargetsProps) => {
   });
   const [isDarkMode, setIsDarkMode] = useState(false);
 
-  // Dialog states
+  // Dialog visibility states
   const [isEditMonthlyTargetOpen, setIsEditMonthlyTargetOpen] = useState(false);
   const [isSubmitDialogOpen, setIsSubmitDialogOpen] = useState(false);
   const [isApproveDialogOpen, setIsApproveDialogOpen] = useState(false);
@@ -57,13 +58,14 @@ const Targets = ({ submissionTypePic: submissionType }: TargetsProps) => {
   const [isValidateDialogOpen, setIsValidateDialogOpen] = useState(false);
   const [isAdminRejectDialogOpen, setIsAdminRejectDialogOpen] = useState(false);
   const [isRevertToDraftDialogOpen, setIsRevertToDraftDialogOpen] = useState(false);
-  const [validationComments, setValidationComments] = useState<string>('');
-  const [isValidating, setIsValidating] = useState(false);
-  const [_, setSelectedEntryId] = useState<number | null>(null);
-  const [submissionComments, setSubmissionComments] = useState<string>('');
-  const [approvalNotes, setApprovalNotes] = useState<string>('');
   const [selectedEntry, setSelectedEntry] = useState<any | null>(null);
-  const [isReverting, setIsReverting] = useState(false);
+
+  // Custom KPI Dialog states
+  const [isCustomKPIDialogOpen, setIsCustomKPIDialogOpen] = useState(false);
+  const [currentEditingKPI, setCurrentEditingKPI] = useState<Partial<KPIDefinitionResponse> | undefined>(undefined);
+  const [perspectives, setPerspectives] = useState<KPIPerspective[]>([]);
+  const [accessibleOrgUnits, setAccessibleOrgUnits] = useState<OrganizationUnitResponse[]>([]);
+  const [canCreateCustomKPI, setCanCreateCustomKPI] = useState(false);
 
   // Filtering states
   const [selectedPerspective, setSelectedPerspective] = useState<string>('');
@@ -71,11 +73,6 @@ const Targets = ({ submissionTypePic: submissionType }: TargetsProps) => {
   // Pagination states
   const [currentPage, setCurrentPage] = useState(1);
   const [itemsPerPage, setItemsPerPage] = useState(10);
-
-  // Perspectives state
-  const [perspectives, setPerspectives] = useState<KPIPerspective[]>([]);
-  const [isSubmitting, setIsSubmitting] = useState(false);
-  const [isProcessingApproval, setIsProcessingApproval] = useState(false);
 
   // Fetch data using our custom hook
   const {
@@ -87,50 +84,7 @@ const Targets = ({ submissionTypePic: submissionType }: TargetsProps) => {
     authStatus,
   } = useTargets();
 
-  const handleRevertToDraft = async () => {
-    if (!submissionId || !authStatus.canRevertToDraft) {
-      console.log("Cannot revert - missing submissionId or permissions:", {
-        submissionId,
-        canRevertToDraft: authStatus.canRevertToDraft
-      });
-      return;
-    }
-
-    console.log("Starting revert to draft process...");
-    setIsReverting(true);
-
-    try {
-      const statusUpdate: SubmissionStatusUpdate = {
-        submission_status: 'Draft',
-        submission_comments: 'Reverted to draft for editing after rejection'
-      };
-
-      await submissionService.updateSubmissionStatus(Number(submissionId), statusUpdate);
-
-      toast({
-        title: "Success",
-        description: "Submission reverted to draft status successfully",
-      });
-
-      // Close the dialog AFTER successful operation
-      setIsRevertToDraftDialogOpen(false);
-
-      // Refresh data to get updated submission status
-      await refreshData();
-
-    } catch (error) {
-      console.error('Error reverting to draft:', error);
-      toast({
-        title: "Error",
-        description: "Failed to revert to draft status",
-        variant: "destructive",
-      });
-    } finally {
-      setIsReverting(false);
-    }
-  };
-
-  // Fetch perspectives on component mount
+  // Fetch perspectives and check organization unit access on component mount
   useEffect(() => {
     const fetchPerspectives = async () => {
       try {
@@ -141,249 +95,138 @@ const Targets = ({ submissionTypePic: submissionType }: TargetsProps) => {
       }
     };
 
+    const checkOrgUnitAccess = async () => {
+      try {
+        // Get user's employee data directly from Redux store
+        const employeeId = user?.employee_data?.employee_id;
+        const employeeOrgUnitId = user?.employee_data?.employee_org_unit_id;
+        const userOrgUnit = user?.org_unit_data;
+
+        if (!employeeId || !employeeOrgUnitId || !userOrgUnit) return;
+
+        // Check if user is org unit head (org_unit_head_id === employee_id)
+        if (userOrgUnit.org_unit_head_id === employeeId) {
+          setCanCreateCustomKPI(true);
+
+          // Get accessible org units (own org unit)
+          const ownOrgUnit = {
+            org_unit_id: userOrgUnit.org_unit_id,
+            org_unit_code: userOrgUnit.org_unit_code,
+            org_unit_name: userOrgUnit.org_unit_name,
+            org_unit_type: userOrgUnit.org_unit_type,
+            org_unit_head_id: userOrgUnit.org_unit_head_id,
+            org_unit_parent_id: userOrgUnit.org_unit_parent_id,
+            org_unit_level: userOrgUnit.org_unit_level,
+            org_unit_description: userOrgUnit.org_unit_description,
+            org_unit_metadata: userOrgUnit.org_unit_metadata,
+            is_active: userOrgUnit.is_active,
+            org_unit_path: userOrgUnit.org_unit_path,
+          };
+
+          // Get only direct subordinate units using the service method
+          const subordinateOrgUnits = await organizationUnitService.getOrganizationUnitWithChildren(userOrgUnit.org_unit_id);
+
+          // Set the accessible org units (own + direct subordinates)
+          setAccessibleOrgUnits([ownOrgUnit, ...(subordinateOrgUnits.children || [])]);
+        }
+      } catch (error) {
+        console.error('Error checking org unit access:', error);
+      }
+    };
+
     fetchPerspectives();
-  }, []);
+    checkOrgUnitAccess();
+  }, [user]);
 
   // Handle edit target
   const handleEditMonthlyTarget = (entryId: number) => {
     const entry = entriesWithTargets.find(entry => entry.entry_id === entryId);
     if (entry) {
       setSelectedEntry(entry);
-      setSelectedEntryId(entryId);
       setIsEditMonthlyTargetOpen(true);
     }
   };
-
-  // Handle save edited targets
-  const handleSaveTargets = async (updatedEntry: any) => {
-    try {
-      // Map the updated entry to the format expected by the bulk update endpoint
-      const bulkUpdateData = {
-        targets: updatedEntry.targets.map((target: any) => ({
-          target_id: target.target_id,
-          target_value: target.target_value,
-          target_notes: target.target_notes || null
-        }))
-      };
-
-      // Call the service to update the targets
-      await kpiTargetService.bulkUpdateTargets(bulkUpdateData);
-
-      // Refresh data to show updated values
-      refreshData();
-      setIsEditMonthlyTargetOpen(false);
-
-      toast({
-        title: "Success",
-        description: "Targets updated successfully",
-      });
-    } catch (error) {
-      console.error('Error updating targets:', error);
-      toast({
-        title: "Error",
-        description: "Failed to update targets",
-        variant: "destructive",
-      });
-    }
-  };
-
 
   const handlePerspectiveChange = (value: string) => {
     setSelectedPerspective(value);
   };
 
-  // Submit function
-  const handleSubmitTargets = async () => {
-    if (!submissionId || !authStatus.canSubmit) return;
+  // Open custom KPI dialog
+  const handleOpenCustomKPIDialog = () => {
+    if (!submission) return;
 
-    setIsSubmitting(true);
-    try {
-      const statusUpdate: SubmissionStatusUpdate = {
-        submission_status: 'Submitted',
-        submission_comments: submissionComments
-      };
+    setCurrentEditingKPI({
+      kpi_code: '',
+      kpi_name: '',
+      kpi_definition: '',
+      kpi_weight: 0,
+      kpi_uom: '',
+      kpi_category: '',
+      kpi_calculation: '',
+      kpi_target: 0,
+      kpi_org_unit_id: user?.employee_data?.employee_org_unit_id,
+      kpi_perspective_id: 0,
+      kpi_owner_id: user?.employee_data?.employee_id,
+      kpi_period_id: submission.period_id,
+      kpi_parent_id: null
+    });
 
-      await submissionService.updateSubmissionStatus(Number(submissionId), statusUpdate);
-
-      toast({
-        title: "Success",
-        description: "Targets submitted successfully",
-      });
-
-      setIsSubmitDialogOpen(false);
-      // Refresh data to get updated submission status
-      refreshData();
-    } catch (error) {
-      console.error('Error submitting targets:', error);
-      toast({
-        title: "Error",
-        description: "Failed to submit targets",
-        variant: "destructive",
-      });
-    } finally {
-      setIsSubmitting(false);
-    }
+    setIsCustomKPIDialogOpen(true);
   };
 
-  // Approve function
-  const handleApprove = async () => {
-    if (!submissionId || !authStatus.canApprove) return;
-
-    setIsProcessingApproval(true);
+  // Handle save custom KPI
+  const handleSaveCustomKPI = async (kpi: KPIDefinitionResponse) => {
     try {
-      // First get the approval ID for the current user
-      const approvalData = await approvalService.getApprovalsBySubmission(parseInt(submissionId));
-      const userApproval = approvalData.find(
-        approval => approval.approver_id === user?.employee_data?.employee_id &&
-          approval.approval_status === 'Pending'
-      );
-
-      if (!userApproval?.approval_id) {
-        throw new Error("No pending approval found for current user");
+      if (!submission) {
+        toast({
+          title: "Error",
+          description: "Submission data is missing",
+          variant: "destructive",
+        });
+        return;
       }
 
-      const statusUpdate: ApprovalStatusUpdate = {
-        approval_status: 'Approved',
-        approval_notes: approvalNotes
+      // Create new custom KPI definition
+      const createData = {
+        kpi_code: kpi.kpi_code,
+        kpi_name: kpi.kpi_name,
+        kpi_org_unit_id: kpi.kpi_org_unit_id,
+        kpi_period_id: submission.period_id,
+        kpi_perspective_id: kpi.kpi_perspective_id,
+        kpi_owner_id: user?.employee_data?.employee_id,
+        kpi_definition: kpi.kpi_definition,
+        kpi_weight: kpi.kpi_weight,
+        kpi_uom: kpi.kpi_uom,
+        kpi_category: kpi.kpi_category,
+        kpi_calculation: kpi.kpi_calculation || '',
+        kpi_target: kpi.kpi_target,
+        kpi_is_action_plan: false,
+        kpi_is_ipm: false,
+        kpi_visibility_level: 'org_unit',
+        kpi_status: 'Active',
+        kpi_employee_id: null,
+        kpi_parent_id: null,
       };
 
-      await approvalService.updateApprovalStatus(userApproval.approval_id, statusUpdate);
+      await kpiDefinitionService.createKPIDefinition(createData);
 
-      setIsApproveDialogOpen(false);
-      setApprovalNotes('');
-
-      // Refresh data to get updated status
+      // After creating KPI, refresh data to show the new entry
       refreshData();
 
+      setIsCustomKPIDialogOpen(false);
       toast({
         title: "Success",
-        description: "Targets approved successfully",
+        description: "Custom KPI created successfully",
       });
     } catch (error) {
-      console.error('Error approving submission:', error);
+      console.error("Error saving custom KPI:", error);
       toast({
         title: "Error",
-        description: "Failed to approve targets",
+        description: "Failed to create custom KPI",
         variant: "destructive",
       });
-    } finally {
-      setIsProcessingApproval(false);
     }
   };
-
-  // Reject function
-  const handleReject = async () => {
-    if (!submissionId || !authStatus.canReject) return;
-
-    setIsProcessingApproval(true);
-    try {
-      // First get the approval ID for the current user
-      const approvalData = await approvalService.getApprovalsBySubmission(parseInt(submissionId));
-      console.log("approvalData", approvalData);
-      console.log("user", user);
-
-      const userApproval = approvalData.find(
-        approval => approval.approver_id === user?.employee_data?.employee_id &&
-          approval.approval_status === 'Pending'
-      );
-      console.log("userApproval", userApproval);
-
-      if (!userApproval?.approval_id) {
-        throw new Error("No pending approval found for current user");
-      }
-
-      const statusUpdate: ApprovalStatusUpdate = {
-        approval_status: 'Rejected',
-        approval_notes: approvalNotes
-      };
-
-      await approvalService.updateApprovalStatus(userApproval.approval_id, statusUpdate);
-
-      setIsRejectDialogOpen(false);
-      setApprovalNotes('');
-
-      // Refresh data to get updated status
-      refreshData();
-
-      toast({
-        title: "Success",
-        description: "Targets rejected successfully",
-      });
-    } catch (error) {
-      console.error('Error rejecting submission:', error);
-      toast({
-        title: "Error",
-        description: "Failed to reject targets",
-        variant: "destructive",
-      });
-    } finally {
-      setIsProcessingApproval(false);
-    }
-  };
-
-  const handleValidate = async () => {
-    if (!submissionId || !authStatus.canValidate) return;
-
-    setIsValidating(true);
-    try {
-      await submissionService.validateSubmission(parseInt(submissionId), validationComments);
-
-      toast({
-        title: "Success",
-        description: "Targets validated successfully",
-      });
-
-      setIsValidateDialogOpen(false);
-      setValidationComments('');
-
-      // Refresh data to get updated status
-      refreshData();
-    } catch (error) {
-      console.error('Error validating submission:', error);
-      toast({
-        title: "Error",
-        description: "Failed to validate targets",
-        variant: "destructive",
-      });
-    } finally {
-      setIsValidating(false);
-    }
-  };
-
-  // Add the admin reject handler function
-  const handleAdminReject = async () => {
-    if (!submissionId || !authStatus.canValidate) return;
-
-    setIsValidating(true);
-    try {
-      const rejectData = {
-        rejection_reason: validationComments
-      };
-
-      await submissionService.adminRejectSubmission(parseInt(submissionId), rejectData);
-
-      toast({
-        title: "Success",
-        description: "Targets rejected successfully",
-      });
-
-      setIsAdminRejectDialogOpen(false);
-      setValidationComments('');
-
-      // Refresh data to get updated status
-      refreshData();
-    } catch (error) {
-      console.error('Error rejecting submission:', error);
-      toast({
-        title: "Error",
-        description: "Failed to reject targets",
-        variant: "destructive",
-      });
-    } finally {
-      setIsValidating(false);
-    }
-  };
-
 
   // Group entries by perspective
   const groupedEntries = useMemo(() => {
@@ -416,8 +259,6 @@ const Targets = ({ submissionTypePic: submissionType }: TargetsProps) => {
         }
       });
     }
-
-    // Additional filtering logic for dates would go here
 
     return result;
   }, [groupedEntries, selectedPerspective, perspectives]);
@@ -452,7 +293,7 @@ const Targets = ({ submissionTypePic: submissionType }: TargetsProps) => {
   }, [filteredEntries, currentPage, itemsPerPage]);
 
   // Helper function to get monthly targets for an entry
-  const getMonthlyTargets = (entry: typeof entriesWithTargets[0], months: number[]): (string | number | Decimal)[] => {
+  const getMonthlyTargets = (entry: typeof entriesWithTargets[0], months: number[]): (string | number | any)[] => {
     return months.map(month => {
       const target = entry.targets.find(t => t.target_month === month);
       return target?.target_value || '-';
@@ -507,8 +348,7 @@ const Targets = ({ submissionTypePic: submissionType }: TargetsProps) => {
               />
 
               {/* Filter Section */}
-              <Filtering
-              >
+              <Filtering>
                 {/* Filter for perspective from service data */}
                 <div className="space-y-3">
                   <label className="flex items-center space-x-2 text-sm font-medium text-gray-700 dark:text-gray-200">
@@ -537,6 +377,18 @@ const Targets = ({ submissionTypePic: submissionType }: TargetsProps) => {
                       KPI Targets Table
                     </CardTitle>
                     <div className="flex flex-col sm:flex-row space-y-2 sm:space-y-0 sm:space-x-4 w-full md:w-auto">
+                      {/* Custom KPI Button - Only show if user is org unit head */}
+                      {canCreateCustomKPI && submission?.submission_status === "Draft" && (
+                        <Button
+                          variant="outline"
+                          className="w-full sm:w-auto border-blue-600 text-blue-600 hover:bg-blue-50 flex items-center justify-center dark:hover:bg-blue-900/20"
+                          onClick={handleOpenCustomKPIDialog}
+                        >
+                          <Plus className="mr-2 h-4 w-4" />
+                          Create Custom KPI
+                        </Button>
+                      )}
+
                       {/* Revert to Draft Button - Only show for user who can submit and when status is Rejected */}
                       {authStatus.canRevertToDraft && (
                         <Button
@@ -614,7 +466,7 @@ const Targets = ({ submissionTypePic: submissionType }: TargetsProps) => {
                     <table className="w-full border-collapse">
                       <thead className="bg-[#1B6131] text-white">
                         <tr>
-                          {submissionType === 'MPM' && (authStatus.canEdit || authStatus.canView) && (
+                          {(authStatus.canEdit || (authStatus.canView && submissionType === 'MPM')) && (
                             <th className="p-4 text-center whitespace-nowrap">Action</th>
                           )}
                           <th className="p-4 text-center whitespace-nowrap">KPI</th>
@@ -645,24 +497,26 @@ const Targets = ({ submissionTypePic: submissionType }: TargetsProps) => {
                             </tr>
                             {entries.map((entry) => {
                               const monthlyTargets = getMonthlyTargets(entry, allMonths);
-
                               return (
                                 <tr key={entry.entry_id} className="hover:bg-[#E4EFCF]/50 dark:hover:bg-[#1B6131]/20">
-                                  {submissionType === 'MPM' && (
-                                    <td className="p-4 text-center flex gap-2 justify-center">
-                                      {/* View button */}
-                                      <Button
-                                        variant="ghost"
-                                        size="icon"
-                                        className="hover:text-[#1B6131]"
-                                        onClick={() =>
-                                          navigate(`/performance-management/mpm/target/${submissionId}/kpi/${entry.kpi_id}/action-plans`)
-                                        }
-                                      >
-                                        <Eye className="h-4 w-4" />
-                                      </Button>
 
-                                      {/* Edit button */}
+                                  {(authStatus.canEdit || (authStatus.canView && submissionType === 'MPM')) && (
+                                    <td className="p-4 text-center flex gap-2 justify-center">
+                                      {/* View action plan button - only for MPM */}
+                                      {submissionType === 'MPM' && authStatus.canView && (
+                                        <Button
+                                          variant="ghost"
+                                          size="icon"
+                                          className="hover:text-[#1B6131]"
+                                          onClick={() =>
+                                            navigate(`/performance-management/mpm/target/${submissionId}/kpi/${entry.kpi_id}/action-plans`)
+                                          }
+                                        >
+                                          <Eye className="h-4 w-4" />
+                                        </Button>
+                                      )}
+
+                                      {/* Edit button - only if user can edit */}
                                       {authStatus.canEdit && (
                                         <Button
                                           variant="ghost"
@@ -675,7 +529,6 @@ const Targets = ({ submissionTypePic: submissionType }: TargetsProps) => {
                                       )}
                                     </td>
                                   )}
-
                                   <td className="p-4">{entry.kpi_name}</td>
                                   <td className="p-4">{entry.kpiDefinition?.kpi_definition || '-'}</td>
                                   <td className="p-4 text-center">{entry.kpiDefinition?.kpi_weight?.toString() || '-'}%</td>
@@ -712,75 +565,72 @@ const Targets = ({ submissionTypePic: submissionType }: TargetsProps) => {
         </div>
       </div>
 
+      {/* Dialog containers with encapsulated logic */}
       {selectedEntry && (
-        <EditMonthlyTargetDialog
+        <EditTargetDialogContainer
           isOpen={isEditMonthlyTargetOpen}
           onClose={() => setIsEditMonthlyTargetOpen(false)}
           kpi={selectedEntry}
-          onSave={handleSaveTargets}
+          refreshData={refreshData}
         />
       )}
 
-      <SubmitDialog
+      {/* Custom KPI Form Dialog */}
+      <KPIFormDialog
+        isOpen={isCustomKPIDialogOpen}
+        onClose={() => setIsCustomKPIDialogOpen(false)}
+        onSave={handleSaveCustomKPI}
+        initialData={currentEditingKPI}
+        mode="create"
+        perspectives={perspectives}
+        organizationUnits={accessibleOrgUnits}
+      />
+
+      <SubmitDialogContainer
         isOpen={isSubmitDialogOpen}
         onClose={() => setIsSubmitDialogOpen(false)}
-        comments={submissionComments}
-        setComments={setSubmissionComments}
-        onSubmit={handleSubmitTargets}
-        isSubmitting={isSubmitting}
+        submissionId={Number(submissionId)}
+        refreshData={refreshData}
       />
 
-      <ApproveDialog
+      <ApproveDialogContainer
         isOpen={isApproveDialogOpen}
         onClose={() => setIsApproveDialogOpen(false)}
-        notes={approvalNotes}
-        setNotes={setApprovalNotes}
-        onApprove={handleApprove}
-        isProcessing={isProcessingApproval}
+        submissionId={Number(submissionId)}
+        employeeId={user?.employee_data?.employee_id}
+        refreshData={refreshData}
       />
 
-      <ValidateDialog
+      <ValidateDialogContainer
         isOpen={isValidateDialogOpen}
         onClose={() => setIsValidateDialogOpen(false)}
-        comments={validationComments}
-        setComments={setValidationComments}
-        onValidate={handleValidate}
-        isProcessing={isValidating}
+        submissionId={Number(submissionId)}
+        refreshData={refreshData}
       />
 
-      {/* Admin Reject Dialog - reusing the RejectDialog component with a different handler */}
-      <RejectDialog
-        isOpen={isAdminRejectDialogOpen}
-        onClose={() => setIsAdminRejectDialogOpen(false)}
-        notes={validationComments}
-        setNotes={setValidationComments}
-        onReject={handleAdminReject}
-        isProcessing={isValidating}
-        title="Admin Rejection"
-        description="You are about to reject these previously approved targets as an admin. Please provide a reason."
-      />
-
-      <RejectDialog
+      <RejectDialogContainer
         isOpen={isRejectDialogOpen}
         onClose={() => setIsRejectDialogOpen(false)}
-        notes={approvalNotes}
-        setNotes={setApprovalNotes}
-        onReject={handleReject}
-        isProcessing={isProcessingApproval}
-        title="Reject Targets"
-        description="You are about to reject these targets. Please provide a reason below."
+        submissionId={Number(submissionId)}
+        employeeId={user?.employee_data?.employee_id}
+        refreshData={refreshData}
+        isAdminReject={false}
       />
 
-      {/* Revert to Draft Dialog */}
-      <ConfirmDialog
+      <RejectDialogContainer
+        isOpen={isAdminRejectDialogOpen}
+        onClose={() => setIsAdminRejectDialogOpen(false)}
+        submissionId={Number(submissionId)}
+        refreshData={refreshData}
+        isAdminReject={true}
+      />
+
+      <RevertToDraftDialogContainer
         isOpen={isRevertToDraftDialogOpen}
         onClose={() => setIsRevertToDraftDialogOpen(false)}
-        onConfirm={handleRevertToDraft}
-        isProcessing={isReverting}
-        title="Revert to Draft"
-        description="Are you sure you want to revert this submission to draft status? This will allow you to make changes before submitting again."
+        submissionId={Number(submissionId)}
+        refreshData={refreshData}
       />
-
     </div>
   );
 };

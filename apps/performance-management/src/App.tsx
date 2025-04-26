@@ -1,14 +1,13 @@
 import { BrowserRouter, Route, Routes } from "react-router-dom";
 import BSCDashboard from "./pages/BSC/BSCDashboard";
 import BSCEntryPage from "./pages/BSC/BSCEntry";
-import Targets from "./pages/MPM/Targets";
+import Targets from "./pages/KPI/Targets";
 import PerformanceManagementDashboard from "./pages/PerformanceManagementDashboard";
 import PerformanceManagementHome from "./pages/PerformanceManagementHome";
 import UserDetailPage from "./pages/UserDetail";
-import Actuals from "./pages/MPM/Actuals";
+import Actuals from "./pages/KPI/Actuals";
 import MPMActualList from "./pages/MPM/MPMActualList";
 import MPMTargetList from "./pages/MPM/MPMTargetsList";
-import MPMActualsActionPlans from "./pages/MPM/_";
 import MPMDashboard from "./pages/MPM/MPMDashboard";
 import { Toaster } from "@workspace/ui/components/sonner";
 import { PersistGate } from "redux-persist/integration/react";
@@ -91,7 +90,7 @@ function App() {
                     <Route path=":submissionId" element={<AuthGuard><Actuals submissionTypePic="IPM" /></AuthGuard>} />
                   </Route>
                 </Route>
-                
+
                 {/* MPM Routes */}
                 <Route path="mpm">
                   <Route path="target">
@@ -106,9 +105,6 @@ function App() {
                   <Route path="actual">
                     <Route index element={<AuthGuard><MPMActualList /></AuthGuard>} />
                     <Route path=":submissionId" element={<AuthGuard><Actuals submissionTypePic="MPM" /></AuthGuard>} />
-                    <Route path=":submissionId/kpi/:kpiId">
-                      <Route path="action-plans" element={<AuthGuard><MPMActualsActionPlans /></AuthGuard>} />
-                    </Route>
                   </Route>
 
                   <Route path="dashboard" element={<AuthGuard><MPMDashboard /></AuthGuard>} />

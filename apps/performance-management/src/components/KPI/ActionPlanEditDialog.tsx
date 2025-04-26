@@ -9,6 +9,8 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@workspace/ui/componen
 import { Combobox } from '@workspace/ui/components/combobox';
 import organizationUnitService from '@/services/organizationUnitService';
 import employeeService from '@/services/employeeService';
+import { kpiDefinitionService } from '@/services/kpiDefinitionService';
+import { useAppSelector } from '@/redux/hooks';
 
 interface ActionPlanEditDialogProps {
     isOpen: boolean;
@@ -23,15 +25,25 @@ export const ActionPlanEditDialog: React.FC<ActionPlanEditDialogProps> = ({
     onClose,
     onSave,
     initialData,
+    parentKPI,
 }) => {
     const { toast } = useToast();
     const [isLoading, setIsLoading] = useState(false);
+
+    // Get current user data from Redux store
+    const { user } = useAppSelector((state: any) => state.auth);
+    const currentUserEmployeeId = user?.employee_data?.employee_id ?? null;
+    const currentUserOrgUnitId = user?.org_unit_data?.org_unit_id ?? null;
+
+    // Form state
     const [formData, setFormData] = useState({
         kpi_id: initialData?.kpi_id || null,
+        kpi_parent_id: parentKPI?.kpi_id || null,
         kpi_name: initialData?.kpi_name || '',
         kpi_definition: initialData?.kpi_definition || '',
         kpi_weight: initialData?.kpi_weight || 0,
         kpi_target: initialData?.kpi_target || 0,
+        kpi_is_ipm: initialData?.kpi_is_ipm || false,
         assignType: initialData?.kpi_org_unit_id ? 'Unit' : initialData?.kpi_employee_id ? 'Employee' : 'Unit',
         assigneeId: initialData?.kpi_org_unit_id || initialData?.kpi_employee_id || null,
         kpi_metadata: initialData?.kpi_metadata || {},
@@ -40,33 +52,42 @@ export const ActionPlanEditDialog: React.FC<ActionPlanEditDialogProps> = ({
     // State for dropdown options
     const [orgUnits, setOrgUnits] = useState<any[]>([]);
     const [employees, setEmployees] = useState<any[]>([]);
+    const [availableKPIs, setAvailableKPIs] = useState<any[]>([]);
     const [searchTerm, setSearchTerm] = useState('');
+    const [kpiSearchTerm, setKpiSearchTerm] = useState('');
 
-    // Fetch organization units and employees on component load
+    // Fetch organization units, employees, and available KPIs on component load
     useEffect(() => {
-        const fetchOrgUnits = async () => {
+        if (!isOpen) return;
+
+        const fetchData = async () => {
             try {
-                const data = await organizationUnitService.getOrganizationUnits(0, 100);
-                setOrgUnits(data);
+                setIsLoading(true);
+
+                // Fetch org units
+                const orgUnitsData = await organizationUnitService.getOrganizationUnits(0, 100);
+                setOrgUnits(orgUnitsData);
+
+                // Fetch employees
+                const employeesData = await employeeService.getEmployees(0, 100);
+                setEmployees(employeesData);
+
+                // Fetch KPIs the user has access to
+                if (currentUserOrgUnitId) {
+                    const kpisData = await kpiDefinitionService.getOrganizationUnitKPIs(currentUserOrgUnitId);
+                    const filteredKpisData = kpisData.filter((kpi: any) => kpi.kpi_is_action_plan === false);
+                    setAvailableKPIs(filteredKpisData);
+                }
+
+                setIsLoading(false);
             } catch (error) {
-                console.error('Error fetching organization units:', error);
+                console.error('Error fetching data:', error);
+                setIsLoading(false);
             }
         };
 
-        const fetchEmployees = async () => {
-            try {
-                const data = await employeeService.getEmployees(0, 100);
-                setEmployees(data);
-            } catch (error) {
-                console.error('Error fetching employees:', error);
-            }
-        };
-
-        if (isOpen) {
-            fetchOrgUnits();
-            fetchEmployees();
-        }
-    }, [isOpen]);
+        fetchData();
+    }, [isOpen, currentUserOrgUnitId]);
 
     const handleInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
         const { name, value } = e.target;
@@ -87,6 +108,30 @@ export const ActionPlanEditDialog: React.FC<ActionPlanEditDialogProps> = ({
         setFormData(prev => ({ ...prev, assigneeId: id }));
     };
 
+    const handleKPISelection = async (kpiId: number) => {
+        try {
+            const selectedKPI = availableKPIs.find(kpi => kpi.kpi_id === kpiId);
+
+            if (selectedKPI) {
+                setFormData(prev => ({
+                    ...prev,
+                    kpi_name: selectedKPI.kpi_name,
+                    kpi_definition: selectedKPI.kpi_definition || '',
+                }));
+            } else {
+                // If not found in the current list, fetch the KPI details
+                const kpiDetails = await kpiDefinitionService.getKPIDefinition(kpiId);
+                setFormData(prev => ({
+                    ...prev,
+                    kpi_name: kpiDetails.kpi_name,
+                    kpi_definition: kpiDetails.kpi_definition || '',
+                }));
+            }
+        } catch (error) {
+            console.error('Error selecting KPI:', error);
+        }
+    };
+
     const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
 
@@ -100,6 +145,7 @@ export const ActionPlanEditDialog: React.FC<ActionPlanEditDialogProps> = ({
                     description: "Action plan name is required",
                     variant: "destructive",
                 });
+                setIsLoading(false);
                 return;
             }
 
@@ -109,6 +155,7 @@ export const ActionPlanEditDialog: React.FC<ActionPlanEditDialogProps> = ({
                     description: "Weight must be greater than zero",
                     variant: "destructive",
                 });
+                setIsLoading(false);
                 return;
             }
 
@@ -118,11 +165,28 @@ export const ActionPlanEditDialog: React.FC<ActionPlanEditDialogProps> = ({
                     description: "Please select an assignee",
                     variant: "destructive",
                 });
+                setIsLoading(false);
                 return;
             }
 
+            const actionPlanData = {
+                ...(formData.kpi_id && { kpi_id: formData.kpi_id }),
+                kpi_parent_id: parentKPI.kpi_id,
+                kpi_name: formData.kpi_name,
+                kpi_definition: formData.kpi_definition || null,
+                kpi_weight: formData.kpi_weight,
+                kpi_target: formData.kpi_target,
+                kpi_is_ipm: formData.assignType === 'Employee',
+                kpi_is_action_plan: true,
+                kpi_owner_id: currentUserEmployeeId,
+                kpi_org_unit_id: formData.assignType === 'Unit' ? formData.assigneeId : null,
+                kpi_employee_id: formData.assignType === 'Employee' ? formData.assigneeId : null,
+                kpi_metadata: formData.kpi_metadata
+            };
+
+
             // Call parent's onSave with the form data
-            await onSave(formData);
+            await onSave(actionPlanData);
             onClose();
         } catch (error) {
             console.error('Error saving action plan:', error);
@@ -140,6 +204,11 @@ export const ActionPlanEditDialog: React.FC<ActionPlanEditDialogProps> = ({
         emp.employee_name.toLowerCase().includes(searchTerm.toLowerCase())
     );
 
+    // Filter KPIs based on search term
+    const filteredKPIs = availableKPIs.filter(kpi =>
+        kpi.kpi_name.toLowerCase().includes(kpiSearchTerm.toLowerCase())
+    );
+
     return (
         <Dialog open={isOpen} onOpenChange={onClose}>
             <DialogContent className="sm:max-w-[600px] max-h-[90vh] overflow-y-auto">
@@ -151,9 +220,37 @@ export const ActionPlanEditDialog: React.FC<ActionPlanEditDialogProps> = ({
 
                 <form onSubmit={handleSubmit}>
                     <div className="grid gap-4 py-4">
+                        {/* KPI Selection */}
+                        {!initialData && (
+                            <div className="grid grid-cols-4 items-center gap-4">
+                                <Label className="text-right">
+                                    Select Existing KPI
+                                </Label>
+                                <div className="col-span-3">
+                                    <Combobox
+                                        options={filteredKPIs.map(kpi => ({
+                                            value: kpi.kpi_id,
+                                            label: kpi.kpi_name
+                                        }))}
+                                        value={null}
+                                        onChange={(value: string | number) => handleKPISelection(Number(value))}
+                                        placeholder="Search for a KPI..."
+                                        searchPlaceholder="Search KPIs..."
+                                        searchValue={kpiSearchTerm}
+                                        onSearchChange={setKpiSearchTerm}
+                                        emptyMessage="No KPIs found"
+                                    />
+                                    <p className="text-xs text-gray-500 mt-1">
+                                        Optional: Select an existing KPI to use its name and definition
+                                    </p>
+                                </div>
+                            </div>
+                        )}
+
+                        {/* Action Plan Name */}
                         <div className="grid grid-cols-4 items-center gap-4">
                             <Label htmlFor="kpi_name" className="text-right">
-                                Action Plan Name *
+                                KPI *
                             </Label>
                             <Input
                                 id="kpi_name"
@@ -162,12 +259,14 @@ export const ActionPlanEditDialog: React.FC<ActionPlanEditDialogProps> = ({
                                 onChange={handleInputChange}
                                 className="col-span-3"
                                 required
+                                disabled
                             />
                         </div>
 
+                        {/* Description */}
                         <div className="grid grid-cols-4 items-center gap-4">
                             <Label htmlFor="kpi_definition" className="text-right">
-                                Description
+                                KPI Definition
                             </Label>
                             <Textarea
                                 id="kpi_definition"
@@ -176,9 +275,11 @@ export const ActionPlanEditDialog: React.FC<ActionPlanEditDialogProps> = ({
                                 onChange={handleInputChange}
                                 className="col-span-3"
                                 rows={3}
+                                disabled
                             />
                         </div>
 
+                        {/* Weight */}
                         <div className="grid grid-cols-4 items-center gap-4">
                             <Label htmlFor="kpi_weight" className="text-right">
                                 Weight (%) *
@@ -197,6 +298,7 @@ export const ActionPlanEditDialog: React.FC<ActionPlanEditDialogProps> = ({
                             />
                         </div>
 
+                        {/* Target Value */}
                         <div className="grid grid-cols-4 items-center gap-4">
                             <Label htmlFor="kpi_target" className="text-right">
                                 Target Value *
@@ -214,6 +316,7 @@ export const ActionPlanEditDialog: React.FC<ActionPlanEditDialogProps> = ({
                             />
                         </div>
 
+                        {/* Assign To */}
                         <div className="grid grid-cols-4 items-center gap-4">
                             <Label className="text-right">
                                 Assign To *
@@ -276,8 +379,9 @@ export const ActionPlanEditDialog: React.FC<ActionPlanEditDialogProps> = ({
                         </Button>
                         <Button
                             type="submit"
+                            disabled={isLoading}
                         >
-                            {initialData ? 'Update' : 'Create'} Action Plan
+                            {isLoading ? 'Processing...' : initialData ? 'Update' : 'Create'} Action Plan
                         </Button>
                     </DialogFooter>
                 </form>

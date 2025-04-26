@@ -11,7 +11,6 @@ import {
 import React from 'react';
     
 
-
 interface RejectDialogProps {
     isOpen: boolean;
     onClose: () => void;
