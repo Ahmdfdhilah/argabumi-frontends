@@ -1,11 +1,12 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { useParams } from 'react-router-dom';
 import { submissionService, SubmissionWithEntries, SubmissionEntry } from '../services/submissionService';
 import { kpiDefinitionService, KPIDefinitionResponse } from '../services/kpiDefinitionService';
 import { kpiTargetService, KPITargetResponse } from '../services/kpiTargetsService';
-import { Employee, employeeService } from '../services/employeeService';
 import { useAppSelector } from '@/redux/hooks';
+import { useToast } from '@workspace/ui/components/sonner';
 import organizationUnitService from '@/services/organizationUnitService';
+import employeeService from '@/services/employeeService';
 
 interface KPIEntryWithTargets extends SubmissionEntry {
   kpiDefinition?: KPIDefinitionResponse;
@@ -13,17 +14,17 @@ interface KPIEntryWithTargets extends SubmissionEntry {
 }
 
 interface AuthorizationStatus {
-  isOwner: boolean;          // Whether current user is the employee who owns this submission
-  isSupervisor: boolean;     // Whether current user is the supervisor who can edit/submit
-  isOrgHead: boolean;        // Whether current user is the org head who can approve
-  isOrgUnitManager: boolean; // Whether current user is manager of the org unit
-  canEdit: boolean;          // Whether current user can edit targets
-  canSubmit: boolean;        // Whether current user can submit targets
-  canApprove: boolean;       // Whether current user can approve targets
-  canReject: boolean;        // Whether current user can reject targets
-  canRevertToDraft: boolean; // Whether current user can revert to draft
-  canValidate: boolean;      // Whether current user can validate targets
-  canView: boolean;          // Whether current user can view targets
+  isOwner: boolean;          
+  isSupervisor: boolean;     
+  isParentOrgHead: boolean;        
+  isOrgUnitHead: boolean;
+  canEdit: boolean;          
+  canSubmit: boolean;        
+  canApprove: boolean;       
+  canReject: boolean;        
+  canRevertToDraft: boolean; 
+  canValidate: boolean;      
+  canView: boolean;          
 }
 
 interface UseTargetsReturn {
@@ -35,18 +36,37 @@ interface UseTargetsReturn {
   authStatus: AuthorizationStatus;
   employeeData: any | null;
   supervisorData: any | null;
-  orgHeadData: any | null;
   orgUnitData: any | null;
 }
 
-// Safely fetch data with error handling
+// Cache for API responses
+const apiCache = {
+  kpiDefinitions: new Map<number, KPIDefinitionResponse>(),
+  targets: new Map<string, KPITargetResponse[]>()
+};
+
+// Safely fetch data with error handling and caching
 const safelyFetchData = async <T,>(
   fetchFunction: () => Promise<T>,
   defaultValue: T,
-  errorMessage: string
+  errorMessage: string,
+  cacheKey?: string,
+  cache?: Map<string | number, T>
 ): Promise<T> => {
+  // Check cache first if provided
+  if (cacheKey && cache && cache.has(cacheKey)) {
+    return cache.get(cacheKey) as T;
+  }
+
   try {
-    return await fetchFunction();
+    const result = await fetchFunction();
+    
+    // Save to cache if caching is enabled
+    if (cacheKey && cache && result) {
+      cache.set(cacheKey, result);
+    }
+    
+    return result;
   } catch (err) {
     console.warn(errorMessage, err);
     return defaultValue;
@@ -59,19 +79,21 @@ export const useTargets = (): UseTargetsReturn => {
   const [error, setError] = useState<string | null>(null);
   const [submission, setSubmission] = useState<SubmissionWithEntries | null>(null);
   const [entriesWithTargets, setEntriesWithTargets] = useState<KPIEntryWithTargets[]>([]);
+  
+  // Track if initial data has been loaded
+  const isInitialLoad = useRef(true);
 
   // Employee/Organization hierarchy data
   const [employeeData, setEmployeeData] = useState<any | null>(null);
   const [supervisorData, setSupervisorData] = useState<any | null>(null);
-  const [orgHeadData, setOrgHeadData] = useState<any | null>(null);
   const [orgUnitData, setOrgUnitData] = useState<any | null>(null);
 
-  // Authorization status
+  // Default authorization status
   const [authStatus, setAuthStatus] = useState<AuthorizationStatus>({
     isOwner: false,
     isSupervisor: false,
-    isOrgHead: false,
-    isOrgUnitManager: false,
+    isParentOrgHead: false,
+    isOrgUnitHead: false,
     canEdit: false,
     canSubmit: false,
     canApprove: false,
@@ -83,311 +105,141 @@ export const useTargets = (): UseTargetsReturn => {
 
   // Get current user from Redux store
   const { user } = useAppSelector((state: any) => state.auth);
-  const currentUserOrgUnitId = user?.org_unit_data?.org_unit_id ?? null;
-  const currentEmployeeId = user?.employee_data?.employee_id ?? null;
+  const { toast } = useToast();
   const currentUserRoles = user?.roles ?? [];
 
-  // Check if user has specific role
+  // Check if user has specific role - memoize this if possible
   const userHasRole = (roleCode: string): boolean => {
     return currentUserRoles.some((role: any) => role.role_code === roleCode);
   };
 
-  const determineEmployeeAuthorizationStatus = async (submissionData: any) => {
-    if (!submissionData || !currentEmployeeId || !submissionData.employee_id) {
-      return;
+  // Determine authorization status based on submission data and user context
+  const determineAuthorizationStatus = async (submissionData: any) => {
+    if (!submissionData || !user) return;
+
+    const currentEmployeeId = user.employee_data?.employee_id;
+    const isAdmin = userHasRole('admin');
+    const isDirector = userHasRole('director');
+
+    // Default permissions - everyone starts with nothing
+    const newAuthStatus: AuthorizationStatus = {
+      isOwner: false,
+      isSupervisor: false,
+      isParentOrgHead: false,
+      isOrgUnitHead: false,
+      canEdit: false,
+      canSubmit: false,
+      canApprove: false,
+      canReject: false,
+      canValidate: false,
+      canView: false,
+      canRevertToDraft: false
+    };
+
+    // Admins always get certain permissions
+    if (isAdmin) {
+      newAuthStatus.canView = true;
+      newAuthStatus.canValidate = submissionData.submission_status === 'Approved';
     }
-    console.log("masuk ke determineEmployeeAuthorizationStatus");
-    try {
-      // Get the employee associated with this submission
-      const employee = await safelyFetchData(
-        () => employeeService.getEmployeeById(submissionData.employee_id),
-        null,
-        `Error fetching employee data for ID: ${submissionData.employee_id}`
-      );
 
-      if (!employee) return;
-      setEmployeeData(employee);
+    // Directors can view everything
+    if (isDirector) {
+      newAuthStatus.canView = true;
+    }
 
-      // Determine if current user is the employee (owner)
-      const isOwner = currentEmployeeId === employee.employee_id;
-
-      // If user is the owner, we don't need to check supervisor/org head status
-      if (isOwner) {
-        setAuthStatus({
-          isOwner: true,
-          isSupervisor: false,
-          isOrgHead: false,
-          isOrgUnitManager: false,
-          canEdit: false, // Owners typically don't edit their own targets
-          canSubmit: false, // Owners typically don't submit their own targets
-          canApprove: false,
-          canReject: false,
-          canValidate: false,
-          canView: true, // Owners can always view
-          canRevertToDraft: false
-        });
-        return;
+    // EMPLOYEE-LEVEL SUBMISSION
+    if (submissionData.employee_id) {
+      // Only fetch employee data if we need to verify supervision
+      let submissionEmployee = null;
+      
+      // Only make this API call if the current user isn't the submission owner
+      // (to check if current user is the supervisor)
+      if (currentEmployeeId !== submissionData.employee_id) {
+        submissionEmployee = await safelyFetchData(
+          () => employeeService.getEmployeeById(Number(submissionData.employee_id)),
+          null,
+          `Error fetching employee data for ID: ${submissionData.employee_id}`
+        );
+      }
+      
+      // Is current user the owner of this submission?
+      if (currentEmployeeId === submissionData.employee_id) {
+        newAuthStatus.isOwner = true;
+        newAuthStatus.canView = true;
+        // Save employee data for future use
+        setEmployeeData(user.employee_data);
       }
 
-      // Check if user is supervisor
-      const isSupervisor = employee.employee_supervisor_id === currentEmployeeId;
+      // Is current user the supervisor of this employee?
+      const isSupervisor = submissionEmployee?.employee_supervisor_id === currentEmployeeId;
 
       if (isSupervisor) {
-        console.log("masuk ke isSupervisor");
-        // If user is supervisor, set appropriate permissions based on submission status
+        newAuthStatus.isSupervisor = true;
+        newAuthStatus.canView = true;
+        // Can edit if in Draft status
+        newAuthStatus.canEdit = submissionData.submission_status === 'Draft';
+        newAuthStatus.canSubmit = submissionData.submission_status === 'Draft';
+        // Can revert if rejected
+        newAuthStatus.canRevertToDraft = ['Rejected', 'Admin_Rejected'].includes(submissionData.submission_status);
+
+        // Save supervisor data
         setSupervisorData({
-          employee_id: currentEmployeeId
+          employee_id: currentEmployeeId,
         });
-
-        setAuthStatus({
-          isOwner: false,
-          isSupervisor: true,
-          isOrgHead: false,
-          isOrgUnitManager: false,
-          canEdit: submissionData.submission_status === 'Draft',
-          canSubmit: submissionData.submission_status === 'Draft',
-          canApprove: false, // Supervisors typically don't approve
-          canReject: false, // Supervisors typically don't reject
-          canValidate: false,
-          canView: true, // Supervisors can always view
-          canRevertToDraft: submissionData.submission_status === 'Rejected' || submissionData.submission_status === 'Admin_Rejected'
-        });
-        return;
       }
-
-      // If user is neither owner nor supervisor, check if they're an org head
-      // Only fetch additional data if user has appropriate roles
-      if (userHasRole('director') || userHasRole('org_head')) {
-        // Get the supervisor first to navigate up the hierarchy
-        let supervisor: Employee | null = null;
-
-        if (employee.employee_supervisor_id) {
-          supervisor = await safelyFetchData(
-            () => employeeService.getEmployeeById(employee.employee_supervisor_id!),
-            null,
-            `Error fetching supervisor data for ID: ${employee.employee_supervisor_id}`
-          );
-
-          if (supervisor) {
-            setSupervisorData(supervisor);
-
-            // Only proceed with org unit checks if necessary
-            if (supervisor.employee_org_unit_id) {
-              const supervisorOrgUnit = await safelyFetchData(
-                () => organizationUnitService.getOrganizationUnitById(supervisor?.employee_org_unit_id!),
-                null,
-                `Error fetching supervisor org unit for ID: ${supervisor.employee_org_unit_id}`
-              );
-
-              if (supervisorOrgUnit && supervisorOrgUnit.org_unit_parent_id) {
-                const parentOrgUnit = await safelyFetchData(
-                  () => organizationUnitService.getOrganizationUnitById(supervisorOrgUnit?.org_unit_parent_id!),
-                  null,
-                  `Error fetching parent org unit for ID: ${supervisorOrgUnit?.org_unit_parent_id}`
-                );
-
-                if (parentOrgUnit && parentOrgUnit.org_unit_head_id) {
-                  const orgHead = await safelyFetchData(
-                    () => employeeService.getEmployeeById(parentOrgUnit?.org_unit_head_id!),
-                    null,
-                    `Error fetching org head for ID: ${parentOrgUnit?.org_unit_head_id}`
-                  );
-
-                  if (orgHead) {
-                    setOrgHeadData(orgHead);
-
-                    // Check if current user is the org head
-                    const isOrgHead = orgHead.employee_id === currentEmployeeId;
-
-                    if (isOrgHead) {
-                      setAuthStatus({
-                        isOwner: false,
-                        isSupervisor: false,
-                        isOrgHead: true,
-                        isOrgUnitManager: false,
-                        canEdit: false,
-                        canSubmit: false,
-                        canApprove: submissionData.submission_status === 'Submitted',
-                        canReject: submissionData.submission_status === 'Submitted',
-                        canValidate: false,
-                        canView: true,
-                        canRevertToDraft: false
-                      });
-                      return;
-                    }
-                  }
-                }
-              }
-            }
-          }
-        }
-      }
-
-      // Check for special roles
-      const isAdmin = userHasRole('admin');
-      console.log(user);
-
-      console.log(isAdmin);
-
-      if (isAdmin) {
-        setAuthStatus({
-          isOwner: false,
-          isSupervisor: false,
-          isOrgHead: false,
-          isOrgUnitManager: false,
-          canEdit: false,
-          canSubmit: false,
-          canApprove: false,
-          canReject: false,
-          canValidate: true,
-          canView: true,
-          canRevertToDraft: false
-        });
-        return;
-      }
-
-      // Default case - user has no special roles for this submission
-      setAuthStatus({
-        isOwner: false,
-        isSupervisor: false,
-        isOrgHead: false,
-        isOrgUnitManager: false,
-        canEdit: false,
-        canSubmit: false,
-        canApprove: false,
-        canReject: false,
-        canValidate: false,
-        canView: false,
-        canRevertToDraft: false
-      });
-
-    } catch (err) {
-      console.error("Error determining employee authorization status:", err);
-    }
-  };
-
-  const determineOrgUnitAuthorizationStatus = async (submissionData: any) => {
-    if (!submissionData || !currentEmployeeId || !submissionData.org_unit_id) {
-      return;
     }
 
-    try {
-      // Get the org unit associated with this submission
-      const orgUnit = await safelyFetchData(
-        () => organizationUnitService.getOrganizationUnitById(submissionData.org_unit_id),
-        null,
-        `Error fetching org unit for ID: ${submissionData.org_unit_id}`
-      );
-      // Check for special roles
-      const isAdmin = userHasRole('admin');
-      const isDirector = userHasRole('director');
-
-      if (!orgUnit) return;
-
-      setOrgUnitData(orgUnit);
- 
-      // Check if user is the org unit manager  
-      const isOrgUnitManager = orgUnit.org_unit_head_id === currentEmployeeId;
-      console.log("isorgh", isOrgUnitManager);
-
-      if (isOrgUnitManager) {
-        setAuthStatus({
-          isOwner: false,
-          isSupervisor: false,
-          isOrgHead: false,
-          isOrgUnitManager: true,
-          canEdit: submissionData.submission_status === 'Draft',
-          canSubmit: submissionData.submission_status === 'Draft',
-          canApprove: false,
-          canReject: false,
-          canValidate: isAdmin,
-          canView: true,
-          canRevertToDraft: submissionData.submission_status === 'Rejected' || submissionData.submission_status === 'Admin_Rejected'
-        });
-        return;
-      }
-      console.log(user);
-
-      // Only check for org head if user might be one (based on roles)
-      if (userHasRole('admin') || !isOrgUnitManager) {
-        // Get the parent organization unit (to find the org head)
-        if (orgUnit.org_unit_parent_id) {
-          const parentOrgUnit = await safelyFetchData(
-            () => organizationUnitService.getOrganizationUnitById(orgUnit?.org_unit_parent_id!),
-            null,
-            `Error fetching parent org unit for ID: ${orgUnit?.org_unit_parent_id}`
-          );
-
-          if (parentOrgUnit && parentOrgUnit.org_unit_head_id) {
-            const orgHead = await safelyFetchData(
-              () => employeeService.getEmployeeById(parentOrgUnit?.org_unit_head_id!),
-              null,
-              `Error fetching org head for ID: ${parentOrgUnit?.org_unit_head_id}`
-            );
-
-            if (orgHead) {
-              setOrgHeadData(orgHead);
-
-              // Check if user is the org head
-              const isOrgHead = orgHead.employee_id === currentEmployeeId;
-
-              if (isOrgHead) {
-                setAuthStatus({
-                  isOwner: false,
-                  isSupervisor: false,
-                  isOrgHead: true,
-                  isOrgUnitManager: false,
-                  canEdit: false,
-                  canSubmit: false,
-                  canApprove: submissionData.submission_status === 'Submitted',
-                  canReject: submissionData.submission_status === 'Submitted',
-                  canValidate: isAdmin,
-                  canView: true,
-                  canRevertToDraft: false
-                });
-                return;
-              }
-            }
-          }
-        }
+    // ORG UNIT-LEVEL SUBMISSION
+    if (submissionData.org_unit_id) {
+      // Extract user and org unit context from Redux store to avoid another API call
+      const userOrgUnitId = user?.org_unit_data?.org_unit_id;
+      const userSubordinateOrgUnits = user?.context?.subordinate_org_units || [];
+      
+      let submissionOrgUnit = null;
+      
+      // Only fetch org unit data if needed for parent relationship check
+      // (ideally this would be provided by the submission data itself)
+      if (userOrgUnitId && userOrgUnitId !== submissionData.org_unit_id) {
+        submissionOrgUnit = await safelyFetchData(
+          () => organizationUnitService.getOrganizationUnitById(Number(submissionData.org_unit_id)),
+          null,
+          `Error fetching org unit data for ID: ${submissionData.org_unit_id}`
+        );
       }
 
-      if (isAdmin || isDirector) {
+      const isOrgUnitHead = userOrgUnitId === submissionData.org_unit_id;
 
-        setAuthStatus({
-          isOwner: false,
-          isSupervisor: false,
-          isOrgHead: false,
-          isOrgUnitManager: false,
-          canEdit: false,
-          canSubmit: false,
-          canApprove: false,
-          canReject: false,
-          canValidate: isAdmin,
-          canView: true,
-          canRevertToDraft: false
-        });
-        return;
+      if (isOrgUnitHead) {
+        newAuthStatus.isOrgUnitHead = true;
+        newAuthStatus.canView = true;
+        newAuthStatus.canEdit = submissionData.submission_status === 'Draft';
+        newAuthStatus.canSubmit = submissionData.submission_status === 'Draft';
+        newAuthStatus.canRevertToDraft = ['Rejected', 'Admin_Rejected'].includes(submissionData.submission_status);
+
+        // Save org unit data
+        setOrgUnitData(user.org_unit_data);
       }
 
-      // Default case - user has no special roles for this submission
-      setAuthStatus({
-        isOwner: false,
-        isSupervisor: false,
-        isOrgHead: false,
-        isOrgUnitManager: false,
-        canEdit: false,
-        canSubmit: false,
-        canApprove: false,
-        canReject: false,
-        canValidate: isAdmin,
-        canView: false,
-        canRevertToDraft: false
-      });
+      // Check if user is parent org head
+      const isParentOrgHead = userSubordinateOrgUnits.includes(submissionData.org_unit_id);
+      const isSupervisorHead = submissionOrgUnit?.org_unit_parent_id === userOrgUnitId;
 
-    } catch (err) {
-      console.error("Error determining org unit authorization status:", err);
+      if (isSupervisorHead) {
+        newAuthStatus.canView = true;
+        newAuthStatus.canApprove = submissionData.submission_status === 'Submitted';
+        newAuthStatus.canReject = submissionData.submission_status === 'Submitted';
+      }
+      
+      if (isParentOrgHead) {
+        newAuthStatus.isParentOrgHead = true;
+        newAuthStatus.canView = true;
+        newAuthStatus.canApprove = submissionData.submission_status === 'Submitted';
+        newAuthStatus.canReject = submissionData.submission_status === 'Submitted';
+      }
     }
+
+    // Update authorization status
+    setAuthStatus(newAuthStatus);
   };
 
   const fetchData = async () => {
@@ -398,94 +250,142 @@ export const useTargets = (): UseTargetsReturn => {
     }
 
     try {
+      apiCache.targets.clear();
       setLoading(true);
       setError(null);
 
-      // Get submission details and entries
-      const submissionData = await safelyFetchData(
-        () => submissionService.getSubmission(parseInt(submissionId)),
+      // Get submission details with entries 
+      const submissionWithEntries = await safelyFetchData(
+        () => submissionService.getSubmissionWithEntries(parseInt(submissionId)),
         null,
-        `Error fetching submission data for ID: ${submissionId}`
+        `Error fetching submission with entries for ID: ${submissionId}`
       );
 
-      if (!submissionData) {
-        throw new Error(`Failed to load submission with ID: ${submissionId}`);
+      if (!submissionWithEntries) {
+        // Fallback: fetch submission and entries separately
+        const submissionData = await safelyFetchData(
+          () => submissionService.getSubmission(parseInt(submissionId)),
+          null,
+          `Error fetching submission for ID: ${submissionId}`
+        );
+
+        if (!submissionData) {
+          throw new Error(`Failed to load submission with ID: ${submissionId}`);
+        }
+
+        const submissionEntries = await safelyFetchData(
+          () => submissionService.getSubmissionEntries(parseInt(submissionId)),
+          [],
+          `Error fetching submission entries for ID: ${submissionId}`
+        );
+
+        const submissionObj = {
+          ...submissionData,
+          entries: submissionEntries
+        };
+        
+        setSubmission(submissionObj);
+
+        // Determine permissions based on submission data
+        await determineAuthorizationStatus(submissionData);
+
+        // Fetch all KPI definitions and targets in batch if possible
+        // For now, we'll optimize the individual fetches
+        
+        // For each entry, get KPI definition and targets
+        const entriesWithData = await Promise.all(
+          submissionEntries.map(async (entry) => {
+            // Fetch KPI definition using cache
+            const kpiDefinition = await safelyFetchData(
+              () => kpiDefinitionService.getKPIDefinition(entry.kpi_id),
+              undefined,
+              `Error fetching KPI definition for ID: ${entry.kpi_id}`,
+              entry.kpi_id.toString(),
+              apiCache.kpiDefinitions
+            );
+
+            // Fetch targets for this entry using cache
+            const cacheKey = `${entry.entry_id}_${submissionId}`;
+            const targets = await safelyFetchData(
+              () => kpiTargetService.getTargetsByEntry(entry.entry_id, parseInt(submissionId)),
+              [],
+              `Error fetching targets for entry ID: ${entry.entry_id}`,
+              cacheKey,
+              apiCache.targets
+            );
+
+            return {
+              ...entry,
+              kpiDefinition,
+              targets
+            };
+          })
+        );
+
+        setEntriesWithTargets(entriesWithData);
+      } else {
+        // We got everything in one call
+        setSubmission(submissionWithEntries);
+
+        // Determine permissions based on submission data
+        await determineAuthorizationStatus(submissionWithEntries);
+
+        // For each entry, get KPI definition and targets with caching
+        const entriesWithData = await Promise.all(
+          submissionWithEntries.entries.map(async (entry) => {
+            // Fetch KPI definition using cache
+            const kpiDefinition = await safelyFetchData(
+              () => kpiDefinitionService.getKPIDefinition(entry.kpi_id),
+              undefined,
+              `Error fetching KPI definition for ID: ${entry.kpi_id}`,
+              entry.kpi_id.toString(),
+              apiCache.kpiDefinitions
+            );
+
+            // Fetch targets for this entry using cache
+            const cacheKey = `${entry.entry_id}_${submissionId}`;
+            const targets = await safelyFetchData(
+              () => kpiTargetService.getTargetsByEntry(entry.entry_id, parseInt(submissionId)),
+              [],
+              `Error fetching targets for entry ID: ${entry.entry_id}`,
+              cacheKey,
+              apiCache.targets
+            );
+
+            return {
+              ...entry,
+              kpiDefinition,
+              targets
+            };
+          })
+        );
+
+        setEntriesWithTargets(entriesWithData);
       }
-      console.log(submissionData);
-
-      const submissionEntries = await safelyFetchData(
-        () => submissionService.getSubmissionEntries(parseInt(submissionId)),
-        [],
-        `Error fetching submission entries for ID: ${submissionId}`
-      );
-
-      const submissionWithEntries = {
-        ...submissionData,
-        entries: submissionEntries
-      };
-
-      setSubmission(submissionWithEntries);
-
-      // Determine authorization status based on submission type
-      if (submissionData.employee_id) {
-        // This is an employee-level submission
-        await determineEmployeeAuthorizationStatus(submissionData);
-      } else if (submissionData.org_unit_id) {
-        // This is an organization-level submission
-        await determineOrgUnitAuthorizationStatus(submissionData);
-      }
-
-      // For each entry, get KPI definition and targets
-      const entriesWithData = await Promise.all(
-        submissionEntries.map(async (entry) => {
-          // Fetch KPI definition
-          const kpiDefinition = await safelyFetchData(
-            () => kpiDefinitionService.getKPIDefinition(entry.kpi_id),
-            undefined,
-            `Error fetching KPI definition for ID: ${entry.kpi_id}`
-          );
-
-          // Fetch targets for this entry
-          const targets = await safelyFetchData(
-            () => kpiTargetService.getTargetsByEntry(entry.entry_id, parseInt(submissionId)),
-            [],
-            `Error fetching targets for entry ID: ${entry.entry_id}`
-          );
-
-          return {
-            ...entry,
-            kpiDefinition,
-            targets
-          };
-        })
-      );
-
-      setEntriesWithTargets(entriesWithData);
+      
+      // Mark initial load as complete
+      isInitialLoad.current = false;
     } catch (err: any) {
-      setError(err.message || "Failed to load MPM targets data");
+      toast({
+        title: "Error",
+        description: err.message || "Failed to load targets data",
+        variant: "destructive",
+      });
+      setError(err.message || "Failed to load targets data");
     } finally {
       setLoading(false);
     }
   };
 
-  // Set default permissions based on user roles
+  // Only fetch data on initial mount or when submissionId changes
   useEffect(() => {
-    // Check for director or admin role that might have default permissions
-    const isDirector = userHasRole('director');
-    const isAdmin = userHasRole('admin');
-
-    if (isDirector || isAdmin) {
-      setAuthStatus(prevState => ({
-        ...prevState,
-        canView: true,
-        // Directors typically can view everything but might need additional checks for edit/submit/approve
-      }));
+    // Clear caches when submissionId changes to ensure fresh data
+    if (submissionId) {
+      apiCache.kpiDefinitions.clear();
+      apiCache.targets.clear();
+      fetchData();
     }
-  }, [currentUserRoles]);
-
-  useEffect(() => {
-    fetchData();
-  }, [submissionId, currentEmployeeId, currentUserOrgUnitId]);
+  }, [submissionId]);
 
   return {
     loading,
@@ -496,7 +396,6 @@ export const useTargets = (): UseTargetsReturn => {
     authStatus,
     employeeData,
     supervisorData,
-    orgHeadData,
     orgUnitData
   };
 };

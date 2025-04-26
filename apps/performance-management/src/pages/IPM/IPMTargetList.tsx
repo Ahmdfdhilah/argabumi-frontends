@@ -57,7 +57,7 @@ const IPMTargetList: React.FC = () => {
 
       // For each direct subordinate, get their subordinates recursively
       for (const subordinate of response.subordinates || []) {
-        if (subordinate.employee_id !== empId) { 
+        if (subordinate.employee_id !== empId) {
           console.log("masuk ke subordinate", subordinate.employee_id);
           // Prevent infinite loops
           const subSubordinates = await fetchAllSubordinatesRecursively(subordinate.employee_id);
@@ -241,17 +241,7 @@ const IPMTargetList: React.FC = () => {
     shouldShowEmployeeFilter
   ]);
 
-  // Mapping submission status to display status
-  const mapSubmissionStatus = (status: string) => {
-    switch (status) {
-      case 'DRAFT': return 'Draft';
-      case 'SUBMITTED': return 'Submitted';
-      case 'APPROVED': return 'Approved by Supervisor';
-      case 'REJECTED': return 'Rejected by Supervisor';
-      case 'PENDING': return 'Pending';
-      default: return status;
-    }
-  };
+
 
   // Filtering and Pagination Logic
   const filteredIpmTargets = useMemo(() => {
@@ -263,8 +253,8 @@ const IPMTargetList: React.FC = () => {
   }, [filteredIpmTargets]);
 
   const getStatusColor = (status: string) => {
-    const displayStatus = mapSubmissionStatus(status);
-    switch (displayStatus) {
+
+    switch (status) {
       case 'Pending':
         return 'bg-gray-200 text-gray-700 dark:bg-gray-700 dark:text-gray-200';
       case 'Submitted':
@@ -274,6 +264,8 @@ const IPMTargetList: React.FC = () => {
       case 'Approved':
         return 'bg-green-200 text-green-700 dark:bg-green-900 dark:text-green-200';
       case 'Rejected':
+        return 'bg-red-200 text-red-700 dark:bg-red-900 dark:text-red-200';
+      case 'Admin_Rejected':
         return 'bg-red-200 text-red-700 dark:bg-red-900 dark:text-red-200';
       case 'Validated':
         return 'bg-purple-200 text-purple-700 dark:bg-purple-900 dark:text-purple-200';
@@ -399,7 +391,7 @@ const IPMTargetList: React.FC = () => {
                               </td>
                               <td className="p-4">
                                 <span className={`px-3 py-1 rounded-full text-xs ${getStatusColor(target.submission_status)}`}>
-                                  {mapSubmissionStatus(target.submission_status)}
+                                  {(target.submission_status)}
                                 </span>
                               </td>
                               <td

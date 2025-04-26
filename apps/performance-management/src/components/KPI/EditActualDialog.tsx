@@ -62,7 +62,7 @@ export const EditActualDialog: React.FC<EditActualDialogProps> = ({
       });
 
       onClose();
-      refreshData(); // Refresh data after update
+      refreshData();
     } catch (error) {
       console.error('Error updating actual:', error);
       toast({

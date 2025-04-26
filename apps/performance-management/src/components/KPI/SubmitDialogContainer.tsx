@@ -39,7 +39,6 @@ export const SubmitDialogContainer = ({
 
       onClose();
       setSubmissionComments('');
-      // Refresh data to get updated submission status
       refreshData();
     } catch (error) {
       console.error('Error submitting targets:', error);

@@ -33,8 +33,8 @@ const PerformanceManagementHome = () => {
     });
     const [isDarkMode, setIsDarkMode] = useState(false);
 
-    const { user } = useAppSelector((state) => state.auth);
-
+    const { user } = useAppSelector((state: any) => state.auth);
+    
     useEffect(() => {
         if (user) {
             console.log(user);

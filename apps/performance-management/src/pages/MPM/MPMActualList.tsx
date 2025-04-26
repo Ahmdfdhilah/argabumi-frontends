@@ -237,18 +237,6 @@ const MPMActualList: React.FC = () => {
   ]);
 
 
-  // Mapping submission status to display status
-  const mapSubmissionStatus = (status: string) => {
-    switch (status) {
-      case 'DRAFT': return 'Draft';
-      case 'SUBMITTED': return 'Submitted';
-      case 'APPROVED': return 'Approved by Senior Manager';
-      case 'REJECTED': return 'Rejected by Senior Manager';
-      case 'PENDING': return 'Pending';
-      default: return status;
-    }
-  };
-
   // Get month name from submission_month (1-12)
   const getMonthName = (monthNum?: number) => {
     if (!monthNum) return 'N/A';
@@ -262,8 +250,7 @@ const MPMActualList: React.FC = () => {
   };
 
   const getStatusColor = (status: string) => {
-    const displayStatus = mapSubmissionStatus(status);
-    switch (displayStatus) {
+    switch (status) {
       case 'Pending':
         return 'bg-gray-200 text-gray-700 dark:bg-gray-700 dark:text-gray-200';
       case 'Submitted':
@@ -273,6 +260,8 @@ const MPMActualList: React.FC = () => {
       case 'Approved':
         return 'bg-green-200 text-green-700 dark:bg-green-900 dark:text-green-200';
       case 'Rejected':
+        return 'bg-red-200 text-red-700 dark:bg-red-900 dark:text-red-200';
+      case 'Admin_Rejected':
         return 'bg-red-200 text-red-700 dark:bg-red-900 dark:text-red-200';
       case 'Validated':
         return 'bg-purple-200 text-purple-700 dark:bg-purple-900 dark:text-purple-200';
@@ -429,7 +418,7 @@ const MPMActualList: React.FC = () => {
                               </td>
                               <td className="p-4">
                                 <span className={`px-3 py-1 rounded-full text-xs ${getStatusColor(actual.submission_status)}`}>
-                                  {mapSubmissionStatus(actual.submission_status)}
+                                  {(actual.submission_status)}
                                 </span>
                               </td>
                               <td

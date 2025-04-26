@@ -1,5 +1,4 @@
-// Main Targets Component - With Custom KPI Creation
-import { useState, useMemo, useEffect } from 'react';
+import { useState, useMemo, useEffect, useCallback } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { Card, CardContent, CardHeader, CardTitle } from '@workspace/ui/components/card';
 import { Button } from '@workspace/ui/components/button';
@@ -32,6 +31,17 @@ import { useToast } from '@workspace/ui/components/sonner';
 interface TargetsProps {
   submissionTypePic: string;
 }
+
+// Global cache to prevent redundant API calls between rerenders
+const perspectivesCache = {
+  data: null as KPIPerspective[] | null,
+  lastFetched: 0
+};
+
+const orgUnitsCache = {
+  data: {} as Record<string, OrganizationUnitResponse[]>,
+  lastFetched: 0
+};
 
 const Targets = ({ submissionTypePic: submissionType }: TargetsProps) => {
   const { submissionId } = useParams<{ submissionId: string }>();
@@ -83,60 +93,92 @@ const Targets = ({ submissionTypePic: submissionType }: TargetsProps) => {
     refreshData,
     authStatus,
   } = useTargets();
+  
+  // Fetch perspectives only once if not already in cache 
+  // with a 5 minute expiration to ensure fresh data occasionally
+  const fetchPerspectives = useCallback(async () => {
+    const now = Date.now();
+    const cacheExpiration = 5 * 60 * 1000; // 5 minutes
+    
+    if (perspectivesCache.data && (now - perspectivesCache.lastFetched) < cacheExpiration) {
+      setPerspectives(perspectivesCache.data);
+      return;
+    }
+    
+    try {
+      const data = await kpiPerspectiveService.getPerspectives();
+      setPerspectives(data);
+      
+      // Update cache
+      perspectivesCache.data = data;
+      perspectivesCache.lastFetched = now;
+    } catch (error) {
+      console.error('Error fetching perspectives:', error);
+    }
+  }, []);
 
-  // Fetch perspectives and check organization unit access on component mount
-  useEffect(() => {
-    const fetchPerspectives = async () => {
-      try {
-        const data = await kpiPerspectiveService.getPerspectives();
-        setPerspectives(data);
-      } catch (error) {
-        console.error('Error fetching perspectives:', error);
-      }
-    };
-
-    const checkOrgUnitAccess = async () => {
-      try {
-        // Get user's employee data directly from Redux store
-        const employeeId = user?.employee_data?.employee_id;
-        const employeeOrgUnitId = user?.employee_data?.employee_org_unit_id;
-        const userOrgUnit = user?.org_unit_data;
-
-        if (!employeeId || !employeeOrgUnitId || !userOrgUnit) return;
-
-        // Check if user is org unit head (org_unit_head_id === employee_id)
-        if (userOrgUnit.org_unit_head_id === employeeId) {
-          setCanCreateCustomKPI(true);
-
-          // Get accessible org units (own org unit)
-          const ownOrgUnit = {
-            org_unit_id: userOrgUnit.org_unit_id,
-            org_unit_code: userOrgUnit.org_unit_code,
-            org_unit_name: userOrgUnit.org_unit_name,
-            org_unit_type: userOrgUnit.org_unit_type,
-            org_unit_head_id: userOrgUnit.org_unit_head_id,
-            org_unit_parent_id: userOrgUnit.org_unit_parent_id,
-            org_unit_level: userOrgUnit.org_unit_level,
-            org_unit_description: userOrgUnit.org_unit_description,
-            org_unit_metadata: userOrgUnit.org_unit_metadata,
-            is_active: userOrgUnit.is_active,
-            org_unit_path: userOrgUnit.org_unit_path,
-          };
-
-          // Get only direct subordinate units using the service method
-          const subordinateOrgUnits = await organizationUnitService.getOrganizationUnitWithChildren(userOrgUnit.org_unit_id);
-
-          // Set the accessible org units (own + direct subordinates)
-          setAccessibleOrgUnits([ownOrgUnit, ...(subordinateOrgUnits.children || [])]);
+  const checkOrgUnitAccess = useCallback(async () => {
+    // Skip if user data is not available
+    if (!user?.employee_data?.employee_id || !user?.employee_data?.employee_org_unit_id || !user?.org_unit_data) {
+      return;
+    }
+    
+    try {
+      const employeeId = user.employee_data.employee_id;
+      const orgUnitId = user.org_unit_data.org_unit_id;
+      const userOrgUnit = user.org_unit_data;
+      
+      // Check if user is org unit head
+      if (userOrgUnit.org_unit_head_id === employeeId) {
+        setCanCreateCustomKPI(true);
+        
+        // Prepare own org unit data
+        const ownOrgUnit = {
+          org_unit_id: userOrgUnit.org_unit_id,
+          org_unit_code: userOrgUnit.org_unit_code,
+          org_unit_name: userOrgUnit.org_unit_name,
+          org_unit_type: userOrgUnit.org_unit_type,
+          org_unit_head_id: userOrgUnit.org_unit_head_id,
+          org_unit_parent_id: userOrgUnit.org_unit_parent_id,
+          org_unit_level: userOrgUnit.org_unit_level,
+          org_unit_description: userOrgUnit.org_unit_description,
+          org_unit_metadata: userOrgUnit.org_unit_metadata,
+          is_active: userOrgUnit.is_active,
+          org_unit_path: userOrgUnit.org_unit_path,
+        };
+        
+        // Check cache for subordinate units first
+        const now = Date.now();
+        const cacheExpiration = 5 * 60 * 1000; // 5 minutes
+        const cacheKey = `org_unit_${orgUnitId}`;
+        
+        let subordinateOrgUnits: OrganizationUnitResponse[] = [];
+        
+        if (orgUnitsCache.data[cacheKey] && (now - orgUnitsCache.lastFetched) < cacheExpiration) {
+          subordinateOrgUnits = orgUnitsCache.data[cacheKey];
+        } else {
+          // Get subordinate units
+          const response = await organizationUnitService.getOrganizationUnitWithChildren(orgUnitId);
+          subordinateOrgUnits = response.children || [];
+          
+          // Update cache
+          orgUnitsCache.data[cacheKey] = subordinateOrgUnits;
+          orgUnitsCache.lastFetched = now;
         }
-      } catch (error) {
-        console.error('Error checking org unit access:', error);
+        
+        // Set accessible org units (own + direct subordinates)
+        setAccessibleOrgUnits([ownOrgUnit, ...subordinateOrgUnits]);
       }
-    };
+    } catch (error) {
+      console.error('Error checking org unit access:', error);
+    }
+  }, [user]);
 
+  // Fetch perspectives and org units on mount
+  useEffect(() => {
     fetchPerspectives();
     checkOrgUnitAccess();
-  }, [user]);
+  }, [fetchPerspectives, checkOrgUnitAccess]);
 
   // Handle edit target
   const handleEditMonthlyTarget = (entryId: number) => {
@@ -149,6 +191,8 @@ const Targets = ({ submissionTypePic: submissionType }: TargetsProps) => {
 
   const handlePerspectiveChange = (value: string) => {
     setSelectedPerspective(value);
+    // Reset to first page when filter changes
+    setCurrentPage(1);
   };
 
   // Open custom KPI dialog
@@ -228,7 +272,7 @@ const Targets = ({ submissionTypePic: submissionType }: TargetsProps) => {
     }
   };
 
-  // Group entries by perspective
+  // Group entries by perspective - memoize to prevent recalculation on every render
   const groupedEntries = useMemo(() => {
     if (!entriesWithTargets || entriesWithTargets.length === 0) return {};
 
@@ -242,11 +286,11 @@ const Targets = ({ submissionTypePic: submissionType }: TargetsProps) => {
     }, {} as Record<string, typeof entriesWithTargets>);
   }, [entriesWithTargets]);
 
-  // Get perspective name
-  const getPerspectiveName = (id: string | number): string => {
+  // Get perspective name - memoize this function
+  const getPerspectiveName = useCallback((id: string | number): string => {
     const perspective = perspectives.find(p => p.perspective_id.toString() === id.toString());
     return perspective ? perspective.perspective_name : 'Uncategorized';
-  };
+  }, [perspectives]);
 
   // Filter entries based on selected filters
   const filteredEntries = useMemo(() => {
@@ -261,7 +305,7 @@ const Targets = ({ submissionTypePic: submissionType }: TargetsProps) => {
     }
 
     return result;
-  }, [groupedEntries, selectedPerspective, perspectives]);
+  }, [groupedEntries, selectedPerspective, getPerspectiveName]);
 
   // Calculate pagination
   const totalItems = useMemo(() => {
@@ -270,7 +314,7 @@ const Targets = ({ submissionTypePic: submissionType }: TargetsProps) => {
 
   const totalPages = Math.ceil(totalItems / itemsPerPage);
 
-  // Get paginated data
+  // Get paginated data - optimize this to prevent recalculations
   const paginatedData = useMemo(() => {
     const startIndex = (currentPage - 1) * itemsPerPage;
     const endIndex = startIndex + itemsPerPage;
@@ -292,19 +336,19 @@ const Targets = ({ submissionTypePic: submissionType }: TargetsProps) => {
     return result;
   }, [filteredEntries, currentPage, itemsPerPage]);
 
-  // Helper function to get monthly targets for an entry
-  const getMonthlyTargets = (entry: typeof entriesWithTargets[0], months: number[]): (string | number | any)[] => {
+  // Helper function to get monthly targets for an entry - memoize if needed
+  const getMonthlyTargets = useCallback((entry: typeof entriesWithTargets[0], months: number[]): (string | number | any)[] => {
     return months.map(month => {
       const target = entry.targets.find(t => t.target_month === month);
       return target?.target_value || '-';
     });
-  };
+  }, []);
 
   // Pagination handlers
   const handlePageChange = (page: number) => {
     setCurrentPage(page);
   };
-
+  
   const handleItemsPerPageChange = (value: string) => {
     setItemsPerPage(Number(value));
     setCurrentPage(1);

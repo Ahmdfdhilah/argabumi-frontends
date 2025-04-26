@@ -1,4 +1,4 @@
-import { useState, useMemo, useEffect } from 'react';
+import { useState, useMemo, useEffect, useCallback } from 'react';
 import { useParams, useSearchParams } from 'react-router-dom';
 import { Card, CardContent, CardHeader, CardTitle } from '@workspace/ui/components/card';
 import {
@@ -31,7 +31,11 @@ import { EditActualDialogContainer } from '@/components/KPI/EditActualDialogCont
 import ViewEvidenceDialog from '@/components/KPI/ViewEvidence';
 import { useAppSelector } from '@/redux/hooks';
 
-// Import dialog containers
+// Global perspective cache with expiration to prevent redundant API calls
+const perspectiveCache = {
+  data: null as KPIPerspective[] | null,
+  lastFetched: 0
+};
 
 interface ActualsProps {
   submissionTypePic?: string;
@@ -40,14 +44,12 @@ interface ActualsProps {
 const Actuals = ({ submissionTypePic: submissionType }: ActualsProps) => {
   const { submissionId } = useParams<{ submissionId: string }>();
   const [searchParams] = useSearchParams();
-  const { user } = useAppSelector((state: any) => state.auth);
-  console.log(user);
-
   const month = searchParams.get('month');
 
-  console.log(submissionType);
+  // Get current user from Redux store
+  const { user } = useAppSelector((state: any) => state.auth);
 
-  // Use our custom hook to fetch actuals data
+  // Use our custom hook to fetch actuals data (with built-in caching)
   const {
     loading,
     error,
@@ -58,8 +60,7 @@ const Actuals = ({ submissionTypePic: submissionType }: ActualsProps) => {
     authStatus,
   } = useActuals();
 
-
-  // Layout states
+  // Layout states - only create once with default values
   const [isSidebarOpen, setIsSidebarOpen] = useState(() => {
     if (typeof window !== 'undefined') {
       return window.innerWidth >= 768;
@@ -68,16 +69,20 @@ const Actuals = ({ submissionTypePic: submissionType }: ActualsProps) => {
   });
   const [isDarkMode, setIsDarkMode] = useState(false);
 
-  // Dialog visibility states
-  const [isEditDialogOpen, setIsEditDialogOpen] = useState(false);
-  const [isSubmitDialogOpen, setIsSubmitDialogOpen] = useState(false);
-  const [isApproveDialogOpen, setIsApproveDialogOpen] = useState(false);
-  const [isRejectDialogOpen, setIsRejectDialogOpen] = useState(false);
-  const [isValidateDialogOpen, setIsValidateDialogOpen] = useState(false);
-  const [isAdminRejectDialogOpen, setIsAdminRejectDialogOpen] = useState(false);
-  const [isRevertToDraftDialogOpen, setIsRevertToDraftDialogOpen] = useState(false);
-  const [isSubmitEvidenceDialogOpen, setIsSubmitEvidenceDialogOpen] = useState(false);
-  const [isViewEvidenceDialogOpen, setIsViewEvidenceDialogOpen] = useState(false);
+  // Dialog visibility states - minimized using a single state object to reduce re-renders
+  const [dialogState, setDialogState] = useState({
+    isEditDialogOpen: false,
+    isSubmitDialogOpen: false,
+    isApproveDialogOpen: false,
+    isRejectDialogOpen: false,
+    isValidateDialogOpen: false,
+    isAdminRejectDialogOpen: false,
+    isRevertToDraftDialogOpen: false,
+    isSubmitEvidenceDialogOpen: false,
+    isViewEvidenceDialogOpen: false,
+  });
+
+  // Track selected actual for editing - only set when needed
   const [selectedActual, setSelectedActual] = useState<KPIEntryWithActuals | null>(null);
 
   // UI states
@@ -90,21 +95,50 @@ const Actuals = ({ submissionTypePic: submissionType }: ActualsProps) => {
   // Filtering states
   const [selectedPerspective, setSelectedPerspective] = useState<string>('');
 
-  // Fetch perspectives on component mount
-  useEffect(() => {
-    const fetchPerspectives = async () => {
-      try {
-        const data = await kpiPerspectiveService.getPerspectives();
-        setPerspectives(data);
-      } catch (error) {
-        console.error('Error fetching perspectives:', error);
-      }
-    };
-
-    fetchPerspectives();
+  // Use React's useCallback for event handlers to prevent unnecessary re-renders
+  const openDialog = useCallback((dialogName: string) => {
+    setDialogState(prev => ({ ...prev, [dialogName]: true }));
   }, []);
 
-  // Group entries by perspective
+  const closeDialog = useCallback((dialogName: string) => {
+    setDialogState(prev => ({ ...prev, [dialogName]: false }));
+  }, []);
+
+  // Fetch perspectives with caching mechanism
+  const fetchPerspectives = useCallback(async () => {
+    const now = Date.now();
+    const cacheExpiration = 5 * 60 * 1000; // 5 minutes
+    
+    if (perspectiveCache.data && (now - perspectiveCache.lastFetched) < cacheExpiration) {
+      setPerspectives(perspectiveCache.data);
+      return;
+    }
+    
+    try {
+      const data = await kpiPerspectiveService.getPerspectives();
+      
+      // Update cache
+      perspectiveCache.data = data;
+      perspectiveCache.lastFetched = now;
+      
+      setPerspectives(data);
+    } catch (error) {
+      console.error('Error fetching perspectives:', error);
+    }
+  }, []);
+
+  // Fetch perspectives only once on component mount
+  useEffect(() => {
+    fetchPerspectives();
+  }, [fetchPerspectives]);
+
+  // Get perspective name - memoized function to optimize lookups
+  const getPerspectiveName = useCallback((id: string | number): string => {
+    const perspective = perspectives.find(p => p.perspective_id.toString() === id.toString());
+    return perspective ? perspective.perspective_name : 'Uncategorized';
+  }, [perspectives]);
+
+  // Group entries by perspective - memoized to avoid recalculation on every render
   const groupedEntries = useMemo(() => {
     if (!entriesWithActuals || entriesWithActuals.length === 0) return {};
 
@@ -118,35 +152,31 @@ const Actuals = ({ submissionTypePic: submissionType }: ActualsProps) => {
     }, {} as Record<string, KPIEntryWithActuals[]>);
   }, [entriesWithActuals]);
 
-  // Get perspective name
-  const getPerspectiveName = (id: string | number): string => {
-    const perspective = perspectives.find(p => p.perspective_id.toString() === id.toString());
-    return perspective ? perspective.perspective_name : 'Uncategorized';
-  };
-
-  // Filter entries based on selected filters
+  // Filter entries based on selected filters - memoized
   const filteredEntries = useMemo(() => {
-    const result = { ...groupedEntries };
-
-    if (selectedPerspective && selectedPerspective !== 'all') {
-      Object.keys(result).forEach(perspectiveId => {
-        if (getPerspectiveName(perspectiveId) !== selectedPerspective) {
-          delete result[perspectiveId];
-        }
-      });
+    // If no filter is applied, return all entries
+    if (!selectedPerspective || selectedPerspective === 'all') {
+      return groupedEntries;
     }
 
-    return result;
-  }, [groupedEntries, selectedPerspective, perspectives]);
+    // Otherwise, create a new filtered object
+    return Object.entries(groupedEntries).reduce((filtered, [perspectiveId, entries]) => {
+      if (getPerspectiveName(perspectiveId) === selectedPerspective) {
+        filtered[perspectiveId] = entries;
+      }
+      return filtered;
+    }, {} as Record<string, KPIEntryWithActuals[]>);
+  }, [groupedEntries, selectedPerspective, getPerspectiveName]);
 
-  // Calculate pagination
-  const totalItems = useMemo(() => {
-    return Object.values(filteredEntries).reduce((sum, entries) => sum + entries.length, 0);
-  }, [filteredEntries]);
+  // Calculate pagination metrics - memoized
+  const paginationMetrics = useMemo(() => {
+    const totalItems = Object.values(filteredEntries).reduce((sum, entries) => sum + entries.length, 0);
+    const totalPages = Math.ceil(totalItems / itemsPerPage);
 
-  const totalPages = Math.ceil(totalItems / itemsPerPage);
+    return { totalItems, totalPages };
+  }, [filteredEntries, itemsPerPage]);
 
-  // Get paginated data
+  // Get paginated data - memoized
   const paginatedData = useMemo(() => {
     const startIndex = (currentPage - 1) * itemsPerPage;
     const endIndex = startIndex + itemsPerPage;
@@ -167,26 +197,36 @@ const Actuals = ({ submissionTypePic: submissionType }: ActualsProps) => {
     return result;
   }, [filteredEntries, currentPage, itemsPerPage]);
 
-  // Handle edit actual
-  const handleEditClick = (entry: KPIEntryWithActuals) => {
+  // Handlers - wrapped in useCallback to maintain reference stability
+  const handleEditClick = useCallback((entry: KPIEntryWithActuals) => {
     setSelectedActual(entry);
-    setIsEditDialogOpen(true);
-  };
+    setDialogState(prev => ({ ...prev, isEditDialogOpen: true }));
+  }, []);
 
-  // Pagination handlers
-  const handlePageChange = (page: number) => {
+  const handlePageChange = useCallback((page: number) => {
     setCurrentPage(page);
-  };
+  }, []);
 
-  const handleItemsPerPageChange = (value: string) => {
+  const handleItemsPerPageChange = useCallback((value: string) => {
     setItemsPerPage(Number(value));
     setCurrentPage(1);
-  };
+  }, []);
 
-  const handlePerspectiveChange = (value: string) => {
+  const handlePerspectiveChange = useCallback((value: string) => {
     setSelectedPerspective(value);
-  };
+    setCurrentPage(1); // Reset to first page when filter changes
+  }, []);
 
+  // Handle dialog submission callbacks
+  const handleDialogClose = useCallback((dialogName: string, shouldRefresh = false) => {
+    closeDialog(dialogName);
+    
+    if (shouldRefresh) {
+      refreshData();
+    }
+  }, [closeDialog, refreshData]);
+
+  // Loading, error, and permission states
   if (loading) {
     return <div className="flex justify-center items-center h-screen">Loading...</div>;
   }
@@ -236,14 +276,14 @@ const Actuals = ({ submissionTypePic: submissionType }: ActualsProps) => {
                   <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between space-y-4 sm:space-y-0">
                     <CardTitle className="font-semibold text-gray-700 dark:text-gray-200 flex items-center">
                       <FileText className="mr-2 h-5 w-5" />
-                      Evidence Status
+                      {submissionType} Evidence Status
                     </CardTitle>
                     <div className="flex flex-col sm:flex-row space-y-2 sm:space-y-0 sm:space-x-4 w-full md:w-auto">
                       {authStatus.canSubmitEvidence && (
                         <Button
                           variant="outline"
                           className="w-full sm:w-auto border-[#1B6131] text-[#1B6131] hover:bg-[#E4EFCF] flex items-center justify-center dark:text-white"
-                          onClick={() => setIsSubmitEvidenceDialogOpen(true)}
+                          onClick={() => openDialog('isSubmitEvidenceDialogOpen')}
                         >
                           <Upload className="mr-2 h-4 w-4" />
                           Upload Evidence
@@ -253,7 +293,7 @@ const Actuals = ({ submissionTypePic: submissionType }: ActualsProps) => {
                         <Button
                           variant="outline"
                           className="w-full sm:w-auto border-[#1B6131] text-[#1B6131] hover:bg-[#E4EFCF] flex items-center justify-center dark:text-white"
-                          onClick={() => setIsViewEvidenceDialogOpen(true)}
+                          onClick={() => openDialog('isViewEvidenceDialogOpen')}
                         >
                           <FileText className="mr-2 h-4 w-4" />
                           View Evidence
@@ -332,7 +372,7 @@ const Actuals = ({ submissionTypePic: submissionType }: ActualsProps) => {
                           <Button
                             variant="outline"
                             className="w-full sm:w-auto border-green-600 text-green-600 hover:bg-green-50 flex items-center justify-center dark:hover:bg-green-900/20"
-                            onClick={() => setIsApproveDialogOpen(true)}
+                            onClick={() => openDialog('isApproveDialogOpen')}
                           >
                             <CheckCircle className="mr-2 h-4 w-4" />
                             Approve
@@ -340,7 +380,7 @@ const Actuals = ({ submissionTypePic: submissionType }: ActualsProps) => {
                           <Button
                             variant="outline"
                             className="w-full sm:w-auto border-red-600 text-red-600 hover:bg-red-50 flex items-center justify-center dark:hover:bg-red-900/20"
-                            onClick={() => setIsRejectDialogOpen(true)}
+                            onClick={() => openDialog('isRejectDialogOpen')}
                           >
                             <XCircle className="mr-2 h-4 w-4" />
                             Reject
@@ -354,7 +394,7 @@ const Actuals = ({ submissionTypePic: submissionType }: ActualsProps) => {
                           <Button
                             variant="outline"
                             className="w-full sm:w-auto border-blue-600 text-blue-600 hover:bg-blue-50 flex items-center justify-center dark:hover:bg-blue-900/20"
-                            onClick={() => setIsValidateDialogOpen(true)}
+                            onClick={() => openDialog('isValidateDialogOpen')}
                           >
                             <CheckSquare className="mr-2 h-4 w-4" />
                             Validate
@@ -362,7 +402,7 @@ const Actuals = ({ submissionTypePic: submissionType }: ActualsProps) => {
                           <Button
                             variant="outline"
                             className="w-full sm:w-auto border-red-600 text-red-600 hover:bg-red-50 flex items-center justify-center dark:hover:bg-red-900/20"
-                            onClick={() => setIsAdminRejectDialogOpen(true)}
+                            onClick={() => openDialog('isAdminRejectDialogOpen')}
                           >
                             <XCircle className="mr-2 h-4 w-4" />
                             Reject
@@ -371,11 +411,11 @@ const Actuals = ({ submissionTypePic: submissionType }: ActualsProps) => {
                       )}
 
                       {/* Revert to Draft Button - Only show if user can revert */}
-                      {authStatus.canRevertToDraft && (submissionStatus === 'Rejected' || submissionStatus == 'Admin_Rejected') && (
+                      {authStatus.canRevertToDraft && (submissionStatus === 'Rejected' || submissionStatus === 'Admin_Rejected') && (
                         <Button
                           variant="outline"
                           className="w-full sm:w-auto border-amber-600 text-amber-600 hover:bg-amber-50 flex items-center justify-center dark:hover:bg-amber-900/20"
-                          onClick={() => setIsRevertToDraftDialogOpen(true)}
+                          onClick={() => openDialog('isRevertToDraftDialogOpen')}
                         >
                           <RotateCcw className="mr-2 h-4 w-4" />
                           Revert to Draft
@@ -387,7 +427,7 @@ const Actuals = ({ submissionTypePic: submissionType }: ActualsProps) => {
                         <Button
                           variant="outline"
                           className="w-full sm:w-auto border-blue-600 text-blue-600 hover:bg-blue-50 flex items-center justify-center dark:hover:bg-blue-900/20"
-                          onClick={() => setIsSubmitDialogOpen(true)}
+                          onClick={() => openDialog('isSubmitDialogOpen')}
                           disabled={!hasEvidence}
                         >
                           <Send className="mr-2 h-4 w-4" />
@@ -422,7 +462,7 @@ const Actuals = ({ submissionTypePic: submissionType }: ActualsProps) => {
                           Object.entries(paginatedData).map(([perspectiveId, entries]) => (
                             <React.Fragment key={perspectiveId}>
                               <tr className="bg-gray-50 dark:bg-gray-800">
-                                <td colSpan={authStatus.canEdit && submissionStatus === 'Draft' && hasEvidence ? 10 : 9} className="p-3 font-semibold">
+                                <td colSpan={authStatus.canEdit && submissionStatus === 'Draft' ? 10 : 9} className="p-3 font-semibold">
                                   {getPerspectiveName(perspectiveId)}
                                 </td>
                               </tr>
@@ -438,10 +478,7 @@ const Actuals = ({ submissionTypePic: submissionType }: ActualsProps) => {
                                           variant="ghost"
                                           size="icon"
                                           className="h-8 w-8 text-[#46B749] hover:bg-[#E4EFCF] dark:hover:bg-[#1B6131]"
-                                          onClick={(e) => {
-                                            e.stopPropagation();
-                                            handleEditClick(entry);
-                                          }}
+                                          onClick={() => handleEditClick(entry)}
                                         >
                                           <Edit className="h-4 w-4" />
                                         </Button>
@@ -460,32 +497,28 @@ const Actuals = ({ submissionTypePic: submissionType }: ActualsProps) => {
                                   <td className="p-4 whitespace-nowrap text-center">
                                     {entry.month_name}
                                   </td>
-                                  {/* Handle case when actuals array exists and has items */}
-                                  {entry.actuals ? (
-                                    entry.actuals.map((actual) => (
-                                      <React.Fragment key={actual.actual_id || `empty-${entry.entry_id}`}>
-                                        <td className="p-4 whitespace-nowrap text-center">
-                                          {String(entry.actuals?.[0]?.target_value ||
-                                            entry.kpiDefinition?.kpi_target || 'N/A')}
-                                        </td>
-                                        <td className="p-4 whitespace-nowrap text-center">
-                                          {actual.actual_value || 'Not set'}
-                                        </td>
-                                        <td className="p-4 whitespace-nowrap text-center">
-                                          {actual.actual_value && entry.kpiDefinition?.kpi_target
-                                            ? `${(Number(actual.actual_value) / Number(entry.kpiDefinition.kpi_target) * 100).toFixed(2)}%`
-                                            : 'N/A'}
-                                        </td>
-                                        <td className="p-4 whitespace-normal max-w-xs text-center">
-                                          {actual.problem_identification || 'N/A'}
-                                        </td>
-                                        <td className="p-4 whitespace-normal max-w-xs text-center">
-                                          {actual.corrective_action || 'N/A'}
-                                        </td>
-                                      </React.Fragment>
-                                    ))
+                                  {/* Optimized actuals rendering */}
+                                  {entry.actuals && entry.actuals.length > 0 ? (
+                                    <>
+                                      <td className="p-4 whitespace-nowrap text-center">
+                                        {String(entry.actuals[0].target_value || entry.kpiDefinition?.kpi_target || 'N/A')}
+                                      </td>
+                                      <td className="p-4 whitespace-nowrap text-center">
+                                        {entry.actuals[0].actual_value || 'Not set'}
+                                      </td>
+                                      <td className="p-4 whitespace-nowrap text-center">
+                                        {entry.actuals[0].actual_value && entry.actuals[0].target_value
+                                          ? `${entry.actuals[0].achievement.toFixed(2)}%`
+                                          : 'N/A'}
+                                      </td>
+                                      <td className="p-4 whitespace-normal max-w-xs text-center">
+                                        {entry.actuals[0].problem_identification || 'N/A'}
+                                      </td>
+                                      <td className="p-4 whitespace-normal max-w-xs text-center">
+                                        {entry.actuals[0].corrective_action || 'N/A'}
+                                      </td>
+                                    </>
                                   ) : (
-                                    // Handle case when no actuals exist
                                     <>
                                       <td className="p-4 whitespace-nowrap text-center">
                                         {entry.target_value || 'N/A'}
@@ -510,7 +543,7 @@ const Actuals = ({ submissionTypePic: submissionType }: ActualsProps) => {
                           ))
                         ) : (
                           <tr>
-                            <td colSpan={authStatus.canEdit && submissionStatus === 'Draft' && hasEvidence ? 10 : 9} className="p-4 text-center">
+                            <td colSpan={authStatus.canEdit && submissionStatus === 'Draft' ? 10 : 9} className="p-4 text-center">
                               No records found.
                             </td>
                           </tr>
@@ -521,11 +554,11 @@ const Actuals = ({ submissionTypePic: submissionType }: ActualsProps) => {
                 </CardContent>
               </Card>
 
-              {/* Pagination */}
+              {/* Pagination - using memoized totals */}
               <Pagination
                 currentPage={currentPage}
-                totalPages={totalPages}
-                totalItems={totalItems}
+                totalPages={paginationMetrics.totalPages}
+                totalItems={paginationMetrics.totalItems}
                 onPageChange={handlePageChange}
                 itemsPerPage={itemsPerPage}
                 onItemsPerPageChange={handleItemsPerPageChange}
@@ -537,74 +570,90 @@ const Actuals = ({ submissionTypePic: submissionType }: ActualsProps) => {
         </div>
       </div>
 
-      {/* Dialog Components */}
-      {selectedActual && (
+      {/* Dialog Components - using conditional rendering for performance optimization */}
+      {selectedActual && dialogState.isEditDialogOpen && (
         <EditActualDialogContainer
-          isOpen={isEditDialogOpen}
-          onClose={() => setIsEditDialogOpen(false)}
+          isOpen={true}
+          onClose={() => handleDialogClose('isEditDialogOpen', true)}
           selectedActual={selectedActual}
           refreshData={refreshData}
         />
       )}
 
-      <SubmitDialogContainer
-        isOpen={isSubmitDialogOpen}
-        onClose={() => setIsSubmitDialogOpen(false)}
-        submissionId={Number(submissionId)}
-        refreshData={refreshData}
-      />
+      {dialogState.isSubmitDialogOpen && (
+        <SubmitDialogContainer
+          isOpen={true}
+          onClose={() => handleDialogClose('isSubmitDialogOpen', true)}
+          submissionId={Number(submissionId)}
+          refreshData={refreshData}
+        />
+      )}
 
-      <ApproveDialogContainer
-        isOpen={isApproveDialogOpen}
-        onClose={() => setIsApproveDialogOpen(false)}
-        submissionId={Number(submissionId)}
-        employeeId={user?.employee_data?.employee_id}
-        refreshData={refreshData}
-      />
+      {dialogState.isApproveDialogOpen && (
+        <ApproveDialogContainer
+          isOpen={true}
+          onClose={() => handleDialogClose('isApproveDialogOpen', true)}
+          submissionId={Number(submissionId)}
+          employeeId={user?.employee_data?.employee_id}
+          refreshData={refreshData}
+        />
+      )}
 
-      <RejectDialogContainer
-        isOpen={isRejectDialogOpen}
-        onClose={() => setIsRejectDialogOpen(false)}
-        submissionId={Number(submissionId)}
-        employeeId={user?.employee_data?.employee_id}
-        refreshData={refreshData}
-        isAdminReject={false}
-      />
+      {dialogState.isRejectDialogOpen && (
+        <RejectDialogContainer
+          isOpen={true}
+          onClose={() => handleDialogClose('isRejectDialogOpen', true)}
+          submissionId={Number(submissionId)}
+          employeeId={user?.employee_data?.employee_id}
+          refreshData={refreshData}
+          isAdminReject={false}
+        />
+      )}
 
-      <RejectDialogContainer
-        isOpen={isAdminRejectDialogOpen}
-        onClose={() => setIsAdminRejectDialogOpen(false)}
-        submissionId={Number(submissionId)}
-        refreshData={refreshData}
-        isAdminReject={true}
-      />
+      {dialogState.isAdminRejectDialogOpen && (
+        <RejectDialogContainer
+          isOpen={true}
+          onClose={() => handleDialogClose('isAdminRejectDialogOpen', true)}
+          submissionId={Number(submissionId)}
+          refreshData={refreshData}
+          isAdminReject={true}
+        />
+      )}
 
-      <ValidateDialogContainer
-        isOpen={isValidateDialogOpen}
-        onClose={() => setIsValidateDialogOpen(false)}
-        submissionId={Number(submissionId)}
-        refreshData={refreshData}
-      />
+      {dialogState.isValidateDialogOpen && (
+        <ValidateDialogContainer
+          isOpen={true}
+          onClose={() => handleDialogClose('isValidateDialogOpen', true)}
+          submissionId={Number(submissionId)}
+          refreshData={refreshData}
+        />
+      )}
 
-      <RevertToDraftDialogContainer
-        isOpen={isRevertToDraftDialogOpen}
-        onClose={() => setIsRevertToDraftDialogOpen(false)}
-        submissionId={Number(submissionId)}
-        refreshData={refreshData}
-      />
+      {dialogState.isRevertToDraftDialogOpen && (
+        <RevertToDraftDialogContainer
+          isOpen={true}
+          onClose={() => handleDialogClose('isRevertToDraftDialogOpen', true)}
+          submissionId={Number(submissionId)}
+          refreshData={refreshData}
+        />
+      )}
 
-      <UploadEvidenceDialogContainer
-        isOpen={isSubmitEvidenceDialogOpen}
-        onClose={() => setIsSubmitEvidenceDialogOpen(false)}
-        submissionId={Number(submissionId)}
-        refreshData={refreshData}
-      />
+      {dialogState.isSubmitEvidenceDialogOpen && (
+        <UploadEvidenceDialogContainer
+          isOpen={true}
+          onClose={() => handleDialogClose('isSubmitEvidenceDialogOpen', true)}
+          submissionId={Number(submissionId)}
+          refreshData={refreshData}
+        />
+      )}
 
-      <ViewEvidenceDialog
-        isOpen={isViewEvidenceDialogOpen}
-        onClose={() => setIsViewEvidenceDialogOpen(false)}
-        evidences={submissionEvidence || []}
-      />
+      {dialogState.isViewEvidenceDialogOpen && (
+        <ViewEvidenceDialog
+          isOpen={true}
+          onClose={() => handleDialogClose('isViewEvidenceDialogOpen', false)}
+          evidences={submissionEvidence || []}
+        />
+      )}
     </div>
   );
 };

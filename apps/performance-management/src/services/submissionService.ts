@@ -5,6 +5,7 @@ export interface SubmissionBase {
   submission_type: string;  // "Target" or "Actual"
   org_unit_id?: number;
   employee_id?: number;
+  requested_by?: any;
   period_id: number;
   submission_month?: number;  // 1-12 representing Jan-Dec
   submission_comments?: string;
